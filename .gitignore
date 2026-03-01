@@ -24,6 +24,12 @@
 .DS_Store
 *.pem
 
+# database
+greatbooks.db
+
+# corpus data (audio, raw HTML, commentary, per-book SKILL.md)
+/data/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
