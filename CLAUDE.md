@@ -34,7 +34,37 @@ Combine the best of Audible + Kindle + ChatGPT voice-mode into one elegant inter
 - (More to be added)
 
 ## Tech Stack
-- TBD — decisions will be recorded here as they're made
+- **Next.js 16** with App Router and TypeScript
+- **Tailwind CSS 4** for layout/utility classes
+- **CSS custom properties** in `globals.css` for themeable colors/fonts
+- Components use inline styles referencing CSS variables for theme-able properties
+
+## Architecture Principles
+- **CSS variables for theming** — swappable light/dark/custom via `:root` overrides
+- **Flat component library** — reusable primitives in `src/components/` that reference CSS variables
+- **Shallow hierarchy** — pages import components directly (max 3 levels deep)
 
 ## Project Structure
-- TBD — will evolve as implementation proceeds
+```
+src/
+  app/
+    layout.tsx              ← Root layout (font, metadata)
+    page.tsx                ← Home page (book grid)
+    globals.css             ← CSS variables / theme
+    [bookId]/
+      layout.tsx            ← Book layout (back link + title + tab bar)
+      page.tsx              ← Redirects to /read
+      read/page.tsx         ← Reader view
+      listen/page.tsx       ← Listener view (placeholder)
+      chat/page.tsx         ← Chat view (placeholder)
+  components/
+    BookCard.tsx            ← Book card for home grid
+    TabBar.tsx              ← Read/Listen/Chat navigation tabs
+    IconButton.tsx          ← Reusable icon button
+    ChapterNav.tsx          ← Chapter selector sidebar
+    AudioPlayer.tsx         ← Placeholder audio player bar
+    ChatMessage.tsx         ← Chat message bubble
+    ChatInput.tsx           ← Chat text input + send button
+  data/
+    books.ts                ← Book/Chapter types + dummy data
+```
