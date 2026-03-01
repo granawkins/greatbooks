@@ -37,34 +37,93 @@ Combine the best of Audible + Kindle + ChatGPT voice-mode into one elegant inter
 - **Next.js 16** with App Router and TypeScript
 - **Tailwind CSS 4** for layout/utility classes
 - **CSS custom properties** in `globals.css` for themeable colors/fonts
-- Components use inline styles referencing CSS variables for theme-able properties
+- **SQLite** (`greatbooks.db` at project root) via `better-sqlite3`, called directly by API routes
+- **Python** scripts for content ingestion (parse HTML) and audio generation (TTS/STT)
+- **Google Chirp3** for TTS, **Google STT** for word-level timestamp alignment
 
 ## Architecture Principles
 - **CSS variables for theming** — swappable light/dark/custom via `:root` overrides
 - **Flat component library** — reusable primitives in `src/components/` that reference CSS variables
 - **Shallow hierarchy** — pages import components directly (max 3 levels deep)
+- **AI-agent backend** — no traditional REST API; Claude skills define the workflows for content management, audio generation, and chat
+- **File + DB hybrid** — structured data (text, timestamps, users) in SQLite; large artifacts (audio files, raw HTML, commentary markdown) on disk in `data/`
+
+## Data Model
+
+### Segment — the atomic text unit
+A **segment** is a sentence (prose) or line (poetry). Segments are the smallest unit we store, display, and annotate.
+
+- Segments are ordered by `sequence` within a chapter
+- Segments with the same `group_number` form a **paragraph** (prose) or **stanza** (poetry)
+- `segment_type` controls rendering: `text` (normal), `heading` (subheading), `section_break` (visual divider)
+
+### Audio chunking
+Audio is generated in chunks of ~4 paragraphs, breaking only on structural boundaries (paragraph, section, or chapter breaks). Never mid-paragraph. Each chunk is one TTS API call and one mp3 file.
+
+Word-level timestamps are stored as JSON on each audio chunk, mapping words back to their source segments. The frontend loads these for the synced reading cursor.
+
+### Database schema
+Defined in `schema.sql`. Tables: `books`, `chapters`, `segments`, `audio_chunks`. See `.claude/skills/database/SKILL.md` for full reference.
+
+## Skills
+
+AI agents are the primary backend operators. Skills live in `.claude/skills/`:
+
+| Skill | Purpose |
+|-------|---------|
+| `add-book` | Fetch public-domain text, parse HTML into segments, populate DB. Includes `parse_html.py`. |
+| `generate-audio` | Generate TTS audio per chapter, align word timestamps via STT. Includes `generate_tts.py` and `align_timestamps.py`. |
+| `chat` | Powers the chat view — searches text/commentary, answers questions with book context. |
+| `database` | Schema reference, query patterns, conventions. Not user-invocable. |
+
+Each book also has a `data/<book-id>/SKILL.md` with provenance, context, and status (not a discoverable skill — read by the chat skill for context).
 
 ## Project Structure
 ```
+greatbooks.db                 ← SQLite database
+schema.sql                    ← Database schema definition
+
+data/
+  <book-id>/
+    SKILL.md                  ← Provenance, context, audio status
+    raw/                      ← Original source HTML
+    audio/                    ← Generated TTS audio (mp3)
+    commentary/               ← Scholarly context (markdown)
+
+.claude/skills/
+  add-book/
+    SKILL.md                  ← Workflow instructions
+    parse_html.py             ← HTML → chapters/segments JSON
+  generate-audio/
+    SKILL.md                  ← TTS + timestamp workflow
+    generate_tts.py           ← Text → audio via Google Chirp3
+    align_timestamps.py       ← Audio + text → word timestamps via STT
+  chat/
+    SKILL.md                  ← Chat agent instructions
+  database/
+    SKILL.md                  ← Schema reference + query patterns
+
 src/
   app/
-    layout.tsx              ← Root layout (font, metadata)
-    page.tsx                ← Home page (book grid)
-    globals.css             ← CSS variables / theme
+    layout.tsx                ← Root layout (font, metadata)
+    page.tsx                  ← Home page (book grid)
+    globals.css               ← CSS variables / theme
     [bookId]/
-      layout.tsx            ← Book layout (back link + title + tab bar)
-      page.tsx              ← Redirects to /read
-      read/page.tsx         ← Reader view
-      listen/page.tsx       ← Listener view (placeholder)
-      chat/page.tsx         ← Chat view (placeholder)
+      layout.tsx              ← Book layout (back link + title + tab bar)
+      page.tsx                ← Redirects to /read
+      read/page.tsx           ← Reader view
+      listen/page.tsx         ← Listener view
+      chat/page.tsx           ← Chat view
   components/
-    BookCard.tsx            ← Book card for home grid
-    TabBar.tsx              ← Read/Listen/Chat navigation tabs
-    IconButton.tsx          ← Reusable icon button
-    ChapterNav.tsx          ← Chapter selector sidebar
-    AudioPlayer.tsx         ← Placeholder audio player bar
-    ChatMessage.tsx         ← Chat message bubble
-    ChatInput.tsx           ← Chat text input + send button
+    BookCard.tsx              ← Book card for home grid
+    TabBar.tsx                ← Read/Listen/Chat navigation tabs
+    IconButton.tsx            ← Reusable icon button
+    ChapterNav.tsx            ← Chapter selector sidebar
+    AudioPlayer.tsx           ← Audio player bar
+    ChatMessage.tsx           ← Chat message bubble
+    ChatInput.tsx             ← Chat text input + send button
+  lib/
+    db.ts                     ← SQLite connection + typed query helpers
   data/
-    books.ts                ← Book/Chapter types + dummy data
+    books.ts                  ← Book/Chapter types + dummy data (temporary)
 ```
