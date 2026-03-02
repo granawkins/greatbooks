@@ -38,8 +38,8 @@ Combine the best of Audible + Kindle + ChatGPT voice-mode into one elegant inter
 - **Tailwind CSS 4** for layout/utility classes
 - **CSS custom properties** in `globals.css` for themeable colors/fonts
 - **SQLite** (`greatbooks.db` at project root) via `better-sqlite3`, called directly by API routes
-- **Python** scripts for content ingestion (parse HTML) and audio generation (TTS/STT)
-- **Google Chirp3** for TTS, **Google STT** for word-level timestamp alignment
+- **Python** scripts for content ingestion (parse HTML) and audio generation (TTS/STT); deps in `.claude/skills/generate-audio/requirements.txt`
+- **Google Chirp3 HD** for TTS, **Google STT (Chirp 2)** for word-level timestamp alignment; credentials via `.env` + `google-credentials.json`
 
 ## Architecture Principles
 - **CSS variables for theming** — swappable light/dark/custom via `:root` overrides
@@ -72,7 +72,7 @@ AI agents are the primary backend operators. Skills live in `.claude/skills/`:
 | Skill | Purpose |
 |-------|---------|
 | `add-book` | Fetch public-domain text, parse HTML into segments, populate DB. Includes `parse_html.py`. |
-| `generate-audio` | Generate TTS audio per chapter, align word timestamps via STT. Includes `generate_tts.py` and `align_timestamps.py`. |
+| `generate-audio` | Generate TTS audio per chapter, align word timestamps via STT. Scripts: `tts.py`, `stt.py`, `generate_chapter.py`. |
 | `chat` | Powers the chat view — searches text/commentary, answers questions with book context. |
 | `database` | Schema reference, query patterns, conventions. Not user-invocable. |
 
@@ -82,6 +82,8 @@ Each book also has a `data/<book-id>/SKILL.md` with provenance, context, and sta
 ```
 greatbooks.db                 ← SQLite database
 schema.sql                    ← Database schema definition
+.env                          ← Google API credentials (gitignored)
+google-credentials.json       ← Google service account key (gitignored)
 
 data/
   <book-id>/
@@ -96,8 +98,10 @@ data/
     parse_html.py             ← HTML → chapters/segments JSON
   generate-audio/
     SKILL.md                  ← TTS + timestamp workflow
-    generate_tts.py           ← Text → audio via Google Chirp3
-    align_timestamps.py       ← Audio + text → word timestamps via STT
+    tts.py                    ← Text → MP3 via Google Chirp3 HD (CLI + importable)
+    stt.py                    ← MP3 → word timestamps via Google STT + Needleman-Wunsch alignment (CLI + importable)
+    generate_chapter.py       ← Orchestrator: chunks segments, runs TTS + STT in a loop (CLI + importable)
+    requirements.txt          ← Python dependencies
   chat/
     SKILL.md                  ← Chat agent instructions
   database/
