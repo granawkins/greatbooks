@@ -29,22 +29,27 @@ export default function AudioPlayer({
   const [speedIdx, setSpeedIdx] = useState(1); // default 1x
   const duration = durationMs ?? 0;
 
-  // Sync playback state
+  // Poll currentTime via rAF for smooth, high-frequency updates
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const handleTime = () => {
-      const ms = Math.floor(audio.currentTime * 1000);
-      setCurrentMs(ms);
-      onTimeUpdate?.(ms);
+    let rafId: number;
+    const tick = () => {
+      if (!audio.paused) {
+        const ms = Math.floor(audio.currentTime * 1000);
+        setCurrentMs(ms);
+        onTimeUpdate?.(ms);
+      }
+      rafId = requestAnimationFrame(tick);
     };
-    const handleEnded = () => setPlaying(false);
 
-    audio.addEventListener("timeupdate", handleTime);
+    const handleEnded = () => setPlaying(false);
     audio.addEventListener("ended", handleEnded);
+    rafId = requestAnimationFrame(tick);
+
     return () => {
-      audio.removeEventListener("timeupdate", handleTime);
+      cancelAnimationFrame(rafId);
       audio.removeEventListener("ended", handleEnded);
     };
   }, [onTimeUpdate]);

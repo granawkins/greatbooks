@@ -14,8 +14,7 @@ CREATE TABLE IF NOT EXISTS chapters (
   number INTEGER NOT NULL,
   title TEXT NOT NULL,
   audio_file TEXT,                      -- relative path to MP3 (NULL if no audio)
-  audio_duration_ms INTEGER,            -- total audio duration in milliseconds
-  word_timestamps JSON                  -- [{segment_id, words: [{text, start_ms, end_ms}]}]
+  audio_duration_ms INTEGER             -- total audio duration in milliseconds
 );
 
 -- A segment is the smallest unit of text: a sentence (prose) or line (poetry).
@@ -26,7 +25,10 @@ CREATE TABLE IF NOT EXISTS segments (
   sequence INTEGER NOT NULL,           -- ordering within chapter
   text TEXT NOT NULL DEFAULT '',
   segment_type TEXT NOT NULL DEFAULT 'text',  -- 'heading' | 'text' | 'section_break'
-  group_number INTEGER                 -- paragraph/stanza grouping
+  group_number INTEGER,                -- paragraph/stanza grouping
+  audio_start_ms INTEGER,              -- start time in chapter audio (ms)
+  audio_end_ms INTEGER,                -- end time in chapter audio (ms)
+  word_timestamps JSON                 -- [{start_ms, end_ms, char_start, char_end}, ...]
 );
 
 -- Indexes

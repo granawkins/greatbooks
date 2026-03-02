@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getBook } from "@/data/books";
-import TabBar from "@/components/TabBar";
 
 export default async function BookLayout({
   children,
@@ -47,7 +46,6 @@ export default async function BookLayout({
         >
           {book.author}
         </p>
-        <TabBar bookId={bookId} />
       </header>
 
       <main className="flex-1 max-w-3xl w-full mx-auto px-6 py-6">

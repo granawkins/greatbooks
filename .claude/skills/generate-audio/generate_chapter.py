@@ -2,9 +2,12 @@
 """
 Generate audio for a full chapter: chunk segments, run TTS + STT for each chunk.
 
+Chunks are processed in parallel (default 10 workers). Each worker runs TTS
+then immediately STT+alignment for its chunk, so there's no idle time.
+
 Usage:
     python generate_chapter.py --segments segments.json --output-dir data/iliad/audio/ --chapter 1
-    python generate_chapter.py --segments segments.json --output-dir out/ --chapter 1 --voice Orus
+    python generate_chapter.py --segments segments.json --output-dir out/ --chapter 1 --voice Orus --workers 5
 
 Input format (segments.json):
     [
@@ -18,14 +21,16 @@ Output:
     - Manifest JSON: <output-dir>/<chapter>-manifest.json
 
 Requires:
-    - google-cloud-texttospeech, google-cloud-speech, python-dotenv
+    - google-cloud-texttospeech, python-dotenv, httpx
     - GOOGLE_APPLICATION_CREDENTIALS in .env
+    - DEEPGRAM_API_KEY in .env (for STT)
 """
 
 import argparse
 import json
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 # Allow importing sibling modules
@@ -33,6 +38,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from tts import generate, MAX_INPUT_CHARS
 from stt import transcribe_and_align
+
+DEFAULT_WORKERS = 10
 
 
 def chunk_segments(segments: list[dict], max_chars: int = None) -> list[list[dict]]:
@@ -108,20 +115,76 @@ def chunk_text(chunk: list[dict]) -> str:
     return " ".join(seg.get("text", "") for seg in chunk if seg.get("text"))
 
 
+def _process_chunk(
+    chunk_idx: int,
+    chunk_segs: list[dict],
+    total_chunks: int,
+    output_dir: str,
+    chapter_str: str,
+    voice: str,
+    stt_provider: str | None,
+) -> dict:
+    """
+    Process a single chunk: TTS then STT+alignment.
+    Designed to run in a thread pool worker.
+    """
+    chunk_num = chunk_idx + 1
+    chunk_str = f"{chunk_num:03d}"
+    filename = f"{chapter_str}-{chunk_str}.mp3"
+    filepath = os.path.join(output_dir, filename)
+
+    text = chunk_text(chunk_segs)
+    seg_ids = [s["id"] for s in chunk_segs]
+
+    # TTS — skip if MP3 already exists
+    if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
+        from tts import _mp3_duration_ms
+        tts_result = {"file_path": filepath, "duration_ms": _mp3_duration_ms(filepath)}
+        print(f"  [{chunk_num}/{total_chunks}] TTS: skipped (exists, {tts_result['duration_ms']}ms)")
+    else:
+        tts_result = generate(text, filepath, voice=voice)
+        print(f"  [{chunk_num}/{total_chunks}] TTS: {len(text)} chars -> {tts_result['duration_ms']}ms")
+
+    # STT + alignment — runs immediately after TTS in the same worker
+    align_segments = [{"id": s["id"], "text": s["text"]} for s in chunk_segs]
+    timestamps = transcribe_and_align(filepath, align_segments, provider=stt_provider)
+    word_count = sum(len(t["words"]) for t in timestamps)
+    print(f"  [{chunk_num}/{total_chunks}] STT: aligned {word_count} words")
+
+    return {
+        "chunk_idx": chunk_idx,
+        "chunk_number": chunk_num,
+        "file_path": f"data/{output_dir.split('data/')[-1]}/{filename}"
+        if "data/" in output_dir
+        else filename,
+        "start_segment_id": seg_ids[0],
+        "end_segment_id": seg_ids[-1],
+        "duration_ms": tts_result["duration_ms"],
+        "word_timestamps": timestamps,
+    }
+
+
 def generate_chapter(
     segments: list[dict],
     output_dir: str,
     chapter_number: int,
     voice: str = "Charon",
+    max_workers: int = DEFAULT_WORKERS,
+    stt_provider: str | None = None,
 ) -> dict:
     """
     Generate audio for a full chapter.
+
+    Chunks are processed in parallel — each worker runs TTS then immediately
+    STT+alignment for its chunk.
 
     Args:
         segments: All segments for the chapter (ordered by sequence)
         output_dir: Directory to write MP3 files and manifest
         chapter_number: Chapter number (for file naming)
         voice: Chirp3 HD voice name
+        max_workers: Max parallel workers (default: 10)
+        stt_provider: STT provider override ("deepgram" or "google")
 
     Returns:
         Manifest dict with chunk info and word timestamps
@@ -130,46 +193,41 @@ def generate_chapter(
     chapter_str = f"{chapter_number:02d}"
 
     chunks = chunk_segments(segments)
-    manifest = {"chapter": chapter_number, "voice": voice, "chunks": []}
+    total = len(chunks)
+    workers = min(max_workers, total)
 
-    for i, chunk_segs in enumerate(chunks):
-        chunk_num = i + 1
-        chunk_str = f"{chunk_num:03d}"
-        filename = f"{chapter_str}-{chunk_str}.mp3"
-        filepath = os.path.join(output_dir, filename)
+    print(f"  {total} chunks, {workers} workers")
 
-        text = chunk_text(chunk_segs)
-        seg_ids = [s["id"] for s in chunk_segs]
+    # Process chunks in parallel
+    results = [None] * total
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {}
+        for i, chunk_segs in enumerate(chunks):
+            fut = pool.submit(
+                _process_chunk,
+                i, chunk_segs, total,
+                output_dir, chapter_str, voice, stt_provider,
+            )
+            futures[fut] = i
 
-        print(f"  Chunk {chunk_num}/{len(chunks)}: {len(text)} chars, "
-              f"segments {seg_ids[0]}-{seg_ids[-1]}")
+        for fut in as_completed(futures):
+            idx = futures[fut]
+            try:
+                results[idx] = fut.result()
+            except Exception as e:
+                print(f"  [chunk {idx + 1}] ERROR: {e}", file=sys.stderr)
+                raise
 
-        # TTS — skip if MP3 already exists
-        if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
-            from tts import _mp3_duration_ms
-            tts_result = {"file_path": filepath, "duration_ms": _mp3_duration_ms(filepath)}
-            print(f"    TTS: skipped (exists, {tts_result['duration_ms']}ms)")
-        else:
-            tts_result = generate(text, filepath, voice=voice)
-            print(f"    TTS: {tts_result['duration_ms']}ms")
-
-        # STT + alignment
-        align_segments = [{"id": s["id"], "text": s["text"]} for s in chunk_segs]
-        timestamps = transcribe_and_align(filepath, align_segments)
-        print(f"    STT: aligned {sum(len(t['words']) for t in timestamps)} words")
-
-        manifest["chunks"].append(
-            {
-                "chunk_number": chunk_num,
-                "file_path": f"data/{output_dir.split('data/')[-1]}/{filename}"
-                if "data/" in output_dir
-                else filename,
-                "start_segment_id": seg_ids[0],
-                "end_segment_id": seg_ids[-1],
-                "duration_ms": tts_result["duration_ms"],
-                "word_timestamps": timestamps,
-            }
-        )
+    # Build manifest in chunk order
+    manifest = {
+        "chapter": chapter_number,
+        "voice": voice,
+        "chunks": [],
+    }
+    for r in results:
+        entry = dict(r)
+        del entry["chunk_idx"]
+        manifest["chunks"].append(entry)
 
     # Write manifest
     manifest_path = os.path.join(output_dir, f"{chapter_str}-manifest.json")
@@ -205,6 +263,18 @@ def main():
         default="Charon",
         help="Chirp3 HD voice name (default: Charon)",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=DEFAULT_WORKERS,
+        help=f"Max parallel workers (default: {DEFAULT_WORKERS})",
+    )
+    parser.add_argument(
+        "--stt-provider",
+        choices=["deepgram", "google"],
+        default=None,
+        help="STT provider (default: from env or deepgram)",
+    )
     args = parser.parse_args()
 
     with open(args.segments, "r") as f:
@@ -214,7 +284,9 @@ def main():
           f"{len(segments)} segments, voice={args.voice}")
 
     manifest = generate_chapter(
-        segments, args.output_dir, args.chapter, voice=args.voice
+        segments, args.output_dir, args.chapter,
+        voice=args.voice, max_workers=args.workers,
+        stt_provider=args.stt_provider,
     )
 
     total_ms = sum(c["duration_ms"] for c in manifest["chunks"])

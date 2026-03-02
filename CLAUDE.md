@@ -63,7 +63,9 @@ A **segment** is a sentence (prose) or line (poetry). Segments are the smallest 
 ### Audio
 Audio is **one MP3 file per chapter** (e.g. `data/iliad/audio/01.mp3`). Internally, TTS is called in ~1800-char chunks (due to API limits), then the chunks are merged via ffmpeg concat into a single file. Word-level timestamps are offset to match the merged file's timeline.
 
-Audio metadata lives directly on the `chapters` table: `audio_file` (path), `audio_duration_ms`, and `word_timestamps` (JSON). The frontend loads these for the synced reading cursor.
+Chapter-level audio metadata (`audio_file`, `audio_duration_ms`) lives on the `chapters` table. Word-level timestamps live on each **segment** row:
+- `audio_start_ms` / `audio_end_ms` — when the segment starts/ends in the chapter MP3
+- `word_timestamps` (JSON) — `[{start_ms, end_ms, char_start, char_end}]` where `char_start`/`char_end` are character indices into `segments.text` (no duplicated word strings)
 
 ### Database schema
 Defined in `schema.sql`. Tables: `books`, `chapters`, `segments`. See `.claude/skills/database/SKILL.md` for full reference.
@@ -91,13 +93,11 @@ src/
     page.tsx                  ← Home page (book grid)
     globals.css               ← CSS variables / theme
     [bookId]/
-      read/page.tsx           ← Reader view (fetches from API)
-      listen/page.tsx         ← Listener view (audio + synced text)
-      chat/page.tsx           ← Chat view (placeholder)
+      page.tsx                ← Unified book view (text + audio player + chat bubble)
     api/
       books/[bookId]/         ← Book + chapter metadata
       audio/[...path]/        ← Streams MP3 files from data/
-  components/                 ← Flat: BookCard, TabBar, ChapterNav, AudioPlayer, etc.
+  components/                 ← Flat: BookCard, ChapterNav, AudioPlayer, ChatBubble, etc.
   lib/db.ts                   ← SQLite connection (readonly) + typed query helpers
   data/books.ts               ← Book/chapter list for navigation (will be replaced by DB queries)
 
@@ -119,6 +119,6 @@ logs/
 
 ## Known Issues / TODO
 - `src/data/books.ts` still used for navigation (chapter list, home page). Should be replaced by DB queries so adding a book doesn't require editing TS.
-- Listen page: word-level highlighting not yet implemented (currently paragraph-level only).
+- Word-level highlighting implemented; uses `word_timestamps` on segments with char indices.
 - `_mp3_duration_ms()` in `tts.py` undercounts after ffmpeg concat — always use `ffprobe` for merged file duration.
 - Fagles/Lattimore translations are NOT public domain (post-1928) — only Butler, Jowett, and similar old translations work.

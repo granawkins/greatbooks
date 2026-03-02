@@ -17,6 +17,7 @@ import argparse
 import os
 import struct
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -31,23 +32,26 @@ from google.cloud import texttospeech_v1beta1 as texttospeech
 # Max input characters for Chirp3 HD
 MAX_INPUT_CHARS = 2000
 
-# Lazy-loaded client
+# Lazy-loaded client (thread-safe init)
 _client = None
+_client_lock = threading.Lock()
 
 
 def _get_client():
     global _client
     if _client is None:
-        creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
-        if creds_path:
-            _client = texttospeech.TextToSpeechClient.from_service_account_json(
-                creds_path
-            )
-        else:
-            api_key = os.environ.get("GOOGLE_API_KEY", "")
-            _client = texttospeech.TextToSpeechClient(
-                client_options={"api_key": api_key}
-            )
+        with _client_lock:
+            if _client is None:
+                creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
+                if creds_path:
+                    _client = texttospeech.TextToSpeechClient.from_service_account_json(
+                        creds_path
+                    )
+                else:
+                    api_key = os.environ.get("GOOGLE_API_KEY", "")
+                    _client = texttospeech.TextToSpeechClient(
+                        client_options={"api_key": api_key}
+                    )
     return _client
 
 

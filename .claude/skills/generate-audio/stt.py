@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 """
-Speech-to-text transcription + word alignment using Google STT.
+Speech-to-text transcription + word alignment.
+
+Supports two providers:
+  - deepgram (default): Deepgram Nova-3, ~10ms precision, $0.0043/min
+  - google: Google STT latest_long, ~100ms precision, $0.016/min
 
 Usage:
     # Transcribe only (raw STT words)
     python stt.py --audio chunk.mp3
+    python stt.py --audio chunk.mp3 --provider google
 
     # Transcribe and align to source segments
     python stt.py --audio chunk.mp3 --segments '[{"id": 1, "text": "Hello world"}]' --output timestamps.json
 
 Requires:
-    - google-cloud-speech
-    - python-dotenv
-    - GOOGLE_APPLICATION_CREDENTIALS in .env (path to service account JSON)
+    - httpx, python-dotenv
+    - DEEPGRAM_API_KEY in .env (for deepgram provider)
+    - google-cloud-speech + GOOGLE_APPLICATION_CREDENTIALS in .env (for google provider)
 """
 
 import argparse
@@ -20,6 +25,7 @@ import json
 import os
 import re
 import sys
+import threading
 from pathlib import Path
 
 # Load .env from project root
@@ -28,22 +34,67 @@ from dotenv import load_dotenv
 _project_root = Path(__file__).resolve().parents[3]
 load_dotenv(_project_root / ".env")
 
-from google.cloud import speech
-
-# Lazy-loaded client
-_client = None
+DEFAULT_PROVIDER = os.environ.get("STT_PROVIDER", "deepgram")
 
 
-def _get_client():
-    global _client
-    if _client is None:
-        creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
-        if creds_path:
-            _client = speech.SpeechClient.from_service_account_json(creds_path)
-        else:
-            api_key = os.environ.get("GOOGLE_API_KEY", "")
-            _client = speech.SpeechClient(client_options={"api_key": api_key})
-    return _client
+# ── Provider: Deepgram ─────────────────────────────────────────────────────
+
+def _transcribe_deepgram(audio_path: str) -> list[dict]:
+    """Transcribe via Deepgram Nova-3. Returns [{"word", "start", "end"}] (seconds)."""
+    import httpx
+
+    api_key = os.environ.get("DEEPGRAM_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("DEEPGRAM_API_KEY not set in environment")
+
+    with open(audio_path, "rb") as f:
+        audio_data = f.read()
+
+    response = httpx.post(
+        "https://api.deepgram.com/v1/listen?model=nova-3&smart_format=false&punctuate=true",
+        headers={
+            "Authorization": f"Token {api_key}",
+            "Content-Type": "audio/mp3",
+        },
+        content=audio_data,
+        timeout=60.0,
+    )
+    response.raise_for_status()
+    data = response.json()
+
+    words = []
+    for w in data["results"]["channels"][0]["alternatives"][0]["words"]:
+        words.append({
+            "word": w["word"],
+            "start": float(w["start"]),
+            "end": float(w["end"]),
+        })
+
+    # Log cost
+    _log_cost(words, audio_path, provider="deepgram", model="nova-3", cost_per_min=0.0043)
+    return words
+
+
+# ── Provider: Google ───────────────────────────────────────────────────────
+
+# Lazy-loaded client (thread-safe init)
+_google_client = None
+_google_lock = threading.Lock()
+
+
+def _get_google_client():
+    global _google_client
+    if _google_client is None:
+        with _google_lock:
+            if _google_client is None:
+                from google.cloud import speech
+                creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
+                if creds_path:
+                    _google_client = speech.SpeechClient.from_service_account_json(creds_path)
+                else:
+                    api_key = os.environ.get("GOOGLE_API_KEY", "")
+                    _google_client = speech.SpeechClient(client_options={"api_key": api_key})
+    return _google_client
 
 
 def _parse_duration(duration) -> float:
@@ -55,17 +106,11 @@ def _parse_duration(duration) -> float:
     return float(seconds) + nanos / 1e9
 
 
-def transcribe(audio_path: str) -> list[dict]:
-    """
-    Run Google STT on an audio file and return word-level timestamps.
+def _transcribe_google(audio_path: str) -> list[dict]:
+    """Transcribe via Google STT. Returns [{"word", "start", "end"}] (seconds)."""
+    from google.cloud import speech
 
-    Args:
-        audio_path: Path to an MP3 file
-
-    Returns:
-        List of {"word": str, "start": float, "end": float} (times in seconds)
-    """
-    client = _get_client()
+    client = _get_google_client()
 
     with open(audio_path, "rb") as f:
         audio_content = f.read()
@@ -84,23 +129,28 @@ def transcribe(audio_path: str) -> list[dict]:
     words = []
     for result in response.results:
         for word_info in result.alternatives[0].words:
-            words.append(
-                {
-                    "word": word_info.word,
-                    "start": _parse_duration(word_info.start_time),
-                    "end": _parse_duration(word_info.end_time),
-                }
-            )
+            words.append({
+                "word": word_info.word,
+                "start": _parse_duration(word_info.start_time),
+                "end": _parse_duration(word_info.end_time),
+            })
 
     # Log cost
+    _log_cost(words, audio_path, provider="google", model="chirp2", cost_per_min=0.016)
+    return words
+
+
+# ── Shared cost logging ────────────────────────────────────────────────────
+
+def _log_cost(words, audio_path, provider, model, cost_per_min):
     try:
         audio_duration_s = words[-1]["end"] if words else 0.0
         sys.path.insert(0, str(_project_root))
         from logs.cost_log import log_cost
         log_cost(
             api="stt",
-            provider="google",
-            model="chirp2",
+            provider=provider,
+            model=model,
             input_units=round(audio_duration_s, 1),
             input_unit_type="seconds",
             entity_type="book",
@@ -108,9 +158,29 @@ def transcribe(audio_path: str) -> list[dict]:
             meta={"audio_path": audio_path},
         )
     except Exception:
-        pass  # Don't let logging failures block transcription
+        pass
 
-    return words
+
+# ── Public API ─────────────────────────────────────────────────────────────
+
+def transcribe(audio_path: str, provider: str | None = None) -> list[dict]:
+    """
+    Transcribe an audio file and return word-level timestamps.
+
+    Args:
+        audio_path: Path to an MP3 file
+        provider: "deepgram" or "google" (default from STT_PROVIDER env or "deepgram")
+
+    Returns:
+        List of {"word": str, "start": float, "end": float} (times in seconds)
+    """
+    p = provider or DEFAULT_PROVIDER
+    if p == "deepgram":
+        return _transcribe_deepgram(audio_path)
+    elif p == "google":
+        return _transcribe_google(audio_path)
+    else:
+        raise ValueError(f"Unknown STT provider: {p}")
 
 
 # ── Needleman-Wunsch word alignment ─────────────────────────────────────────
@@ -166,6 +236,25 @@ def _score(orig_norm: str, stt_norm: str) -> int:
     return _MISMATCH
 
 
+def _compute_char_indices(tokens: list[str], text: str) -> list[tuple[int, int]]:
+    """
+    Find (char_start, char_end) for each token within segment text.
+
+    Searches sequentially so duplicate words resolve correctly.
+    """
+    indices = []
+    search_from = 0
+    for token in tokens:
+        pos = text.find(token, search_from)
+        if pos == -1:
+            # Fallback: token not found (shouldn't happen with _tokenize)
+            indices.append((search_from, search_from + len(token)))
+        else:
+            indices.append((pos, pos + len(token)))
+            search_from = pos + len(token)
+    return indices
+
+
 def align(stt_words: list[dict], segments: list[dict]) -> list[dict]:
     """
     Align STT word timestamps to original text segments using
@@ -176,19 +265,29 @@ def align(stt_words: list[dict], segments: list[dict]) -> list[dict]:
         segments: [{"id": int, "text": str}]
 
     Returns:
-        [{"segment_id": int, "words": [{"text": str, "start_ms": int, "end_ms": int}]}]
+        [{
+            "segment_id": int,
+            "audio_start_ms": int,
+            "audio_end_ms": int,
+            "words": [{"start_ms": int, "end_ms": int, "char_start": int, "char_end": int}]
+        }]
     """
     # Build flat token list with segment mapping
     all_tokens = []
     token_seg_idx = []  # which segment index each token belongs to
+    seg_token_lists = []  # tokens per segment, for char index computation
     for seg_i, seg in enumerate(segments):
         tokens = _tokenize(seg["text"])
+        seg_token_lists.append(tokens)
         for t in tokens:
             all_tokens.append(t)
             token_seg_idx.append(seg_i)
 
     if not all_tokens or not stt_words:
-        return [{"segment_id": seg["id"], "words": []} for seg in segments]
+        return [
+            {"segment_id": seg["id"], "audio_start_ms": 0, "audio_end_ms": 0, "words": []}
+            for seg in segments
+        ]
 
     n = len(all_tokens)
     m = len(stt_words)
@@ -233,10 +332,11 @@ def align(stt_words: list[dict], segments: list[dict]) -> list[dict]:
     matches.reverse()
 
     # ── Build per-token timestamps with interpolation ────────────────────
+    # Keep full float precision until final output
     match_map = {oi: si for oi, si in matches}
     total_duration = stt_words[-1]["end"] if stt_words else 0.0
 
-    token_timestamps = []
+    token_timestamps = []  # list of (start_s, end_s) per token (float seconds)
     prev_match_orig = -1
     prev_match_stt = -1
     next_ptr = 0
@@ -247,13 +347,10 @@ def align(stt_words: list[dict], segments: list[dict]) -> list[dict]:
 
         stt_idx = match_map.get(k)
         if stt_idx is not None:
-            token_timestamps.append(
-                {
-                    "text": all_tokens[k],
-                    "start_ms": int(stt_words[stt_idx]["start"] * 1000),
-                    "end_ms": int(stt_words[stt_idx]["end"] * 1000),
-                }
-            )
+            token_timestamps.append((
+                stt_words[stt_idx]["start"],
+                stt_words[stt_idx]["end"],
+            ))
             prev_match_orig = k
             prev_match_stt = stt_idx
         else:
@@ -272,35 +369,66 @@ def align(stt_words: list[dict], segments: list[dict]) -> list[dict]:
             pos = k - prev_idx
             tpt = (next_time - prev_time) / span if span > 0 else 0
 
-            token_timestamps.append(
-                {
-                    "text": all_tokens[k],
-                    "start_ms": int(max(0, prev_time + (pos - 0.5) * tpt) * 1000),
-                    "end_ms": int((prev_time + (pos + 0.5) * tpt) * 1000),
-                }
-            )
+            token_timestamps.append((
+                max(0.0, prev_time + (pos - 0.5) * tpt),
+                prev_time + (pos + 0.5) * tpt,
+            ))
 
-    # ── Group by segment ─────────────────────────────────────────────────
-    result = [{"segment_id": seg["id"], "words": []} for seg in segments]
-    for k, ts in enumerate(token_timestamps):
-        seg_i = token_seg_idx[k]
-        result[seg_i]["words"].append(ts)
+    # ── Group by segment with char indices ────────────────────────────────
+    seg_char_indices = []
+    for seg_i, seg in enumerate(segments):
+        seg_char_indices.append(
+            _compute_char_indices(seg_token_lists[seg_i], seg["text"])
+        )
+
+    result = []
+    token_offset = 0
+    for seg_i, seg in enumerate(segments):
+        seg_tokens = seg_token_lists[seg_i]
+        char_indices = seg_char_indices[seg_i]
+        words = []
+        for j, _token in enumerate(seg_tokens):
+            k = token_offset + j
+            start_s, end_s = token_timestamps[k]
+            char_start, char_end = char_indices[j]
+            words.append({
+                "start_ms": round(start_s * 1000),
+                "end_ms": round(end_s * 1000),
+                "char_start": char_start,
+                "char_end": char_end,
+            })
+
+        audio_start = words[0]["start_ms"] if words else 0
+        audio_end = words[-1]["end_ms"] if words else 0
+        result.append({
+            "segment_id": seg["id"],
+            "audio_start_ms": audio_start,
+            "audio_end_ms": audio_end,
+            "words": words,
+        })
+        token_offset += len(seg_tokens)
 
     return result
 
 
-def transcribe_and_align(audio_path: str, segments: list[dict]) -> list[dict]:
+def transcribe_and_align(audio_path: str, segments: list[dict], provider: str | None = None) -> list[dict]:
     """
     Convenience: transcribe audio then align words to segments.
 
     Args:
         audio_path: Path to MP3 file
         segments: [{"id": int, "text": str}]
+        provider: "deepgram" or "google" (default from env)
 
     Returns:
-        [{"segment_id": int, "words": [{"text": str, "start_ms": int, "end_ms": int}]}]
+        [{
+            "segment_id": int,
+            "audio_start_ms": int,
+            "audio_end_ms": int,
+            "words": [{"start_ms": int, "end_ms": int, "char_start": int, "char_end": int}]
+        }]
     """
-    stt_words = transcribe(audio_path)
+    stt_words = transcribe(audio_path, provider=provider)
     return align(stt_words, segments)
 
 
@@ -315,13 +443,19 @@ def main():
         "If omitted, outputs raw STT words only.",
     )
     parser.add_argument("--output", help="Output JSON path (default: stdout)")
+    parser.add_argument(
+        "--provider",
+        choices=["deepgram", "google"],
+        default=None,
+        help=f"STT provider (default: {DEFAULT_PROVIDER})",
+    )
     args = parser.parse_args()
 
     if args.segments:
         segments = json.loads(args.segments)
-        result = transcribe_and_align(args.audio, segments)
+        result = transcribe_and_align(args.audio, segments, provider=args.provider)
     else:
-        result = transcribe(args.audio)
+        result = transcribe(args.audio, provider=args.provider)
 
     output_json = json.dumps(result, indent=2)
 

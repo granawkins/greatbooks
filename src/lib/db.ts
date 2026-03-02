@@ -28,7 +28,6 @@ export type ChapterRow = {
   title: string;
   audio_file: string | null;
   audio_duration_ms: number | null;
-  word_timestamps: string | null; // JSON string
 };
 
 export type SegmentRow = {
@@ -38,17 +37,16 @@ export type SegmentRow = {
   text: string;
   segment_type: "heading" | "text" | "section_break";
   group_number: number | null;
+  audio_start_ms: number | null;
+  audio_end_ms: number | null;
+  word_timestamps: string | null; // JSON string
 };
 
 export type WordTimestamp = {
-  text: string;
   start_ms: number;
   end_ms: number;
-};
-
-export type SegmentTimestamps = {
-  segment_id: number;
-  words: WordTimestamp[];
+  char_start: number;
+  char_end: number;
 };
 
 // -- Query helpers --

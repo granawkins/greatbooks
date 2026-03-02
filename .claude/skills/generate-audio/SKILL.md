@@ -69,7 +69,12 @@ words = transcribe("chunk.mp3")
 
 # Align to segments
 result = transcribe_and_align("chunk.mp3", [{"id": 1, "text": "Hello world"}])
-# Returns [{"segment_id": int, "words": [{"text": str, "start_ms": int, "end_ms": int}]}]
+# Returns [{
+#   "segment_id": int,
+#   "audio_start_ms": int,
+#   "audio_end_ms": int,
+#   "words": [{"start_ms": int, "end_ms": int, "char_start": int, "char_end": int}]
+# }]
 ```
 
 ### generate_chapter.py — Chapter Orchestrator
@@ -134,11 +139,19 @@ Write a Python script that:
 
 ### 4. Store in database
 ```sql
+-- Chapter-level: audio file and duration
 UPDATE chapters
 SET audio_file = 'data/<BOOK_ID>/audio/<NN>.mp3',
-    audio_duration_ms = <DURATION_FROM_FFPROBE>,
-    word_timestamps = '<MERGED_TIMESTAMPS_JSON>'
+    audio_duration_ms = <DURATION_FROM_FFPROBE>
 WHERE book_id = '<BOOK_ID>' AND number = <CHAPTER_NUM>;
+
+-- Segment-level: timestamps (from merged manifest)
+-- For each segment entry in the merged word_timestamps:
+UPDATE segments
+SET audio_start_ms = <SEGMENT_START>,
+    audio_end_ms = <SEGMENT_END>,
+    word_timestamps = '<WORDS_JSON>'  -- [{start_ms, end_ms, char_start, char_end}]
+WHERE id = <SEGMENT_ID>;
 ```
 
 ### 5. Update book SKILL.md and check costs
