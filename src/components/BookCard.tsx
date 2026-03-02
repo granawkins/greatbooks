@@ -3,7 +3,7 @@ import type { Book } from "@/data/books";
 
 export default function BookCard({ book }: { book: Book }) {
   return (
-    <Link href={`/${book.id}/read`} className="block group">
+    <Link href={`/${book.id}`} className="block group">
       <div
         className="rounded-[var(--radius-lg)] border overflow-hidden transition-shadow hover:shadow-lg"
         style={{

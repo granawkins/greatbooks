@@ -135,7 +135,7 @@ Write a Python script that:
 - Runs `ffmpeg -y -f concat -safe 0 -i concat.txt -c copy <NN>.mp3`
 - Offsets all word timestamps by cumulative chunk durations
 - Gets real duration via `ffprobe -v quiet -show_entries format=duration -of csv=p=0 <NN>.mp3`
-- Writes updated manifest and deletes chunk MP3s
+- Deletes chunk MP3s
 
 ### 4. Store in database
 ```sql
@@ -154,7 +154,10 @@ SET audio_start_ms = <SEGMENT_START>,
 WHERE id = <SEGMENT_ID>;
 ```
 
-### 5. Update book SKILL.md and check costs
+### 5. Clean up manifest
+Delete the `<NN>-manifest.json` — it's now redundant with the DB.
+
+### 6. Update book SKILL.md and check costs
 
 ## Audio Chunking Strategy (Internal)
 

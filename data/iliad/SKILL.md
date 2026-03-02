@@ -23,4 +23,5 @@
 - None added yet
 
 ## Audio Status
-- **Book I**: generated (15.1 min, voice: Charon, $1.03 TTS+STT)
+- **Book I**: generated (30.2 min, voice: Charon, $1.03 TTS+STT)
+- **Book II**: generated (43.5 min, voice: Charon, $2.05 TTS+STT)
