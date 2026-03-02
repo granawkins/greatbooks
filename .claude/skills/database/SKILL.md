@@ -18,9 +18,8 @@ sqlite3 greatbooks.db < schema.sql
 ## Schema Overview
 
 - **books** — one row per book (id is a slug like `iliad`)
-- **chapters** — ordered by `number` within a book
+- **chapters** — ordered by `number` within a book. Audio columns (`audio_file`, `audio_duration_ms`, `word_timestamps`) are NULL until audio is generated.
 - **segments** — the atomic text unit. A sentence (prose) or line (poetry). Ordered by `sequence` within a chapter. Grouped into paragraphs/stanzas by `group_number`.
-- **audio_chunks** — one audio file per chunk (~4 paragraphs). Maps to a segment range via `start_segment_id` / `end_segment_id`. Word-level timestamps stored as JSON.
 
 ## Segment Types
 
@@ -44,9 +43,10 @@ SELECT * FROM chapters WHERE book_id = ? ORDER BY number;
 SELECT * FROM segments WHERE chapter_id = ? ORDER BY sequence;
 ```
 
-### Get audio chunks with timestamps for a chapter
+### Get audio info for a chapter
 ```sql
-SELECT * FROM audio_chunks WHERE chapter_id = ? ORDER BY chunk_number;
+SELECT audio_file, audio_duration_ms, word_timestamps
+FROM chapters WHERE book_id = ? AND number = ?;
 ```
 
 ### Full-text search within a book
@@ -64,4 +64,5 @@ ORDER BY c.number, s.sequence;
 - Book IDs are lowercase slugs: `iliad`, `odyssey`, `republic`, `paradise-lost`
 - Segment sequences are 1-indexed, contiguous within a chapter
 - Group numbers are 1-indexed, contiguous within a chapter
-- Audio chunk file paths are relative to the project root: `data/iliad/audio/01-001.mp3`
+- Audio file paths are relative to the project root: `data/iliad/audio/01.mp3`
+- Word timestamps JSON format: `[{segment_id, words: [{text, start_ms, end_ms}]}]`

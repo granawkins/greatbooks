@@ -25,7 +25,7 @@ GOOGLE_APPLICATION_CREDENTIALS=/path/to/google-credentials.json
 
 ### tts.py — Text-to-Speech
 
-Generates MP3 audio from text using Google Chirp3 HD.
+Generates MP3 audio from text using Google Chirp3 HD. Includes retry with backoff for transient errors.
 
 **CLI:**
 ```bash
@@ -74,7 +74,7 @@ result = transcribe_and_align("chunk.mp3", [{"id": 1, "text": "Hello world"}])
 
 ### generate_chapter.py — Chapter Orchestrator
 
-Chunks segments by paragraph boundaries, runs TTS + STT for each chunk, outputs MP3s and a manifest.
+Chunks segments by paragraph boundaries, runs TTS + STT for each chunk. Skips chunks whose MP3 already exists (resumable).
 
 **CLI:**
 ```bash
@@ -93,33 +93,75 @@ manifest = generate_chapter(segments, "data/iliad/audio/", chapter_number=1, voi
 
 Input segments JSON: `[{"id", "sequence", "text", "segment_type", "group_number"}]`
 
-Output: MP3 files (`01-001.mp3`, `01-002.mp3`, ...) and `01-manifest.json`.
+Output: Per-chunk MP3 files (`01-001.mp3`, ...) and `01-manifest.json`.
 
 ## Workflow
 
-1. **Load chapter segments from the database** — query all segments for the target chapter(s)
-2. **Export segments to JSON** — `generate_chapter.py` expects `[{"id", "sequence", "text", "segment_type", "group_number"}]`
-3. **Run generate_chapter.py** — produces MP3 files + manifest
-4. **Store results** — insert `audio_chunks` rows from the manifest (file paths, durations, word timestamps)
-5. **Update book SKILL.md** — note which chapters now have audio
+### 1. Export segments from DB
+```bash
+python3 -c "
+import sqlite3, json
+conn = sqlite3.connect('greatbooks.db')
+rows = conn.execute('''
+    SELECT s.id, s.sequence, s.text, s.segment_type, s.group_number
+    FROM segments s JOIN chapters c ON s.chapter_id = c.id
+    WHERE c.book_id = '<BOOK_ID>' AND c.number = <CHAPTER_NUM>
+    ORDER BY s.sequence
+''').fetchall()
+segments = [{'id':r[0],'sequence':r[1],'text':r[2],'segment_type':r[3],'group_number':r[4]} for r in rows]
+with open('/tmp/segments.json','w') as f: json.dump(segments, f)
+print(f'{len(segments)} segments')
+"
+```
 
-## Audio Chunking Strategy
+### 2. Generate TTS chunks
+```bash
+GREATBOOKS_ENTITY_ID=<BOOK_ID> python3 .claude/skills/generate-audio/generate_chapter.py \
+  --segments /tmp/segments.json \
+  --output-dir data/<BOOK_ID>/audio/ \
+  --chapter <CHAPTER_NUM> \
+  --voice Charon
+```
 
-Audio chunks break on **structural boundaries only** — never mid-paragraph:
+### 3. Merge chunks + get accurate duration
+Write a Python script that:
+- Reads the manifest (`<NN>-manifest.json`)
+- Creates ffmpeg concat file from chunk MP3s
+- Runs `ffmpeg -y -f concat -safe 0 -i concat.txt -c copy <NN>.mp3`
+- Offsets all word timestamps by cumulative chunk durations
+- Gets real duration via `ffprobe -v quiet -show_entries format=duration -of csv=p=0 <NN>.mp3`
+- Writes updated manifest and deletes chunk MP3s
+
+### 4. Store in database
+```sql
+UPDATE chapters
+SET audio_file = 'data/<BOOK_ID>/audio/<NN>.mp3',
+    audio_duration_ms = <DURATION_FROM_FFPROBE>,
+    word_timestamps = '<MERGED_TIMESTAMPS_JSON>'
+WHERE book_id = '<BOOK_ID>' AND number = <CHAPTER_NUM>;
+```
+
+### 5. Update book SKILL.md and check costs
+
+## Audio Chunking Strategy (Internal)
+
+TTS has a 2000-character limit, so text is chunked for API calls:
 
 1. Collect paragraphs (groups of segments with the same `group_number`)
-2. Accumulate paragraphs until reaching ~1800 chars (90% of TTS limit) or a section/chapter break
-3. Section breaks and headings always start a new chunk
-4. Each chunk becomes one MP3 file, one TTS call, and one STT call
+2. Accumulate paragraphs until reaching ~1800 chars (soft limit) or a section/chapter break
+3. Hard-break at 2000 chars even mid-paragraph if needed
+4. Section breaks and headings always start a new chunk
+5. Each chunk = one TTS call + one STT call
+6. After all chunks are generated, they are **merged into a single MP3 per chapter**
 
 ## Audio File Naming
 
+Final output (one file per chapter):
 ```
-<chapter_number>-<chunk_number>.mp3
+data/<book-id>/audio/<chapter_number>.mp3
+data/<book-id>/audio/<chapter_number>-manifest.json
 ```
-Example: `data/iliad/audio/01-001.mp3` (chapter 1, chunk 1)
-
-Manifest: `data/iliad/audio/01-manifest.json`
+Example: `data/iliad/audio/01.mp3`, `data/iliad/audio/01-manifest.json`
 
 ## TTS Configuration
 
@@ -127,3 +169,8 @@ Manifest: `data/iliad/audio/01-manifest.json`
 - **Default voice**: Charon
 - **Format**: MP3, 24kHz
 - **Max input**: 2000 characters per call
+- **Retry**: 3 attempts with exponential backoff on 503/UNAVAILABLE
+
+## Cost Tracking
+
+Both `tts.py` and `stt.py` automatically log to `logs/api_costs.jsonl` via `logs/cost_log.py`. Set the `GREATBOOKS_ENTITY_ID` environment variable to tag calls with the book id.

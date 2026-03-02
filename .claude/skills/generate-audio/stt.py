@@ -92,6 +92,24 @@ def transcribe(audio_path: str) -> list[dict]:
                 }
             )
 
+    # Log cost
+    try:
+        audio_duration_s = words[-1]["end"] if words else 0.0
+        sys.path.insert(0, str(_project_root))
+        from logs.cost_log import log_cost
+        log_cost(
+            api="stt",
+            provider="google",
+            model="chirp2",
+            input_units=round(audio_duration_s, 1),
+            input_unit_type="seconds",
+            entity_type="book",
+            entity_id=os.environ.get("GREATBOOKS_ENTITY_ID"),
+            meta={"audio_path": audio_path},
+        )
+    except Exception:
+        pass  # Don't let logging failures block transcription
+
     return words
 
 

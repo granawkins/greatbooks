@@ -38,7 +38,8 @@ from stt import transcribe_and_align
 def chunk_segments(segments: list[dict], max_chars: int = None) -> list[list[dict]]:
     """
     Group segments into chunks suitable for TTS, breaking on paragraph
-    and section boundaries. Never splits mid-paragraph.
+    and section boundaries. Prefers paragraph boundaries but will break
+    mid-paragraph to respect the hard character limit.
 
     Each chunk is a list of segments whose combined text fits within max_chars.
 
@@ -51,6 +52,8 @@ def chunk_segments(segments: list[dict], max_chars: int = None) -> list[list[dic
     """
     if max_chars is None:
         max_chars = int(MAX_INPUT_CHARS * 0.9)
+
+    hard_limit = MAX_INPUT_CHARS
 
     chunks = []
     current_chunk = []
@@ -68,18 +71,22 @@ def chunk_segments(segments: list[dict], max_chars: int = None) -> list[list[dic
         # New paragraph (different group_number)
         is_new_paragraph = group != current_group and current_group is not None
 
-        # Would this segment push us over the limit?
-        added_len = len(seg_text) + (2 if current_len > 0 else 0)  # \n\n separator
-        would_overflow = current_len + added_len > max_chars
+        # Would this segment push us over the limits?
+        added_len = len(seg_text) + (1 if current_len > 0 else 0)  # space separator
+        would_overflow_soft = current_len + added_len > max_chars
+        would_overflow_hard = current_len + added_len > hard_limit
 
-        # Start new chunk if: boundary, or overflow at a paragraph boundary
-        if current_chunk and (is_boundary or (would_overflow and is_new_paragraph)):
+        # Start new chunk if:
+        # - structural boundary (section break / heading)
+        # - soft overflow at a paragraph boundary (preferred break point)
+        # - hard overflow (must break, even mid-paragraph)
+        if current_chunk and (is_boundary or (would_overflow_soft and is_new_paragraph) or would_overflow_hard):
             chunks.append(current_chunk)
             current_chunk = []
             current_len = 0
 
         # If a single segment overflows, it gets its own chunk
-        if not current_chunk and len(seg_text) > max_chars:
+        if not current_chunk and len(seg_text) > hard_limit:
             chunks.append([seg])
             current_group = group
             continue
@@ -97,16 +104,8 @@ def chunk_segments(segments: list[dict], max_chars: int = None) -> list[list[dic
 
 
 def chunk_text(chunk: list[dict]) -> str:
-    """Join segment texts in a chunk, separating paragraphs with blank lines."""
-    parts = []
-    prev_group = None
-    for seg in chunk:
-        group = seg.get("group_number")
-        if prev_group is not None and group != prev_group:
-            parts.append("")  # blank line between paragraphs
-        parts.append(seg.get("text", ""))
-        prev_group = group
-    return "\n".join(parts)
+    """Join segment texts in a chunk, adding space between sentences."""
+    return " ".join(seg.get("text", "") for seg in chunk if seg.get("text"))
 
 
 def generate_chapter(
@@ -145,9 +144,14 @@ def generate_chapter(
         print(f"  Chunk {chunk_num}/{len(chunks)}: {len(text)} chars, "
               f"segments {seg_ids[0]}-{seg_ids[-1]}")
 
-        # TTS
-        tts_result = generate(text, filepath, voice=voice)
-        print(f"    TTS: {tts_result['duration_ms']}ms")
+        # TTS — skip if MP3 already exists
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
+            from tts import _mp3_duration_ms
+            tts_result = {"file_path": filepath, "duration_ms": _mp3_duration_ms(filepath)}
+            print(f"    TTS: skipped (exists, {tts_result['duration_ms']}ms)")
+        else:
+            tts_result = generate(text, filepath, voice=voice)
+            print(f"    TTS: {tts_result['duration_ms']}ms")
 
         # STT + alignment
         align_segments = [{"id": s["id"], "text": s["text"]} for s in chunk_segs]

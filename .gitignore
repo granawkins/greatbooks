@@ -26,9 +26,16 @@
 
 # database
 greatbooks.db
+greatbooks.db-shm
+greatbooks.db-wal
 
-# corpus data (audio, raw HTML, commentary, per-book SKILL.md)
-/data/
+# corpus data (audio, raw HTML, commentary)
+/data/*/raw/
+/data/*/audio/
+/data/*/commentary/
+
+# api cost logs
+/logs/
 
 # debug
 npm-debug.log*
@@ -38,6 +45,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+__pycache__
 
 # google cloud credentials
 google-credentials.json

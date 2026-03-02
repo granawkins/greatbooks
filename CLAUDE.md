@@ -37,7 +37,7 @@ Combine the best of Audible + Kindle + ChatGPT voice-mode into one elegant inter
 - **Next.js 16** with App Router and TypeScript
 - **Tailwind CSS 4** for layout/utility classes
 - **CSS custom properties** in `globals.css` for themeable colors/fonts
-- **SQLite** (`greatbooks.db` at project root) via `better-sqlite3`, called directly by API routes
+- **SQLite** (`greatbooks.db` at project root) via `better-sqlite3`, called directly by API routes. **WAL mode** is enabled on the DB file for concurrent access — Next.js opens readonly, Python scripts open read-write. Python writers should set `PRAGMA busy_timeout = 5000` to handle lock contention gracefully.
 - **Python** scripts for content ingestion (parse HTML) and audio generation (TTS/STT); deps in `.claude/skills/generate-audio/requirements.txt`
 - **Google Chirp3 HD** for TTS, **Google STT (Chirp 2)** for word-level timestamp alignment; credentials via `.env` + `google-credentials.json`
 
@@ -48,6 +48,9 @@ Combine the best of Audible + Kindle + ChatGPT voice-mode into one elegant inter
 - **AI-agent backend** — no traditional REST API; Claude skills define the workflows for content management, audio generation, and chat
 - **File + DB hybrid** — structured data (text, timestamps, users) in SQLite; large artifacts (audio files, raw HTML, commentary markdown) on disk in `data/`
 
+## Cost Tracking
+All external API calls (TTS, STT, LLM, image) are logged to `logs/api_costs.jsonl` — one JSON line per call with timestamp, api type, provider, model, input units, estimated cost, and the relevant entity (book or user). The `logs/cost_log.py` module provides `log_cost()` for writing and `summarize()` for reading. TTS and STT scripts log automatically; any new API integration should import and call `log_cost()`. Set `GREATBOOKS_ENTITY_ID` env var to tag calls with the relevant book id.
+
 ## Data Model
 
 ### Segment — the atomic text unit
@@ -57,13 +60,13 @@ A **segment** is a sentence (prose) or line (poetry). Segments are the smallest 
 - Segments with the same `group_number` form a **paragraph** (prose) or **stanza** (poetry)
 - `segment_type` controls rendering: `text` (normal), `heading` (subheading), `section_break` (visual divider)
 
-### Audio chunking
-Audio is generated in chunks of ~4 paragraphs, breaking only on structural boundaries (paragraph, section, or chapter breaks). Never mid-paragraph. Each chunk is one TTS API call and one mp3 file.
+### Audio
+Audio is **one MP3 file per chapter** (e.g. `data/iliad/audio/01.mp3`). Internally, TTS is called in ~1800-char chunks (due to API limits), then the chunks are merged via ffmpeg concat into a single file. Word-level timestamps are offset to match the merged file's timeline.
 
-Word-level timestamps are stored as JSON on each audio chunk, mapping words back to their source segments. The frontend loads these for the synced reading cursor.
+Audio metadata lives directly on the `chapters` table: `audio_file` (path), `audio_duration_ms`, and `word_timestamps` (JSON). The frontend loads these for the synced reading cursor.
 
 ### Database schema
-Defined in `schema.sql`. Tables: `books`, `chapters`, `segments`, `audio_chunks`. See `.claude/skills/database/SKILL.md` for full reference.
+Defined in `schema.sql`. Tables: `books`, `chapters`, `segments`. See `.claude/skills/database/SKILL.md` for full reference.
 
 ## Skills
 
@@ -80,54 +83,42 @@ Each book also has a `data/<book-id>/SKILL.md` with provenance, context, and sta
 
 ## Project Structure
 ```
-greatbooks.db                 ← SQLite database
+greatbooks.db                 ← SQLite database (gitignored, created via schema.sql)
 schema.sql                    ← Database schema definition
-.env                          ← Google API credentials (gitignored)
-google-credentials.json       ← Google service account key (gitignored)
-
-data/
-  <book-id>/
-    SKILL.md                  ← Provenance, context, audio status
-    raw/                      ← Original source HTML
-    audio/                    ← Generated TTS audio (mp3)
-    commentary/               ← Scholarly context (markdown)
-
-.claude/skills/
-  add-book/
-    SKILL.md                  ← Workflow instructions
-    parse_html.py             ← HTML → chapters/segments JSON
-  generate-audio/
-    SKILL.md                  ← TTS + timestamp workflow
-    tts.py                    ← Text → MP3 via Google Chirp3 HD (CLI + importable)
-    stt.py                    ← MP3 → word timestamps via Google STT + Needleman-Wunsch alignment (CLI + importable)
-    generate_chapter.py       ← Orchestrator: chunks segments, runs TTS + STT in a loop (CLI + importable)
-    requirements.txt          ← Python dependencies
-  chat/
-    SKILL.md                  ← Chat agent instructions
-  database/
-    SKILL.md                  ← Schema reference + query patterns
 
 src/
   app/
-    layout.tsx                ← Root layout (font, metadata)
     page.tsx                  ← Home page (book grid)
     globals.css               ← CSS variables / theme
     [bookId]/
-      layout.tsx              ← Book layout (back link + title + tab bar)
-      page.tsx                ← Redirects to /read
-      read/page.tsx           ← Reader view
-      listen/page.tsx         ← Listener view
-      chat/page.tsx           ← Chat view
-  components/
-    BookCard.tsx              ← Book card for home grid
-    TabBar.tsx                ← Read/Listen/Chat navigation tabs
-    IconButton.tsx            ← Reusable icon button
-    ChapterNav.tsx            ← Chapter selector sidebar
-    AudioPlayer.tsx           ← Audio player bar
-    ChatMessage.tsx           ← Chat message bubble
-    ChatInput.tsx             ← Chat text input + send button
-  lib/
-    db.ts                     ← SQLite connection + typed query helpers
-  data/
-    books.ts                  ← Book/Chapter types + dummy data (temporary)
+      read/page.tsx           ← Reader view (fetches from API)
+      listen/page.tsx         ← Listener view (audio + synced text)
+      chat/page.tsx           ← Chat view (placeholder)
+    api/
+      books/[bookId]/         ← Book + chapter metadata
+      audio/[...path]/        ← Streams MP3 files from data/
+  components/                 ← Flat: BookCard, TabBar, ChapterNav, AudioPlayer, etc.
+  lib/db.ts                   ← SQLite connection (readonly) + typed query helpers
+  data/books.ts               ← Book/chapter list for navigation (will be replaced by DB queries)
+
+data/<book-id>/
+  SKILL.md                    ← Provenance, context, audio status
+  raw/                        ← Original source HTML
+  audio/                      ← One MP3 per chapter + manifest JSON
+
+logs/
+  cost_log.py                 ← Shared cost-logging utility
+  api_costs.jsonl             ← Append-only API call log (gitignored)
+
+.claude/skills/
+  add-book/                   ← Fetch + parse + insert book text
+  generate-audio/             ← TTS + STT + merge + store audio
+  chat/                       ← Chat agent (placeholder)
+  database/                   ← Schema reference (not user-invocable)
 ```
+
+## Known Issues / TODO
+- `src/data/books.ts` still used for navigation (chapter list, home page). Should be replaced by DB queries so adding a book doesn't require editing TS.
+- Listen page: word-level highlighting not yet implemented (currently paragraph-level only).
+- `_mp3_duration_ms()` in `tts.py` undercounts after ffmpeg concat — always use `ffprobe` for merged file duration.
+- Fagles/Lattimore translations are NOT public domain (post-1928) — only Butler, Jowett, and similar old translations work.

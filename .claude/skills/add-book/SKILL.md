@@ -79,8 +79,11 @@ Follow the schema and conventions in the `database` skill. Assign `sequence` num
 
 ### General Tips
 - Always verify the translation is public domain (pre-1928 US publication)
-- Prefer translations by: Fagles, Lattimore (check dates), Butler, Jowett
+- **Fagles and Lattimore are NOT public domain** — their translations are too recent
+- Safe translators: Butler (Homer), Jowett (Plato), old Project Gutenberg editions
 - Save the raw HTML before processing — we keep it for reference in `data/<book-id>/raw/`
+- Internet Classics Archive often has **one HTML page per chapter** — use `parse_html.py` with a directory arg to parse all at once
+- `parse_html.py` supports `--source classics` for Internet Classics Archive format; `gutenberg` and `perseus` parsers are not yet implemented
 
 ## Writing the Book's SKILL.md
 

@@ -17,6 +17,7 @@ import argparse
 import os
 import struct
 import sys
+import time
 from pathlib import Path
 
 # Load .env from project root
@@ -155,22 +156,50 @@ def generate(text: str, output_path: str, voice: str = "Charon") -> dict:
 
     voice_name = voice[0].upper() + voice[1:].lower()
 
-    response = client.synthesize_speech(
-        input=texttospeech.SynthesisInput(text=text),
-        voice=texttospeech.VoiceSelectionParams(
-            language_code="en-US",
-            name=f"en-US-Chirp3-HD-{voice_name}",
-        ),
-        audio_config=texttospeech.AudioConfig(
-            audio_encoding=texttospeech.AudioEncoding.MP3,
-        ),
-    )
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = client.synthesize_speech(
+                input=texttospeech.SynthesisInput(text=text),
+                voice=texttospeech.VoiceSelectionParams(
+                    language_code="en-US",
+                    name=f"en-US-Chirp3-HD-{voice_name}",
+                ),
+                audio_config=texttospeech.AudioConfig(
+                    audio_encoding=texttospeech.AudioEncoding.MP3,
+                ),
+            )
+            break
+        except Exception as e:
+            if attempt < max_retries - 1 and ("503" in str(e) or "UNAVAILABLE" in str(e)):
+                wait = 2 ** (attempt + 1)
+                print(f"    TTS retry {attempt + 1}/{max_retries} after {wait}s: {e}")
+                time.sleep(wait)
+            else:
+                raise
 
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     with open(output_path, "wb") as f:
         f.write(response.audio_content)
 
     duration_ms = _mp3_duration_ms(output_path)
+
+    # Log cost
+    try:
+        sys.path.insert(0, str(_project_root))
+        from logs.cost_log import log_cost
+        log_cost(
+            api="tts",
+            provider="google",
+            model="chirp3-hd",
+            input_units=len(text),
+            input_unit_type="chars",
+            entity_type="book",
+            entity_id=os.environ.get("GREATBOOKS_ENTITY_ID"),
+            meta={"voice": voice, "duration_ms": duration_ms, "output": output_path},
+        )
+    except Exception:
+        pass  # Don't let logging failures block generation
 
     return {"file_path": output_path, "duration_ms": duration_ms}
 

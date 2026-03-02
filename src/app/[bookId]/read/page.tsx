@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { getBook } from "@/data/books";
 import ChapterNav from "@/components/ChapterNav";
@@ -12,6 +12,20 @@ export default function ReadPage() {
   const [activeChapterId, setActiveChapterId] = useState(
     book?.chapters[0]?.id ?? 1
   );
+  const [paragraphs, setParagraphs] = useState<{ text: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/books/${bookId}/chapters/${activeChapterId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.paragraphs) {
+          setParagraphs(data.paragraphs);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [bookId, activeChapterId]);
 
   if (!book) return null;
 
@@ -57,20 +71,29 @@ export default function ReadPage() {
           {chapter?.title}
         </h2>
 
-        <div className="space-y-4">
-          {chapter?.paragraphs.map((p, i) => (
-            <p
-              key={i}
-              className="text-base leading-7"
-              style={{
-                color: "var(--color-text)",
-                fontFamily: "var(--font-body)",
-              }}
-            >
-              {p}
-            </p>
-          ))}
-        </div>
+        {loading ? (
+          <p
+            className="text-sm"
+            style={{ color: "var(--color-text-secondary)" }}
+          >
+            Loading...
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {paragraphs.map((p, i) => (
+              <p
+                key={i}
+                className="text-base leading-7"
+                style={{
+                  color: "var(--color-text)",
+                  fontFamily: "var(--font-body)",
+                }}
+              >
+                {p.text}
+              </p>
+            ))}
+          </div>
+        )}
       </article>
     </div>
   );

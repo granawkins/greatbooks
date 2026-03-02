@@ -12,7 +12,10 @@ CREATE TABLE IF NOT EXISTS chapters (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   book_id TEXT NOT NULL REFERENCES books(id),
   number INTEGER NOT NULL,
-  title TEXT NOT NULL
+  title TEXT NOT NULL,
+  audio_file TEXT,                      -- relative path to MP3 (NULL if no audio)
+  audio_duration_ms INTEGER,            -- total audio duration in milliseconds
+  word_timestamps JSON                  -- [{segment_id, words: [{text, start_ms, end_ms}]}]
 );
 
 -- A segment is the smallest unit of text: a sentence (prose) or line (poetry).
@@ -26,20 +29,6 @@ CREATE TABLE IF NOT EXISTS segments (
   group_number INTEGER                 -- paragraph/stanza grouping
 );
 
--- Audio is chunked on structural boundaries (~4 paragraphs per chunk).
--- Each chunk maps to a contiguous range of segments.
-CREATE TABLE IF NOT EXISTS audio_chunks (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  chapter_id INTEGER NOT NULL REFERENCES chapters(id),
-  chunk_number INTEGER NOT NULL,
-  start_segment_id INTEGER NOT NULL REFERENCES segments(id),
-  end_segment_id INTEGER NOT NULL REFERENCES segments(id),
-  file_path TEXT NOT NULL,
-  duration_ms INTEGER,
-  word_timestamps JSON                 -- [{segment_id, words: [{text, start_ms, end_ms}]}]
-);
-
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_chapters_book ON chapters(book_id);
 CREATE INDEX IF NOT EXISTS idx_segments_chapter ON segments(chapter_id);
-CREATE INDEX IF NOT EXISTS idx_audio_chapter ON audio_chunks(chapter_id);
