@@ -6,7 +6,9 @@ import IconButton from "./IconButton";
 type AudioPlayerProps = {
   src: string | null;
   durationMs: number | null;
+  initialPositionMs?: number;
   onTimeUpdate?: (timeMs: number) => void;
+  onPause?: (timeMs: number) => void;
 };
 
 function formatTime(ms: number): string {
@@ -21,7 +23,9 @@ const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
 export default function AudioPlayer({
   src,
   durationMs,
+  initialPositionMs,
   onTimeUpdate,
+  onPause,
 }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -54,34 +58,57 @@ export default function AudioPlayer({
     };
   }, [onTimeUpdate]);
 
-  // Reset when src changes
+  // Reset when src changes; seek to initial position if provided
+  const seekedRef = useRef(false);
   useEffect(() => {
     setPlaying(false);
     setCurrentMs(0);
+    seekedRef.current = false;
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
   }, [src]);
 
+  // Seek to initial position once audio is ready
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !initialPositionMs || seekedRef.current) return;
+    const handleCanPlay = () => {
+      if (!seekedRef.current && initialPositionMs > 0) {
+        audio.currentTime = initialPositionMs / 1000;
+        setCurrentMs(initialPositionMs);
+        seekedRef.current = true;
+      }
+    };
+    audio.addEventListener("canplay", handleCanPlay);
+    // If already ready
+    if (audio.readyState >= 3) handleCanPlay();
+    return () => audio.removeEventListener("canplay", handleCanPlay);
+  }, [src, initialPositionMs]);
+
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
     if (playing) {
       audio.pause();
+      onPause?.(Math.floor(audio.currentTime * 1000));
     } else {
       audio.play();
     }
     setPlaying(!playing);
-  }, [playing]);
+  }, [playing, onPause]);
 
   const seek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const audio = audioRef.current;
     if (!audio || !duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    audio.currentTime = (pct * duration) / 1000;
-  }, [duration]);
+    const ms = Math.floor(pct * duration);
+    audio.currentTime = ms / 1000;
+    setCurrentMs(ms);
+    onTimeUpdate?.(ms);
+  }, [duration, onTimeUpdate]);
 
   const cycleSpeed = useCallback(() => {
     const next = (speedIdx + 1) % SPEEDS.length;

@@ -1,7 +1,14 @@
 import Link from "next/link";
 import type { Book } from "@/data/books";
 
-export default function BookCard({ book }: { book: Book }) {
+type BookCardProps = {
+  book: Book;
+  progress?: { chapter_number: number } | null;
+};
+
+export default function BookCard({ book, progress }: BookCardProps) {
+  const totalChapters = book.chapters.length;
+
   return (
     <Link href={`/${book.id}`} className="block group">
       <div
@@ -13,7 +20,7 @@ export default function BookCard({ book }: { book: Book }) {
       >
         {/* Cover placeholder */}
         <div
-          className="aspect-[3/4] flex items-center justify-center"
+          className="aspect-[3/4] flex items-center justify-center relative"
           style={{ backgroundColor: "var(--color-bg-secondary)" }}
         >
           <span
@@ -37,12 +44,21 @@ export default function BookCard({ book }: { book: Book }) {
           >
             {book.author}
           </p>
-          <p
-            className="text-sm mt-2 line-clamp-3"
-            style={{ color: "var(--color-text-secondary)" }}
-          >
-            {book.description}
-          </p>
+          {progress ? (
+            <p
+              className="text-xs mt-2"
+              style={{ color: "var(--color-accent)" }}
+            >
+              Chapter {progress.chapter_number} of {totalChapters}
+            </p>
+          ) : (
+            <p
+              className="text-sm mt-2 line-clamp-3"
+              style={{ color: "var(--color-text-secondary)" }}
+            >
+              {book.description}
+            </p>
+          )}
         </div>
       </div>
     </Link>

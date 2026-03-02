@@ -12,6 +12,11 @@ const DB_PATH = path.join(process.cwd(), "greatbooks.db");
 const connection = new Database(DB_PATH, { readonly: true });
 connection.pragma("foreign_keys = ON");
 
+// Read-write connection for user mutations (progress, etc.)
+const rwConnection = new Database(DB_PATH);
+rwConnection.pragma("foreign_keys = ON");
+rwConnection.pragma("busy_timeout = 5000");
+
 // -- Types matching the database schema --
 
 export type BookRow = {
@@ -49,6 +54,21 @@ export type WordTimestamp = {
   char_end: number;
 };
 
+export type UserRow = {
+  id: string;
+  email: string | null;
+  created_at: string;
+};
+
+export type UserProgressRow = {
+  user_id: string;
+  book_id: string;
+  chapter_number: number;
+  audio_position_ms: number;
+  text_position_segment: number;
+  updated_at: string;
+};
+
 // -- Query helpers --
 
 export const db = {
@@ -78,4 +98,37 @@ export const db = {
         "SELECT * FROM segments WHERE chapter_id = ? ORDER BY sequence"
       )
       .all(chapterId) as SegmentRow[],
+
+  // -- User & progress (read-write) --
+
+  upsertUser: (id: string): void => {
+    rwConnection
+      .prepare("INSERT OR IGNORE INTO users (id) VALUES (?)")
+      .run(id);
+  },
+
+  getProgress: (userId: string): UserProgressRow[] =>
+    connection
+      .prepare("SELECT * FROM user_progress WHERE user_id = ?")
+      .all(userId) as UserProgressRow[],
+
+  upsertProgress: (
+    userId: string,
+    bookId: string,
+    chapterNumber: number,
+    audioPositionMs: number,
+    textPositionSegment: number
+  ): void => {
+    rwConnection
+      .prepare(
+        `INSERT INTO user_progress (user_id, book_id, chapter_number, audio_position_ms, text_position_segment, updated_at)
+         VALUES (?, ?, ?, ?, ?, datetime('now'))
+         ON CONFLICT (user_id, book_id) DO UPDATE SET
+           chapter_number = excluded.chapter_number,
+           audio_position_ms = excluded.audio_position_ms,
+           text_position_segment = excluded.text_position_segment,
+           updated_at = excluded.updated_at`
+      )
+      .run(userId, bookId, chapterNumber, audioPositionMs, textPositionSegment);
+  },
 };

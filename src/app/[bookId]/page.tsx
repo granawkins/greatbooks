@@ -6,6 +6,7 @@ import { getBook } from "@/data/books";
 import ChapterNav from "@/components/ChapterNav";
 import AudioPlayer from "@/components/AudioPlayer";
 import ChatBubble from "@/components/ChatBubble";
+import { useProgress } from "@/lib/useProgress";
 
 type WordTs = {
   start_ms: number;
@@ -164,16 +165,27 @@ function HighlightedParagraph({
 export default function BookPage() {
   const { bookId } = useParams<{ bookId: string }>();
   const book = getBook(bookId);
+  const { progress, loaded: progressLoaded, saveProgress, saveProgressNow } = useProgress(bookId);
 
   const [activeChapterId, setActiveChapterId] = useState(
     book?.chapters[0]?.id ?? 1
   );
+  const [initialAudioMs, setInitialAudioMs] = useState(0);
   const [chapter, setChapter] = useState<ChapterData | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentMs, setCurrentMs] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const paraRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const activeParaRef = useRef<number | null>(null);
+  const restoredRef = useRef(false);
+
+  // Restore saved chapter on first load
+  useEffect(() => {
+    if (!progressLoaded || restoredRef.current || !progress) return;
+    restoredRef.current = true;
+    setActiveChapterId(progress.chapter_number);
+    setInitialAudioMs(progress.audio_position_ms);
+  }, [progressLoaded, progress]);
 
   // Fetch chapter data
   useEffect(() => {
@@ -187,6 +199,18 @@ export default function BookPage() {
       .finally(() => setLoading(false));
   }, [bookId, activeChapterId]);
 
+  // Save progress on chapter change (after initial restore)
+  const handleChapterSelect = useCallback(
+    (chapterId: number) => {
+      setActiveChapterId(chapterId);
+      setInitialAudioMs(0);
+      if (restoredRef.current) {
+        saveProgressNow(chapterId, 0, 0);
+      }
+    },
+    [saveProgressNow]
+  );
+
   // Build paragraph time ranges
   const paraRanges = useMemo(() => {
     if (!chapter?.paragraphs) return null;
@@ -197,6 +221,7 @@ export default function BookPage() {
     (timeMs: number) => {
       setCurrentMs(timeMs);
       setIsPlaying(true);
+      saveProgress(activeChapterId, timeMs, 0);
       if (!paraRanges) return;
 
       // Auto-scroll to active paragraph
@@ -217,7 +242,15 @@ export default function BookPage() {
         });
       }
     },
-    [paraRanges]
+    [paraRanges, activeChapterId, saveProgress]
+  );
+
+  const handlePause = useCallback(
+    (timeMs: number) => {
+      setIsPlaying(false);
+      saveProgressNow(activeChapterId, timeMs, 0);
+    },
+    [activeChapterId, saveProgressNow]
   );
 
   if (!book) return null;
@@ -235,7 +268,7 @@ export default function BookPage() {
           <ChapterNav
             chapters={book.chapters}
             activeChapterId={activeChapterId}
-            onSelect={setActiveChapterId}
+            onSelect={handleChapterSelect}
           />
         </aside>
 
@@ -245,7 +278,7 @@ export default function BookPage() {
           <div className="md:hidden mb-4">
             <select
               value={activeChapterId}
-              onChange={(e) => setActiveChapterId(Number(e.target.value))}
+              onChange={(e) => handleChapterSelect(Number(e.target.value))}
               className="w-full px-3 py-2 rounded-[var(--radius)] border text-sm"
               style={{
                 borderColor: "var(--color-border)",
@@ -323,7 +356,9 @@ export default function BookPage() {
           <AudioPlayer
             src={audioSrc}
             durationMs={chapter?.audio_duration_ms ?? null}
+            initialPositionMs={initialAudioMs}
             onTimeUpdate={handleTimeUpdate}
+            onPause={handlePause}
           />
         </div>
       </div>

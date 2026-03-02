@@ -31,6 +31,24 @@ CREATE TABLE IF NOT EXISTS segments (
   word_timestamps JSON                 -- [{start_ms, end_ms, char_start, char_end}, ...]
 );
 
+-- Users (anonymous by default — id is a UUID stored in the browser's localStorage)
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Reading progress per user per book
+CREATE TABLE IF NOT EXISTS user_progress (
+  user_id TEXT NOT NULL REFERENCES users(id),
+  book_id TEXT NOT NULL REFERENCES books(id),
+  chapter_number INTEGER NOT NULL,
+  audio_position_ms INTEGER DEFAULT 0,
+  text_position_segment INTEGER DEFAULT 0,
+  updated_at TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, book_id)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_chapters_book ON chapters(book_id);
 CREATE INDEX IF NOT EXISTS idx_segments_chapter ON segments(chapter_id);

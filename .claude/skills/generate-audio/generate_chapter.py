@@ -29,7 +29,9 @@ Requires:
 import argparse
 import json
 import os
+import subprocess
 import sys
+import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -164,6 +166,86 @@ def _process_chunk(
     }
 
 
+def _ffprobe_duration_ms(filepath: str) -> int:
+    """Get accurate duration in milliseconds via ffprobe."""
+    result = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+         "-of", "csv=p=0", filepath],
+        capture_output=True, text=True,
+    )
+    return int(float(result.stdout.strip()) * 1000)
+
+
+def _resolve_chunk_path(file_path: str, audio_dir: str) -> str:
+    """Resolve chunk file path, trying as-is first, then relative to audio_dir."""
+    if os.path.exists(file_path):
+        return file_path
+    return os.path.join(audio_dir, os.path.basename(file_path))
+
+
+def merge_chunks(manifest: dict, output_dir: str) -> tuple[str, int]:
+    """
+    Merge chunk MP3s into a single chapter MP3, offset word timestamps
+    using ffprobe for accurate chunk durations, and clean up chunk files.
+
+    Mutates manifest in place (timestamps are offset).
+
+    Returns:
+        (output_path, merged_duration_ms)
+    """
+    chapter_str = f"{manifest['chapter']:02d}"
+    chunks = manifest["chunks"]
+
+    # 1. Get accurate duration of each chunk via ffprobe
+    chunk_paths = []
+    chunk_durations = []
+    for chunk in chunks:
+        fp = _resolve_chunk_path(chunk["file_path"], output_dir)
+        dur = _ffprobe_duration_ms(fp)
+        chunk_paths.append(fp)
+        chunk_durations.append(dur)
+        print(f"  Chunk {chunk['chunk_number']}: {dur}ms")
+
+    # 2. Cumulative offsets
+    cumulative_offsets = [0]
+    for d in chunk_durations[:-1]:
+        cumulative_offsets.append(cumulative_offsets[-1] + d)
+
+    # 3. Offset all word timestamps
+    for ci, chunk in enumerate(chunks):
+        offset = cumulative_offsets[ci]
+        for seg_entry in chunk["word_timestamps"]:
+            seg_entry["audio_start_ms"] += offset
+            seg_entry["audio_end_ms"] += offset
+            for w in seg_entry["words"]:
+                w["start_ms"] += offset
+                w["end_ms"] += offset
+
+    # 4. Merge via ffmpeg concat
+    output_path = os.path.join(output_dir, f"{chapter_str}.mp3")
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        for fp in chunk_paths:
+            f.write(f"file '{os.path.abspath(fp)}'\n")
+        concat_path = f.name
+
+    subprocess.run(
+        ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", concat_path,
+         "-c", "copy", output_path],
+        capture_output=True, check=True,
+    )
+    os.unlink(concat_path)
+
+    merged_duration = _ffprobe_duration_ms(output_path)
+    print(f"  Merged: {output_path} ({merged_duration / 1000:.1f}s)")
+
+    # 5. Delete chunk MP3s
+    for fp in chunk_paths:
+        if os.path.exists(fp):
+            os.unlink(fp)
+
+    return output_path, merged_duration
+
+
 def generate_chapter(
     segments: list[dict],
     output_dir: str,
@@ -229,11 +311,10 @@ def generate_chapter(
         del entry["chunk_idx"]
         manifest["chunks"].append(entry)
 
-    # Write manifest
-    manifest_path = os.path.join(output_dir, f"{chapter_str}-manifest.json")
-    with open(manifest_path, "w") as f:
-        json.dump(manifest, f, indent=2)
-    print(f"  Manifest: {manifest_path}")
+    # Merge chunks into single MP3, offset timestamps, clean up
+    output_path, merged_duration = merge_chunks(manifest, output_dir)
+    manifest["merged_file"] = output_path
+    manifest["merged_duration_ms"] = merged_duration
 
     return manifest
 
@@ -289,9 +370,8 @@ def main():
         stt_provider=args.stt_provider,
     )
 
-    total_ms = sum(c["duration_ms"] for c in manifest["chunks"])
     print(f"\nDone! {len(manifest['chunks'])} chunks, "
-          f"{total_ms / 1000:.1f}s total audio")
+          f"{manifest['merged_duration_ms'] / 1000:.1f}s merged audio")
 
 
 if __name__ == "__main__":

@@ -98,7 +98,7 @@ manifest = generate_chapter(segments, "data/iliad/audio/", chapter_number=1, voi
 
 Input segments JSON: `[{"id", "sequence", "text", "segment_type", "group_number"}]`
 
-Output: Per-chunk MP3 files (`01-001.mp3`, ...) and `01-manifest.json`.
+Output: Single merged MP3 (`01.mp3`) with word timestamps offset to the merged timeline. Chunk MP3s are created temporarily and deleted after merge.
 
 ## Workflow
 
@@ -128,36 +128,19 @@ GREATBOOKS_ENTITY_ID=<BOOK_ID> python3 .claude/skills/generate-audio/generate_ch
   --voice Charon
 ```
 
-### 3. Merge chunks + get accurate duration
-Write a Python script that:
-- Reads the manifest (`<NN>-manifest.json`)
-- Creates ffmpeg concat file from chunk MP3s
-- Runs `ffmpeg -y -f concat -safe 0 -i concat.txt -c copy <NN>.mp3`
-- Offsets all word timestamps by cumulative chunk durations
-- Gets real duration via `ffprobe -v quiet -show_entries format=duration -of csv=p=0 <NN>.mp3`
-- Deletes chunk MP3s
-
-### 4. Store in database
+### 3. Store in database
+`generate_chapter.py` merges chunks automatically (via `merge_chunks()`), but the caller must update the DB:
 ```sql
--- Chapter-level: audio file and duration
-UPDATE chapters
-SET audio_file = 'data/<BOOK_ID>/audio/<NN>.mp3',
-    audio_duration_ms = <DURATION_FROM_FFPROBE>
+UPDATE chapters SET audio_file = 'data/<BOOK_ID>/audio/<NN>.mp3',
+    audio_duration_ms = <MERGED_DURATION_MS>
 WHERE book_id = '<BOOK_ID>' AND number = <CHAPTER_NUM>;
 
--- Segment-level: timestamps (from merged manifest)
--- For each segment entry in the merged word_timestamps:
-UPDATE segments
-SET audio_start_ms = <SEGMENT_START>,
-    audio_end_ms = <SEGMENT_END>,
-    word_timestamps = '<WORDS_JSON>'  -- [{start_ms, end_ms, char_start, char_end}]
+-- For each segment in manifest['chunks'][*]['word_timestamps'][*]:
+UPDATE segments SET audio_start_ms = ?, audio_end_ms = ?, word_timestamps = ?
 WHERE id = <SEGMENT_ID>;
 ```
 
-### 5. Clean up manifest
-Delete the `<NN>-manifest.json` — it's now redundant with the DB.
-
-### 6. Update book SKILL.md and check costs
+### 4. Update book SKILL.md and check costs
 
 ## Audio Chunking Strategy (Internal)
 
@@ -175,9 +158,8 @@ TTS has a 2000-character limit, so text is chunked for API calls:
 Final output (one file per chapter):
 ```
 data/<book-id>/audio/<chapter_number>.mp3
-data/<book-id>/audio/<chapter_number>-manifest.json
 ```
-Example: `data/iliad/audio/01.mp3`, `data/iliad/audio/01-manifest.json`
+Example: `data/iliad/audio/01.mp3`
 
 ## TTS Configuration
 
