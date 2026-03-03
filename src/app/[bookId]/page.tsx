@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
-import ChapterNav from "@/components/ChapterNav";
+import Link from "next/link";
 import AudioPlayer from "@/components/AudioPlayer";
 import ChatBubble from "@/components/ChatBubble";
 import { useProgress } from "@/lib/useProgress";
@@ -100,69 +100,251 @@ function paraTimeRange(para: Paragraph): { start_ms: number; end_ms: number } | 
   return { start_ms: start, end_ms: end };
 }
 
-// Render paragraph text with word-level highlighting — just a colored
-// background on the currently-spoken word, nothing else changes.
-function HighlightedParagraph({
-  para,
-  currentMs,
-  isPlaying,
-}: {
-  para: Paragraph;
-  currentMs: number;
-  isPlaying: boolean;
-}) {
+// Renders paragraph text with stable word-span IDs.
+// Highlighting is applied imperatively via document.getElementById —
+// React never re-renders this component during playback.
+function HighlightedParagraph({ para, paraIndex }: { para: Paragraph; paraIndex: number }) {
   const spans = useMemo(() => buildWordSpans(para), [para]);
   const text = para.text;
 
-  // If no timestamps or not playing, render plain text
-  if (spans.length === 0 || !isPlaying) {
-    return <>{text}</>;
-  }
+  if (!spans.length) return <>{text}</>;
 
   const elements: React.ReactNode[] = [];
   let lastEnd = 0;
-
-  for (let i = 0; i < spans.length; i++) {
-    const span = spans[i];
-    // Gap text before this word (spaces, punctuation between tokens)
-    if (span.charStart > lastEnd) {
-      elements.push(text.slice(lastEnd, span.charStart));
-    }
-
-    const isActiveWord = currentMs >= span.start_ms && currentMs < span.end_ms;
-    const wordText = text.slice(span.charStart, span.charEnd);
-
-    if (isActiveWord) {
-      elements.push(
-        <mark
-          key={`w-${span.charStart}`}
-          style={{
-            backgroundColor: "var(--color-highlight, #fef08a)",
-            color: "inherit",
-            borderRadius: "2px",
-            padding: "0 1px",
-          }}
-        >
-          {wordText}
-        </mark>
-      );
-    } else {
-      elements.push(wordText);
-    }
-
+  for (const span of spans) {
+    if (span.charStart > lastEnd) elements.push(text.slice(lastEnd, span.charStart));
+    elements.push(
+      <span key={span.charStart} id={`w-${paraIndex}-${span.charStart}`}>
+        {text.slice(span.charStart, span.charEnd)}
+      </span>
+    );
     lastEnd = span.charEnd;
   }
-
-  // Trailing text
-  if (lastEnd < text.length) {
-    elements.push(text.slice(lastEnd));
-  }
+  if (lastEnd < text.length) elements.push(text.slice(lastEnd));
 
   return <>{elements}</>;
 }
 
+// Flat sorted list of every word span across all paragraphs, for binary search.
+type FlatSpan = { id: string; start_ms: number; end_ms: number; paraIdx: number };
+
+function buildFlatSpans(paragraphs: Paragraph[]): FlatSpan[] {
+  const result: FlatSpan[] = [];
+  for (let i = 0; i < paragraphs.length; i++) {
+    for (const s of buildWordSpans(paragraphs[i])) {
+      result.push({ id: `w-${i}-${s.charStart}`, start_ms: s.start_ms, end_ms: s.end_ms, paraIdx: i });
+    }
+  }
+  return result;
+}
+
+function highlightWord(el: HTMLElement | null) {
+  if (!el) return;
+  el.style.textDecorationLine = "underline";
+  el.style.textDecorationColor = "#2563eb";
+  el.style.textDecorationThickness = "2px";
+  el.style.textUnderlineOffset = "3px";
+}
+
+function clearWord(el: HTMLElement | null) {
+  if (!el) return;
+  el.style.textDecorationLine = "";
+  el.style.textDecorationColor = "";
+  el.style.textDecorationThickness = "";
+  el.style.textUnderlineOffset = "";
+}
+
+function findActiveSpanIdx(spans: FlatSpan[], ms: number): number {
+  let lo = 0, hi = spans.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const s = spans[mid];
+    if (ms >= s.start_ms && ms < s.end_ms) return mid;
+    if (ms < s.start_ms) hi = mid - 1;
+    else lo = mid + 1;
+  }
+  return -1;
+}
+
 type NavChapter = { id: number; title: string };
 type BookMeta = { title: string; author: string };
+
+// Top: left-aligned serif heading that opens a chapter dropdown
+function ChapterHeading({
+  chapters,
+  activeChapterId,
+  onSelect,
+}: {
+  chapters: NavChapter[];
+  activeChapterId: number;
+  onSelect: (id: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const current = chapters.find((c) => c.id === activeChapterId);
+
+  return (
+    <div ref={ref} className="relative mb-10">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="group text-left"
+        aria-expanded={open}
+      >
+        <h2
+          className="flex items-center gap-3"
+          style={{
+            fontFamily: "var(--font-body)",
+            fontSize: "1.75rem",
+            fontWeight: 400,
+            lineHeight: 1.25,
+            color: "var(--color-text)",
+          }}
+        >
+          {current?.title}
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 18 18"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="shrink-0 transition-all"
+            style={{
+              color: "var(--color-text-secondary)",
+              opacity: open ? 0.7 : 0.3,
+              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+              marginTop: "0.1em",
+            }}
+            aria-hidden
+          >
+            <path d="M3 6l6 6 6-6" />
+          </svg>
+        </h2>
+      </button>
+
+      <div style={{ borderBottom: "1px solid var(--color-border)", marginTop: "1.25rem" }} />
+
+      {open && (
+        <div
+          className="absolute left-0 top-full mt-2 z-50 overflow-auto"
+          style={{
+            backgroundColor: "var(--color-bg)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-lg)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.05)",
+            maxHeight: "60vh",
+            minWidth: "22rem",
+          }}
+        >
+          {chapters.map((ch, i) => {
+            const isActive = ch.id === activeChapterId;
+            return (
+              <button
+                key={ch.id}
+                onClick={() => { onSelect(ch.id); setOpen(false); }}
+                className="flex items-baseline gap-4 w-full text-left px-5 py-3 transition-colors hover:bg-[var(--color-bg-secondary)]"
+                style={{
+                  backgroundColor: isActive ? "var(--color-bg-secondary)" : "transparent",
+                  borderBottom: i < chapters.length - 1 ? "1px solid var(--color-border)" : "none",
+                }}
+              >
+                <span
+                  className="text-xs tabular-nums shrink-0"
+                  style={{
+                    color: "var(--color-text-secondary)",
+                    fontFamily: "var(--font-ui)",
+                    opacity: 0.5,
+                    minWidth: "1.5rem",
+                    textAlign: "right",
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <span
+                  style={{
+                    color: isActive ? "var(--color-text)" : "var(--color-text-secondary)",
+                    fontFamily: "var(--font-ui)",
+                    fontSize: "0.875rem",
+                    fontWeight: isActive ? 500 : 400,
+                  }}
+                >
+                  {ch.title}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Bottom: centered title with prev/next arrows
+function ChapterFooterNav({
+  chapters,
+  activeChapterId,
+  onSelect,
+}: {
+  chapters: NavChapter[];
+  activeChapterId: number;
+  onSelect: (id: number) => void;
+}) {
+  const idx = chapters.findIndex((c) => c.id === activeChapterId);
+  const current = chapters[idx];
+  const prev = idx > 0 ? chapters[idx - 1] : null;
+  const next = idx < chapters.length - 1 ? chapters[idx + 1] : null;
+
+  return (
+    <div
+      className="flex items-center justify-center gap-6 py-10"
+      style={{ borderTop: "1px solid var(--color-border)", marginTop: "4rem" }}
+    >
+      <button
+        onClick={() => prev && onSelect(prev.id)}
+        aria-label="Previous chapter"
+        style={{ visibility: prev ? "visible" : "hidden", color: "var(--color-text-secondary)" }}
+        className="p-1 transition-opacity hover:opacity-60"
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 4L6 9l5 5" />
+        </svg>
+      </button>
+
+      <span
+        style={{
+          color: "var(--color-text-secondary)",
+          fontFamily: "var(--font-ui)",
+          fontSize: "0.8125rem",
+        }}
+      >
+        {current?.title}
+      </span>
+
+      <button
+        onClick={() => next && onSelect(next.id)}
+        aria-label="Next chapter"
+        style={{ visibility: next ? "visible" : "hidden", color: "var(--color-text-secondary)" }}
+        className="p-1 transition-opacity hover:opacity-60"
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M7 4l5 5-5 5" />
+        </svg>
+      </button>
+    </div>
+  );
+}
 
 export default function BookPage() {
   const { bookId } = useParams<{ bookId: string }>();
@@ -174,10 +356,9 @@ export default function BookPage() {
   const [initialAudioMs, setInitialAudioMs] = useState(0);
   const [chapter, setChapter] = useState<ChapterData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentMs, setCurrentMs] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
   const paraRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const activeParaRef = useRef<number | null>(null);
+  const activeWordIdRef = useRef<string | null>(null);
   const restoredRef = useRef(false);
 
   // Fetch chapter list for navigation
@@ -211,8 +392,11 @@ export default function BookPage() {
     const controller = new AbortController();
     setLoading(true);
     activeParaRef.current = null;
-    setCurrentMs(0);
-    setIsPlaying(false);
+    if (activeWordIdRef.current) {
+      const el = document.getElementById(activeWordIdRef.current);
+      clearWord(el);
+      activeWordIdRef.current = null;
+    }
     fetch(`/api/books/${bookId}/chapters/${activeChapterId}`, {
       signal: controller.signal,
     })
@@ -232,6 +416,7 @@ export default function BookPage() {
   // Save progress on chapter change (after initial restore)
   const handleChapterSelect = useCallback(
     (chapterId: number) => {
+      window.scrollTo({ top: 0, behavior: "instant" });
       setActiveChapterId(chapterId);
       setInitialAudioMs(0);
       if (restoredRef.current) {
@@ -241,43 +426,55 @@ export default function BookPage() {
     [saveProgressNow]
   );
 
-  // Build paragraph time ranges
-  const paraRanges = useMemo(() => {
-    if (!chapter?.paragraphs) return null;
-    return chapter.paragraphs.map((p) => paraTimeRange(p));
-  }, [chapter]);
+  // Flat sorted word spans + paragraph ranges, rebuilt only when chapter changes
+  const flatSpans = useMemo(
+    () => (chapter?.paragraphs ? buildFlatSpans(chapter.paragraphs) : []),
+    [chapter]
+  );
+  const paraRanges = useMemo(
+    () => chapter?.paragraphs?.map((p) => paraTimeRange(p)) ?? null,
+    [chapter]
+  );
 
   const handleTimeUpdate = useCallback(
     (timeMs: number) => {
-      setCurrentMs(timeMs);
-      setIsPlaying(true);
       saveProgress(activeChapterId, timeMs, 0);
-      if (!paraRanges) return;
+
+      // Highlight active word — pure DOM, no React re-render
+      const idx = findActiveSpanIdx(flatSpans, timeMs);
+      const newId = idx >= 0 ? flatSpans[idx].id : null;
+      if (newId !== activeWordIdRef.current) {
+        if (activeWordIdRef.current) {
+          clearWord(document.getElementById(activeWordIdRef.current));
+        }
+        if (newId) {
+          highlightWord(document.getElementById(newId));
+        }
+        activeWordIdRef.current = newId;
+      }
 
       // Auto-scroll to active paragraph
-      let active: number | null = null;
+      if (!paraRanges) return;
+      let activePara: number | null = null;
       for (let i = 0; i < paraRanges.length; i++) {
-        const range = paraRanges[i];
-        if (range && timeMs >= range.start_ms && timeMs < range.end_ms) {
-          active = i;
-          break;
-        }
+        const r = paraRanges[i];
+        if (r && timeMs >= r.start_ms && timeMs < r.end_ms) { activePara = i; break; }
       }
-
-      if (active !== null && active !== activeParaRef.current) {
-        activeParaRef.current = active;
-        paraRefs.current[active]?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
+      if (activePara !== null && activePara !== activeParaRef.current) {
+        activeParaRef.current = activePara;
+        paraRefs.current[activePara]?.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     },
-    [paraRanges, activeChapterId, saveProgress]
+    [flatSpans, paraRanges, activeChapterId, saveProgress]
   );
 
   const handlePause = useCallback(
     (timeMs: number) => {
-      setIsPlaying(false);
+      if (activeWordIdRef.current) {
+        const el = document.getElementById(activeWordIdRef.current);
+        clearWord(el);
+        activeWordIdRef.current = null;
+      }
       saveProgressNow(activeChapterId, timeMs, 0);
     },
     [activeChapterId, saveProgressNow]
@@ -289,87 +486,76 @@ export default function BookPage() {
 
   return (
     <>
-      <div className="flex gap-6 pb-28">
-        {/* Sidebar */}
-        <aside className="hidden md:block w-56 shrink-0">
-          <ChapterNav
+      <article
+        className="mx-auto pb-32"
+        style={{ maxWidth: "68ch", paddingLeft: "1.5rem", paddingRight: "1.5rem" }}
+      >
+        {/* Book header */}
+        <div className="flex items-center gap-2 mb-8 mt-6">
+          <Link
+            href="/"
+            className="p-1 -ml-1 transition-opacity hover:opacity-60"
+            style={{ color: "var(--color-text-secondary)" }}
+            aria-label="Back to library"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4L6 9l5 5" />
+            </svg>
+          </Link>
+          <span
+            style={{
+              color: "var(--color-text-secondary)",
+              fontFamily: "var(--font-ui)",
+              fontSize: "0.9375rem",
+            }}
+          >
+            {bookMeta ? `${bookMeta.title}, ${bookMeta.author}` : ""}
+          </span>
+        </div>
+
+        {bookChapters.length > 0 && (
+          <ChapterHeading
             chapters={bookChapters}
             activeChapterId={activeChapterId}
             onSelect={handleChapterSelect}
           />
-        </aside>
+        )}
 
-        {/* Text */}
-        <article className="flex-1 min-w-0">
-          {/* Mobile chapter selector */}
-          <div className="md:hidden mb-4">
-            <select
-              value={activeChapterId}
-              onChange={(e) => handleChapterSelect(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-[var(--radius)] border text-sm"
-              style={{
-                borderColor: "var(--color-border)",
-                backgroundColor: "var(--color-bg)",
-                color: "var(--color-text)",
-              }}
-            >
-              {bookChapters.map((ch) => (
-                <option key={ch.id} value={ch.id}>
-                  {ch.title}
-                </option>
-              ))}
-            </select>
+        {loading ? (
+          <p className="text-sm text-center py-16" style={{ color: "var(--color-text-secondary)" }}>
+            Loading…
+          </p>
+        ) : !chapter?.paragraphs?.length ? (
+          <p className="text-sm text-center py-16" style={{ color: "var(--color-text-secondary)" }}>
+            No text available for this chapter.
+          </p>
+        ) : (
+          <div className="space-y-5">
+            {chapter.paragraphs.map((p, i) => (
+              <p
+                key={i}
+                ref={(el) => { paraRefs.current[i] = el; }}
+                style={{
+                  color: "var(--color-text)",
+                  fontFamily: "var(--font-body)",
+                  fontSize: "1.125rem",
+                  lineHeight: "1.85",
+                }}
+              >
+                <HighlightedParagraph para={p} paraIndex={i} />
+              </p>
+            ))}
           </div>
+        )}
 
-          <h2
-            className="text-xl font-semibold mb-6"
-            style={{ color: "var(--color-text)", fontFamily: "var(--font-ui)" }}
-          >
-            {bookChapters.find((c) => c.id === activeChapterId)?.title ?? chapter?.title}
-          </h2>
-
-          {loading ? (
-            <p
-              className="text-sm"
-              style={{ color: "var(--color-text-secondary)" }}
-            >
-              Loading...
-            </p>
-          ) : !chapter?.paragraphs?.length ? (
-            <div
-              className="rounded-[var(--radius-lg)] p-6 text-center"
-              style={{
-                backgroundColor: "var(--color-bg-secondary)",
-                color: "var(--color-text-secondary)",
-              }}
-            >
-              <p className="text-sm">No text available for this chapter.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {chapter.paragraphs.map((p, i) => (
-                <p
-                  key={i}
-                  ref={(el) => {
-                    paraRefs.current[i] = el;
-                  }}
-                  className="text-base leading-7"
-                  style={{
-                    color: "var(--color-text)",
-                    fontFamily: "var(--font-body)",
-                  }}
-                >
-                  <HighlightedParagraph
-                    para={p}
-                    currentMs={currentMs}
-                    isPlaying={isPlaying}
-                  />
-                </p>
-              ))}
-            </div>
-          )}
-        </article>
-      </div>
+        {!loading && bookChapters.length > 0 && (
+          <ChapterFooterNav
+            chapters={bookChapters}
+            activeChapterId={activeChapterId}
+            onSelect={handleChapterSelect}
+          />
+        )}
+      </article>
 
       {/* Sticky audio player at bottom */}
       <div
