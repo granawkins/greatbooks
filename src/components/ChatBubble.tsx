@@ -142,13 +142,16 @@ export default function ChatBubble({ bookId, bookTitle, authorName, onClose }: C
           onClick={onClose}
           aria-label="Back to reading"
           style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
             padding: "0.25rem",
             marginLeft: "-0.25rem",
             color: "var(--color-text-secondary)",
             background: "none",
             border: "none",
             cursor: "pointer",
-            lineHeight: 1,
+            borderRadius: "var(--radius)",
             transition: "opacity 0.15s",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.5")}
@@ -157,16 +160,10 @@ export default function ChatBubble({ bookId, bookTitle, authorName, onClose }: C
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M11 4L6 9l5 5" />
           </svg>
+          <span style={{ fontFamily: "var(--font-ui)", fontSize: "0.9375rem" }}>
+            Chat
+          </span>
         </button>
-        <span
-          style={{
-            color: "var(--color-text-secondary)",
-            fontFamily: "var(--font-ui)",
-            fontSize: "0.9375rem",
-          }}
-        >
-          Chat
-        </span>
       </div>
 
       {/* Divider */}

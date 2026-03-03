@@ -522,26 +522,25 @@ export default function BookPage() {
         }}
       >
         {/* Book header */}
-        <div className="flex items-center gap-2 mb-8 mt-6">
+        <div className="flex items-center mb-8 mt-6">
           <Link
             href="/"
-            className="p-1 -ml-1 transition-opacity hover:opacity-60"
+            className="flex items-center gap-2 -ml-1 px-1 py-1 rounded-[var(--radius)] transition-opacity hover:opacity-60"
             style={{ color: "var(--color-text-secondary)" }}
             aria-label="Back to library"
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M11 4L6 9l5 5" />
             </svg>
+            <span
+              style={{
+                fontFamily: "var(--font-ui)",
+                fontSize: "0.9375rem",
+              }}
+            >
+              {bookMeta ? `${bookMeta.title}, ${bookMeta.author}` : ""}
+            </span>
           </Link>
-          <span
-            style={{
-              color: "var(--color-text-secondary)",
-              fontFamily: "var(--font-ui)",
-              fontSize: "0.9375rem",
-            }}
-          >
-            {bookMeta ? `${bookMeta.title}, ${bookMeta.author}` : ""}
-          </span>
         </div>
 
         {bookChapters.length > 0 && (
