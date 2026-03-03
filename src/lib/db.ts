@@ -69,6 +69,16 @@ export type UserProgressRow = {
   updated_at: string;
 };
 
+export type MessageRow = {
+  id: number;
+  user_id: string;
+  book_id: string;
+  role: "user" | "assistant";
+  text: string;
+  status: "pending" | "streaming" | "completed" | "error";
+  created_at: string;
+};
+
 // -- Query helpers --
 
 export const db = {
@@ -130,5 +140,37 @@ export const db = {
            updated_at = excluded.updated_at`
       )
       .run(userId, bookId, chapterNumber, audioPositionMs, textPositionSegment);
+  },
+
+  getMessages: (userId: string, bookId: string): MessageRow[] =>
+    connection
+      .prepare(
+        "SELECT * FROM messages WHERE user_id = ? AND book_id = ? ORDER BY id"
+      )
+      .all(userId, bookId) as MessageRow[],
+
+  insertMessage: (
+    userId: string,
+    bookId: string,
+    role: "user" | "assistant",
+    text: string,
+    status: "pending" | "completed" = "completed"
+  ): MessageRow => {
+    const result = rwConnection
+      .prepare(
+        "INSERT INTO messages (user_id, book_id, role, text, status) VALUES (?, ?, ?, ?, ?) RETURNING *"
+      )
+      .get(userId, bookId, role, text, status) as MessageRow;
+    return result;
+  },
+
+  updateMessage: (
+    id: number,
+    text: string,
+    status: "streaming" | "completed" | "error"
+  ): void => {
+    rwConnection
+      .prepare("UPDATE messages SET text = ?, status = ? WHERE id = ?")
+      .run(text, status, id);
   },
 };

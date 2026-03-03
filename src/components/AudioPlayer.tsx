@@ -151,7 +151,7 @@ export default function AudioPlayer({
           onClick={seek}
         >
           <div
-            className="h-full rounded-full transition-[width] duration-200"
+            className="h-full rounded-full"
             style={{
               backgroundColor: "var(--color-accent)",
               width: `${progress}%`,

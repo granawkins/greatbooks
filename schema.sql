@@ -49,6 +49,18 @@ CREATE TABLE IF NOT EXISTS user_progress (
   PRIMARY KEY (user_id, book_id)
 );
 
+-- Chat messages
+CREATE TABLE IF NOT EXISTS messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  book_id TEXT NOT NULL REFERENCES books(id),
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+  text TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'completed',  -- user: always 'completed'; assistant: 'pending'|'streaming'|'completed'|'error'
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_chapters_book ON chapters(book_id);
 CREATE INDEX IF NOT EXISTS idx_segments_chapter ON segments(chapter_id);
+CREATE INDEX IF NOT EXISTS idx_messages_user_book ON messages(user_id, book_id);

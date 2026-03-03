@@ -187,16 +187,27 @@ export default function BookPage() {
     setInitialAudioMs(progress.audio_position_ms);
   }, [progressLoaded, progress]);
 
-  // Fetch chapter data
+  // Fetch chapter data (abort stale requests to avoid race conditions)
   useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
     activeParaRef.current = null;
     setCurrentMs(0);
     setIsPlaying(false);
-    fetch(`/api/books/${bookId}/chapters/${activeChapterId}`)
+    fetch(`/api/books/${bookId}/chapters/${activeChapterId}`, {
+      signal: controller.signal,
+    })
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setChapter(data))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (!controller.signal.aborted) setChapter(data);
+      })
+      .catch((e) => {
+        if (e.name !== "AbortError") throw e;
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, [bookId, activeChapterId]);
 
   // Save progress on chapter change (after initial restore)
@@ -364,7 +375,7 @@ export default function BookPage() {
       </div>
 
       {/* Chat bubble */}
-      <ChatBubble bookTitle={book.title} authorName={book.author} />
+      <ChatBubble bookId={bookId} bookTitle={book.title} authorName={book.author} />
     </>
   );
 }
