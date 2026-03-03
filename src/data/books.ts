@@ -9,6 +9,7 @@ export type Book = {
   title: string;
   author: string;
   description: string;
+  cover_image?: string;  // public URL e.g. "/covers/iliad.png"
   chapters: Chapter[];
 };
 

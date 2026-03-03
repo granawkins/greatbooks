@@ -1,14 +1,13 @@
 import Link from "next/link";
-import type { Book } from "@/data/books";
+import Image from "next/image";
+import type { BookRow } from "@/lib/db";
 
 type BookCardProps = {
-  book: Book;
+  book: BookRow;
   progress?: { chapter_number: number } | null;
 };
 
 export default function BookCard({ book, progress }: BookCardProps) {
-  const totalChapters = book.chapters.length;
-
   return (
     <Link href={`/${book.id}`} className="block group">
       <div
@@ -18,17 +17,26 @@ export default function BookCard({ book, progress }: BookCardProps) {
           backgroundColor: "var(--color-bg)",
         }}
       >
-        {/* Cover placeholder */}
+        {/* Cover */}
         <div
-          className="aspect-[3/4] flex items-center justify-center relative"
+          className="aspect-[3/4] flex items-center justify-center relative overflow-hidden"
           style={{ backgroundColor: "var(--color-bg-secondary)" }}
         >
-          <span
-            className="text-4xl font-serif opacity-30"
-            style={{ fontFamily: "var(--font-body)" }}
-          >
-            {book.title[0]}
-          </span>
+          {book.cover_image ? (
+            <Image
+              src={book.cover_image}
+              alt={`${book.title} cover`}
+              fill
+              className="object-cover"
+            />
+          ) : (
+            <span
+              className="text-4xl font-serif opacity-30"
+              style={{ fontFamily: "var(--font-body)" }}
+            >
+              {book.title[0]}
+            </span>
+          )}
         </div>
 
         <div className="p-4">
@@ -49,7 +57,7 @@ export default function BookCard({ book, progress }: BookCardProps) {
               className="text-xs mt-2"
               style={{ color: "var(--color-accent)" }}
             >
-              Chapter {progress.chapter_number} of {totalChapters}
+              Chapter {progress.chapter_number}
             </p>
           ) : (
             <p

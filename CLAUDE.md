@@ -38,7 +38,7 @@ Combine the best of Audible + Kindle + ChatGPT voice-mode into one elegant inter
 - **Tailwind CSS 4** for layout/utility classes
 - **CSS custom properties** in `globals.css` for themeable colors/fonts
 - **SQLite** (`greatbooks.db` at project root) via `better-sqlite3`, called directly by API routes. **WAL mode** is enabled on the DB file for concurrent access — Next.js opens readonly, Python scripts open read-write. Python writers should set `PRAGMA busy_timeout = 5000` to handle lock contention gracefully.
-- **Python** scripts for content ingestion (parse HTML) and audio generation (TTS/STT); deps in `.claude/skills/generate-audio/requirements.txt`
+- **Python** scripts for content ingestion (parse HTML) and audio/image generation; virtualenv at `.venv/` in project root — always run Python scripts with `.venv/bin/python`. Install deps with `.venv/bin/pip install`. Each skill has its own `requirements.txt`.
 - **Google Chirp3 HD** for TTS, **Google STT (Chirp 2)** for word-level timestamp alignment; credentials via `.env` + `google-credentials.json`
 
 ## Architecture Principles

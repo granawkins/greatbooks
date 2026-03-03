@@ -19,6 +19,31 @@ Add a new book to the Great Books corpus.
 5. **Insert into database** — add rows to `books`, `chapters`, and `segments` tables
 6. **Write the book's SKILL.md** — create `data/<book-id>/SKILL.md` with provenance and context
 7. **Update the frontend** — add the book to `src/data/books.ts` so it appears on the home page
+8. **Generate cover art** — choose a subject, run `img.py`, record the subject in `data/<book-id>/SKILL.md`
+
+## Generating Cover Art
+
+Read `cover-style.md` first to understand the visual aesthetic (fine-art oil, single object, no text).
+
+Then pick a **subject** for the book: a specific object, artifact, or tightly-framed scene that is iconic to the story. See `cover-style.md` for guidance and examples.
+
+```bash
+python .claude/skills/add-book/img.py \
+  --book-id <book-id> \
+  --subject "<specific object or scene description>"
+```
+
+This saves `data/<book-id>/cover.png` and updates `books.cover_image` in the DB.
+
+If the result isn't right, adjust the subject description and rerun — each call costs ~$0.04.
+
+After generating, add a **Cover** section to `data/<book-id>/SKILL.md`:
+
+```markdown
+## Cover
+- **Subject**: The Shield of Achilles — a vast bronze shield with hammered scenes of cities, harvests, and dancing
+- **Generated**: 2026-03-03
+```
 
 ## Using parse_html.py
 
@@ -93,3 +118,4 @@ After adding a book, create `data/<book-id>/SKILL.md` with:
 - **Context**: date of composition, genre, major themes, key characters
 - **Commentary**: what supplementary material has been added (if any)
 - **Audio status**: which chapters have generated audio (initially none)
+- **Cover**: subject chosen and date generated (added after running `img.py`)

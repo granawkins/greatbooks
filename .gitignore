@@ -34,6 +34,9 @@ greatbooks.db-wal
 /data/*/audio/
 /data/*/commentary/
 
+# generated cover art
+/public/covers/
+
 # api cost logs
 /logs/
 
@@ -46,6 +49,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 __pycache__
+.venv/
 
 # google cloud credentials
 google-credentials.json

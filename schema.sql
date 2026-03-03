@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS books (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   author TEXT NOT NULL,
-  description TEXT
+  description TEXT,
+  cover_image TEXT                      -- relative path under data/ (e.g. "iliad/cover.png")
 );
 
 CREATE TABLE IF NOT EXISTS chapters (

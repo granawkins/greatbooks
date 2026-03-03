@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { books } from "@/data/books";
+import type { BookRow } from "@/lib/db";
 import BookCard from "@/components/BookCard";
 
 const STORAGE_KEY = "greatbooks:userId";
@@ -9,7 +9,15 @@ const STORAGE_KEY = "greatbooks:userId";
 type ProgressMap = Record<string, { chapter_number: number }>;
 
 export default function Home() {
+  const [books, setBooks] = useState<BookRow[]>([]);
   const [progressMap, setProgressMap] = useState<ProgressMap>({});
+
+  useEffect(() => {
+    fetch("/api/books")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setBooks)
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const userId = localStorage.getItem(STORAGE_KEY);
