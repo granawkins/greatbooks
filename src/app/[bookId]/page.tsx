@@ -518,7 +518,7 @@ export default function BookPage() {
           maxWidth: "68ch",
           paddingLeft: "1.5rem",
           paddingRight: "1.5rem",
-          paddingBottom: "120px",
+          paddingBottom: "180px",
         }}
       >
         {/* Book header */}
