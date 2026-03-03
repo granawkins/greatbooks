@@ -501,8 +501,13 @@ export default function BookPage() {
   return (
     <>
       <article
-        className="mx-auto pb-32"
-        style={{ maxWidth: "68ch", paddingLeft: "1.5rem", paddingRight: "1.5rem" }}
+        className="mx-auto"
+        style={{
+          maxWidth: "68ch",
+          paddingLeft: "1.5rem",
+          paddingRight: "1.5rem",
+          paddingBottom: "var(--player-height)",
+        }}
       >
         {/* Book header */}
         <div className="flex items-center gap-2 mb-8 mt-6">
@@ -587,18 +592,20 @@ export default function BookPage() {
             segmentBoundaries={segmentBoundaries}
             onTimeUpdate={handleTimeUpdate}
             onPause={handlePause}
-            onChatClick={() => setChatOpen(true)}
+            onChatClick={() => setChatOpen((o) => !o)}
           />
         </div>
       </div>
 
-      {/* Chat bubble */}
-      <ChatBubble
-        bookId={bookId}
-        bookTitle={bookMeta?.title ?? ""}
-        authorName={bookMeta?.author ?? ""}
-        externalOpen={chatOpen}
-      />
+      {/* Full-screen chat overlay — sits above article, below player bar */}
+      {chatOpen && (
+        <ChatBubble
+          bookId={bookId}
+          bookTitle={bookMeta?.title ?? ""}
+          authorName={bookMeta?.author ?? ""}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
     </>
   );
 }

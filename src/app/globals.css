@@ -18,6 +18,9 @@
   /* Spacing & Radius */
   --radius: 6px;
   --radius-lg: 10px;
+
+  /* Player bar height — used by article padding and chat overlay bottom */
+  --player-height: 172px;
 }
 
 @theme inline {

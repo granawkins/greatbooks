@@ -27,17 +27,10 @@ type ChatBubbleProps = {
   bookId: string;
   bookTitle: string;
   authorName: string;
-  /** When this flips to true the panel opens; internal toggle still works normally */
-  externalOpen?: boolean;
+  onClose: () => void;
 };
 
-export default function ChatBubble({ bookId, bookTitle, authorName, externalOpen }: ChatBubbleProps) {
-  const [open, setOpen] = useState(false);
-
-  // When the parent signals open, honour it
-  useEffect(() => {
-    if (externalOpen) setOpen(true);
-  }, [externalOpen]);
+export default function ChatBubble({ bookId, bookTitle, authorName, onClose }: ChatBubbleProps) {
   const [userId] = useState(getUserId);
   const [messages, setMessages] = useState<Message[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -59,12 +52,10 @@ export default function ChatBubble({ bookId, bookTitle, authorName, externalOpen
     return rows;
   }, [userId, bookId]);
 
-  // Load messages when chat opens
+  // Load messages on mount
   useEffect(() => {
-    if (open && userId) {
-      fetchMessages();
-    }
-  }, [open, userId, fetchMessages]);
+    if (userId) fetchMessages();
+  }, [userId, fetchMessages]);
 
   // Poll every 1s while any message is pending or streaming
   const needsPoll = messages.some(
@@ -99,19 +90,15 @@ export default function ChatBubble({ bookId, bookTitle, authorName, externalOpen
 
   const handleSend = async (text: string) => {
     if (!userId) return;
-    // Optimistically add user message; backend will create it + the pending assistant row
     setMessages((prev) => [
       ...prev,
       { id: -Date.now(), role: "user", text, status: "completed" },
     ]);
-
     await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, bookId, text }),
     });
-
-    // Replace optimistic state with real rows (includes the pending assistant message)
     fetchMessages();
   };
 
@@ -128,95 +115,119 @@ export default function ChatBubble({ bookId, bookTitle, authorName, externalOpen
         ];
 
   return (
-    <div className="fixed bottom-[9rem] right-6 z-50 flex flex-col items-end gap-3">
-      {/* Chat panel */}
-      {open && (
-        <div
-          className="flex flex-col rounded-[var(--radius-lg)] border shadow-lg overflow-hidden"
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: "var(--player-height)",
+        zIndex: 30,
+        backgroundColor: "var(--color-bg)",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Header — matches the reader page's book header style */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.5rem",
+          padding: "1.5rem 1.5rem 0.75rem",
+          maxWidth: "68ch",
+          width: "100%",
+          margin: "0 auto",
+          flexShrink: 0,
+        }}
+      >
+        <button
+          onClick={onClose}
+          aria-label="Back to reading"
           style={{
-            width: "380px",
-            height: "480px",
-            borderColor: "var(--color-border)",
-            backgroundColor: "var(--color-bg)",
+            padding: "0.25rem",
+            marginLeft: "-0.25rem",
+            color: "var(--color-text-secondary)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            lineHeight: 1,
+            transition: "opacity 0.15s",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.5")}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 4L6 9l5 5" />
+          </svg>
+        </button>
+        <span
+          style={{
+            color: "var(--color-text-secondary)",
+            fontFamily: "var(--font-ui)",
+            fontSize: "0.9375rem",
           }}
         >
-          {/* Header */}
-          <div
-            className="flex items-center justify-between px-4 py-3 border-b"
-            style={{
-              borderColor: "var(--color-border)",
-              backgroundColor: "var(--color-bg-secondary)",
-            }}
-          >
-            <span
-              className="text-sm font-medium"
-              style={{ color: "var(--color-text)", fontFamily: "var(--font-ui)" }}
-            >
-              Chat
-            </span>
-            <button
-              onClick={() => setOpen(false)}
-              className="p-1 rounded-[var(--radius)] hover:opacity-70 transition-opacity"
-              style={{ color: "var(--color-text-secondary)" }}
-              aria-label="Close chat"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
-              </svg>
-            </button>
-          </div>
+          Chat
+        </span>
+      </div>
 
-          {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-            {displayMessages.map((msg) => {
-              if (msg.status === "pending" || msg.status === "streaming") {
-                return (
-                  <div key={msg.id} className="flex justify-start">
-                    <div
-                      className="rounded-[var(--radius-lg)] px-4 py-2.5 text-sm"
-                      style={{
-                        backgroundColor: "var(--color-bg-secondary)",
-                        color: "var(--color-text-secondary)",
-                        fontFamily: "var(--font-ui)",
-                      }}
-                    >
-                      <span className="inline-flex gap-1">
-                        <span className="animate-bounce" style={{ animationDelay: "0ms" }}>·</span>
-                        <span className="animate-bounce" style={{ animationDelay: "150ms" }}>·</span>
-                        <span className="animate-bounce" style={{ animationDelay: "300ms" }}>·</span>
-                      </span>
-                    </div>
-                  </div>
-                );
-              }
-              return (
-                <ChatMessage key={msg.id} role={msg.role} content={msg.text} />
-              );
-            })}
-          </div>
+      {/* Divider */}
+      <div style={{ borderBottom: "1px solid var(--color-border)", flexShrink: 0 }} />
 
-          {/* Input */}
-          <ChatInput onSend={handleSend} />
-        </div>
-      )}
-
-      {/* Toggle button */}
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105"
-        style={{ backgroundColor: "var(--color-accent)", color: "#ffffff" }}
-        aria-label={open ? "Close chat" : "Open chat"}
+      {/* Messages */}
+      <div
+        ref={scrollRef}
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "1.25rem 1.5rem",
+          maxWidth: "68ch",
+          width: "100%",
+          margin: "0 auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.75rem",
+          boxSizing: "border-box",
+        }}
       >
-        {open ? (
-          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
-          </svg>
-        ) : (
-          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M2.5 1A1.5 1.5 0 0 0 1 2.5v8A1.5 1.5 0 0 0 2.5 12H5v3.5a.5.5 0 0 0 .854.354L9.207 12H13.5A1.5 1.5 0 0 0 15 10.5v-8A1.5 1.5 0 0 0 13.5 1h-11z" />
-          </svg>
-        )}
-      </button>
+        {displayMessages.map((msg) => {
+          if (msg.status === "pending" || msg.status === "streaming") {
+            return (
+              <div key={msg.id} className="flex justify-start">
+                <div
+                  className="rounded-[var(--radius-lg)] px-4 py-2.5 text-sm"
+                  style={{
+                    backgroundColor: "var(--color-bg-secondary)",
+                    color: "var(--color-text-secondary)",
+                    fontFamily: "var(--font-ui)",
+                  }}
+                >
+                  <span className="inline-flex gap-1">
+                    <span className="animate-bounce" style={{ animationDelay: "0ms" }}>·</span>
+                    <span className="animate-bounce" style={{ animationDelay: "150ms" }}>·</span>
+                    <span className="animate-bounce" style={{ animationDelay: "300ms" }}>·</span>
+                  </span>
+                </div>
+              </div>
+            );
+          }
+          return <ChatMessage key={msg.id} role={msg.role} content={msg.text} />;
+        })}
+      </div>
+
+      {/* Input */}
+      <div
+        style={{
+          maxWidth: "68ch",
+          width: "100%",
+          margin: "0 auto",
+          flexShrink: 0,
+          borderTop: "1px solid var(--color-border)",
+        }}
+      >
+        <ChatInput onSend={handleSend} />
+      </div>
     </div>
   );
 }
