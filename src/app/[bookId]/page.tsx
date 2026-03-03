@@ -362,6 +362,18 @@ export default function BookPage() {
   const activeWordIdRef = useRef<string | null>(null);
   const restoredRef = useRef(false);
 
+  // Push a history entry when chat opens so the browser back button closes it
+  useEffect(() => {
+    if (chatOpen) window.history.pushState({ chat: true }, "");
+  }, [chatOpen]);
+
+  // Browser back button closes chat
+  useEffect(() => {
+    const handlePopState = () => setChatOpen(false);
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   // Fetch chapter list for navigation
   useEffect(() => {
     fetch(`/api/books/${bookId}`)
@@ -603,7 +615,7 @@ export default function BookPage() {
           bookId={bookId}
           bookTitle={bookMeta?.title ?? ""}
           authorName={bookMeta?.author ?? ""}
-          onClose={() => setChatOpen(false)}
+          onClose={() => window.history.back()}
         />
       )}
     </>
