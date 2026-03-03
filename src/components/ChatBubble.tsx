@@ -118,11 +118,8 @@ export default function ChatBubble({ bookId, bookTitle, authorName, onClose }: C
     <div
       style={{
         position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: "var(--player-height)",
-        zIndex: 30,
+        inset: 0,
+        zIndex: 50,
         backgroundColor: "var(--color-bg)",
         display: "flex",
         flexDirection: "column",
