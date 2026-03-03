@@ -367,9 +367,16 @@ export default function BookPage() {
     if (chatOpen) window.history.pushState({ chat: true }, "");
   }, [chatOpen]);
 
-  // Browser back button closes chat
+  // Browser back button: close chat or navigate to previous chapter
   useEffect(() => {
-    const handlePopState = () => setChatOpen(false);
+    const handlePopState = (e: PopStateEvent) => {
+      setChatOpen(false);
+      if (e.state?.chapter !== undefined) {
+        setActiveChapterId(e.state.chapter);
+        setInitialAudioMs(0);
+        window.scrollTo({ top: 0, behavior: "instant" });
+      }
+    };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
@@ -392,12 +399,13 @@ export default function BookPage() {
       .catch(() => {});
   }, [bookId]);
 
-  // Restore saved chapter on first load
+  // Restore saved chapter on first load; seed the history entry with the chapter
   useEffect(() => {
     if (!progressLoaded || restoredRef.current || !progress) return;
     restoredRef.current = true;
     setActiveChapterId(progress.chapter_number);
     setInitialAudioMs(progress.audio_position_ms);
+    window.history.replaceState({ chapter: progress.chapter_number }, "");
   }, [progressLoaded, progress]);
 
   // Fetch chapter data (abort stale requests to avoid race conditions)
@@ -430,6 +438,7 @@ export default function BookPage() {
   const handleChapterSelect = useCallback(
     (chapterId: number) => {
       window.scrollTo({ top: 0, behavior: "instant" });
+      window.history.pushState({ chapter: chapterId }, "");
       setActiveChapterId(chapterId);
       setInitialAudioMs(0);
       if (restoredRef.current) {
