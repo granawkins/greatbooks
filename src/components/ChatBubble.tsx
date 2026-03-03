@@ -175,7 +175,7 @@ export default function ChatBubble({ bookId, bookTitle, authorName, onClose }: C
       {/* Divider */}
       <div style={{ borderBottom: "1px solid var(--color-border)", flexShrink: 0 }} />
 
-      {/* Messages */}
+      {/* Messages — justify-end so sparse history hugs the bottom */}
       <div
         ref={scrollRef}
         style={{
@@ -187,6 +187,7 @@ export default function ChatBubble({ bookId, bookTitle, authorName, onClose }: C
           margin: "0 auto",
           display: "flex",
           flexDirection: "column",
+          justifyContent: "flex-end",
           gap: "0.75rem",
           boxSizing: "border-box",
         }}
