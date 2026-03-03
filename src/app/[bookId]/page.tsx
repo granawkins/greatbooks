@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
-import { getBook } from "@/data/books";
 import ChapterNav from "@/components/ChapterNav";
 import AudioPlayer from "@/components/AudioPlayer";
 import ChatBubble from "@/components/ChatBubble";
@@ -162,14 +161,16 @@ function HighlightedParagraph({
   return <>{elements}</>;
 }
 
+type NavChapter = { id: number; title: string };
+type BookMeta = { title: string; author: string };
+
 export default function BookPage() {
   const { bookId } = useParams<{ bookId: string }>();
-  const book = getBook(bookId);
   const { progress, loaded: progressLoaded, saveProgress, saveProgressNow } = useProgress(bookId);
 
-  const [activeChapterId, setActiveChapterId] = useState(
-    book?.chapters[0]?.id ?? 1
-  );
+  const [bookMeta, setBookMeta] = useState<BookMeta | null>(null);
+  const [bookChapters, setBookChapters] = useState<NavChapter[]>([]);
+  const [activeChapterId, setActiveChapterId] = useState(1);
   const [initialAudioMs, setInitialAudioMs] = useState(0);
   const [chapter, setChapter] = useState<ChapterData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -178,6 +179,24 @@ export default function BookPage() {
   const paraRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const activeParaRef = useRef<number | null>(null);
   const restoredRef = useRef(false);
+
+  // Fetch chapter list for navigation
+  useEffect(() => {
+    fetch(`/api/books/${bookId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.chapters) {
+          setBookMeta({ title: data.title, author: data.author });
+          setBookChapters(
+            data.chapters.map((c: { number: number; title: string }) => ({
+              id: c.number,
+              title: c.title,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+  }, [bookId]);
 
   // Restore saved chapter on first load
   useEffect(() => {
@@ -264,9 +283,6 @@ export default function BookPage() {
     [activeChapterId, saveProgressNow]
   );
 
-  if (!book) return null;
-
-  const bookChapter = book.chapters.find((c) => c.id === activeChapterId);
   const audioSrc = chapter?.audio_file
     ? `/api/audio/${chapter.audio_file.replace(/^data\//, "")}`
     : null;
@@ -277,7 +293,7 @@ export default function BookPage() {
         {/* Sidebar */}
         <aside className="hidden md:block w-56 shrink-0">
           <ChapterNav
-            chapters={book.chapters}
+            chapters={bookChapters}
             activeChapterId={activeChapterId}
             onSelect={handleChapterSelect}
           />
@@ -297,7 +313,7 @@ export default function BookPage() {
                 color: "var(--color-text)",
               }}
             >
-              {book.chapters.map((ch) => (
+              {bookChapters.map((ch) => (
                 <option key={ch.id} value={ch.id}>
                   {ch.title}
                 </option>
@@ -309,7 +325,7 @@ export default function BookPage() {
             className="text-xl font-semibold mb-6"
             style={{ color: "var(--color-text)", fontFamily: "var(--font-ui)" }}
           >
-            {bookChapter?.title}
+            {bookChapters.find((c) => c.id === activeChapterId)?.title ?? chapter?.title}
           </h2>
 
           {loading ? (
@@ -375,7 +391,7 @@ export default function BookPage() {
       </div>
 
       {/* Chat bubble */}
-      <ChatBubble bookId={bookId} bookTitle={book.title} authorName={book.author} />
+      <ChatBubble bookId={bookId} bookTitle={bookMeta?.title ?? ""} authorName={bookMeta?.author ?? ""} />
     </>
   );
 }

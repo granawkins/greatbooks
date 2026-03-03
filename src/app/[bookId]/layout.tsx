@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBook } from "@/data/books";
+import { db } from "@/lib/db";
 
 export default async function BookLayout({
   children,
@@ -10,7 +10,7 @@ export default async function BookLayout({
   params: Promise<{ bookId: string }>;
 }) {
   const { bookId } = await params;
-  const book = getBook(bookId);
+  const book = db.getBook(bookId);
   if (!book) notFound();
 
   return (

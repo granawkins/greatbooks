@@ -99,7 +99,6 @@ src/
       audio/[...path]/        ← Streams MP3 files from data/
   components/                 ← Flat: BookCard, ChapterNav, AudioPlayer, ChatBubble, etc.
   lib/db.ts                   ← SQLite connection (readonly) + typed query helpers
-  data/books.ts               ← Book/chapter list for navigation (will be replaced by DB queries)
 
 data/<book-id>/
   SKILL.md                    ← Provenance, context, audio status
@@ -118,7 +117,6 @@ logs/
 ```
 
 ## Known Issues / TODO
-- `src/data/books.ts` still used for navigation (chapter list, home page). Should be replaced by DB queries so adding a book doesn't require editing TS.
 - Word-level highlighting implemented; uses `word_timestamps` on segments with char indices.
 - `_mp3_duration_ms()` in `tts.py` undercounts after ffmpeg concat — always use `ffprobe` for merged file duration.
 - Fagles/Lattimore translations are NOT public domain (post-1928) — only Butler, Jowett, and similar old translations work.

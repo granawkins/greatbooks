@@ -1,6 +1,6 @@
 "use client";
 
-import type { Chapter } from "@/data/books";
+type Chapter = { id: number; title: string };
 
 type ChapterNavProps = {
   chapters: Chapter[];
