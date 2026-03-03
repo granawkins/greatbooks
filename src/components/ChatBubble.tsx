@@ -27,10 +27,17 @@ type ChatBubbleProps = {
   bookId: string;
   bookTitle: string;
   authorName: string;
+  /** When this flips to true the panel opens; internal toggle still works normally */
+  externalOpen?: boolean;
 };
 
-export default function ChatBubble({ bookId, bookTitle, authorName }: ChatBubbleProps) {
+export default function ChatBubble({ bookId, bookTitle, authorName, externalOpen }: ChatBubbleProps) {
   const [open, setOpen] = useState(false);
+
+  // When the parent signals open, honour it
+  useEffect(() => {
+    if (externalOpen) setOpen(true);
+  }, [externalOpen]);
   const [userId] = useState(getUserId);
   const [messages, setMessages] = useState<Message[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -121,7 +128,7 @@ export default function ChatBubble({ bookId, bookTitle, authorName }: ChatBubble
         ];
 
   return (
-    <div className="fixed bottom-20 right-6 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-[9rem] right-6 z-50 flex flex-col items-end gap-3">
       {/* Chat panel */}
       {open && (
         <div

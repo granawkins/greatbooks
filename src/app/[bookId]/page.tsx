@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import AudioPlayer from "@/components/AudioPlayer";
+import AudioPlayer, { SegmentBoundary } from "@/components/AudioPlayer";
 import ChatBubble from "@/components/ChatBubble";
 import { useProgress } from "@/lib/useProgress";
 
@@ -356,6 +356,7 @@ export default function BookPage() {
   const [initialAudioMs, setInitialAudioMs] = useState(0);
   const [chapter, setChapter] = useState<ChapterData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
   const paraRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const activeParaRef = useRef<number | null>(null);
   const activeWordIdRef = useRef<string | null>(null);
@@ -435,6 +436,19 @@ export default function BookPage() {
     () => chapter?.paragraphs?.map((p) => paraTimeRange(p)) ?? null,
     [chapter]
   );
+
+  const segmentBoundaries = useMemo((): SegmentBoundary[] => {
+    if (!chapter?.paragraphs) return [];
+    const result: SegmentBoundary[] = [];
+    for (const para of chapter.paragraphs) {
+      for (const seg of para.segments) {
+        if (seg.audio_start_ms != null && seg.audio_end_ms != null) {
+          result.push({ start_ms: seg.audio_start_ms, end_ms: seg.audio_end_ms });
+        }
+      }
+    }
+    return result.sort((a, b) => a.start_ms - b.start_ms);
+  }, [chapter]);
 
   const handleTimeUpdate = useCallback(
     (timeMs: number) => {
@@ -565,19 +579,26 @@ export default function BookPage() {
           backgroundColor: "var(--color-bg)",
         }}
       >
-        <div className="max-w-3xl mx-auto px-6 py-3">
+        <div className="mx-auto px-6 py-4" style={{ maxWidth: "68ch" }}>
           <AudioPlayer
             src={audioSrc}
             durationMs={chapter?.audio_duration_ms ?? null}
             initialPositionMs={initialAudioMs}
+            segmentBoundaries={segmentBoundaries}
             onTimeUpdate={handleTimeUpdate}
             onPause={handlePause}
+            onChatClick={() => setChatOpen(true)}
           />
         </div>
       </div>
 
       {/* Chat bubble */}
-      <ChatBubble bookId={bookId} bookTitle={bookMeta?.title ?? ""} authorName={bookMeta?.author ?? ""} />
+      <ChatBubble
+        bookId={bookId}
+        bookTitle={bookMeta?.title ?? ""}
+        authorName={bookMeta?.author ?? ""}
+        externalOpen={chatOpen}
+      />
     </>
   );
 }
