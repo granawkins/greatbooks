@@ -308,8 +308,8 @@ function ChapterFooterNav({
 
   return (
     <div
-      className="flex items-center justify-center gap-6 py-10"
-      style={{ borderTop: "1px solid var(--color-border)", marginTop: "4rem" }}
+      className="flex items-center justify-center gap-6 py-4"
+      style={{ marginTop: "2rem" }}
     >
       <button
         onClick={() => prev && onSelect(prev.id)}
@@ -518,7 +518,7 @@ export default function BookPage() {
           maxWidth: "68ch",
           paddingLeft: "1.5rem",
           paddingRight: "1.5rem",
-          paddingBottom: "200px",
+          paddingBottom: "120px",
         }}
       >
         {/* Book header */}
