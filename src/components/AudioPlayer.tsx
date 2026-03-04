@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAudioPlayer, type WordTiming } from "@/lib/AudioPlayerContext";
 
@@ -154,15 +154,32 @@ export default function AudioPlayer() {
   const {
     session,
     audioRef,
+    loadSession,
     dismiss,
     wordTimingsRef,
     scrollDataRef,
+    viewportParaRef,
+    viewingChapterRef,
+    pageContextRef,
+    navigateToChapterRef,
     onChatClickRef,
   } = useAudioPlayer();
+
+  const router = useRouter();
 
   // ── Local playback state (derived from audio element events) ────────────
   const [playing, setPlaying] = useState(false);
   const [speedIdx, setSpeedIdx] = useState(1); // index into SPEEDS (default 1x)
+  // Resume modal — captures ref values at open time so we don't read refs during render
+  type ModalData = {
+    mode: "offscreen" | "mismatch";
+    savedTimeMs: number;
+    isCrossBook: boolean;
+    pageChapterTitle: string;
+    pageBookTitle: string;
+  };
+  const [resumeModal, setResumeModal] = useState<ModalData | null>(null);
+  const resumeModalRef = useRef<HTMLDivElement>(null);
 
   // Sync playing state with audio element
   useEffect(() => {
@@ -188,12 +205,70 @@ export default function AudioPlayer() {
 
   // ── Playback controls (local, operate directly on audio element) ────────
 
+  const pathname = usePathname();
+  const isOnBookPage = session ? pathname === `/${session.bookId}` : false;
+
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (audio.paused) audio.play();
-    else audio.pause();
-  }, [audioRef]);
+
+    // Pause if playing
+    if (!audio.paused) {
+      audio.pause();
+      return;
+    }
+
+    // Use viewingChapterRef for immediate mismatch detection (no async deps)
+    const viewing = viewingChapterRef.current;
+    const sessionMatchesPage = session && viewing &&
+      session.bookId === viewing.bookId &&
+      session.chapterId === viewing.chapterId;
+
+    // Session loaded but viewing a different chapter/book that has audio → mismatch
+    const pageCtx = pageContextRef.current;
+    if (session && viewing && !sessionMatchesPage && pageCtx) {
+      setResumeModal({
+        mode: "mismatch",
+        savedTimeMs: Math.floor(audio.currentTime * 1000),
+        isCrossBook: session.bookId !== pageCtx.bookId,
+        pageChapterTitle: pageCtx.chapterTitle,
+        pageBookTitle: pageCtx.bookTitle,
+      });
+      return;
+    }
+
+    // Session matches page — check if audio position is offscreen
+    if (sessionMatchesPage && audio.currentTime > 0.5) {
+      const sd = scrollDataRef.current;
+      if (sd) {
+        const ms = Math.floor(audio.currentTime * 1000);
+        let audioPara = -1;
+        for (let i = 0; i < sd.ranges.length; i++) {
+          const r = sd.ranges[i];
+          if (r && ms >= r.start_ms && ms < r.end_ms) { audioPara = i; break; }
+        }
+        if (audioPara >= 0) {
+          const el = sd.elements[audioPara];
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            const visible = rect.top < window.innerHeight && rect.bottom > 0;
+            if (!visible) {
+              setResumeModal({
+                mode: "offscreen",
+                savedTimeMs: ms,
+                isCrossBook: false,
+                pageChapterTitle: "",
+                pageBookTitle: "",
+              });
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    audio.play();
+  }, [audioRef, session, viewingChapterRef, pageContextRef, scrollDataRef]);
 
   const seekTo = useCallback((ms: number) => {
     const audio = audioRef.current;
@@ -236,6 +311,64 @@ export default function AudioPlayer() {
     });
   }, [audioRef]);
 
+  // ── Resume modal handlers ──────────────────────────────────────────────
+
+  // Offscreen: continue from saved position
+  const handleResumeContinue = useCallback(() => {
+    setResumeModal(null);
+    audioRef.current?.play();
+  }, [audioRef]);
+
+  // Offscreen: play from current viewport position
+  const handleResumeHere = useCallback(() => {
+    setResumeModal(null);
+    const sd = scrollDataRef.current;
+    if (!sd) { audioRef.current?.play(); return; }
+    const paraIdx = viewportParaRef.current;
+    const range = sd.ranges[paraIdx];
+    if (range) {
+      const audio = audioRef.current;
+      if (audio) audio.currentTime = range.start_ms / 1000;
+    }
+    audioRef.current?.play();
+  }, [audioRef, scrollDataRef, viewportParaRef]);
+
+  // Mismatch: continue current session and navigate to its location
+  const handleMismatchContinue = useCallback(() => {
+    setResumeModal(null);
+    if (!session) return;
+    audioRef.current?.play();
+
+    const pageCtx = pageContextRef.current;
+    if (pageCtx && pageCtx.bookId === session.bookId) {
+      // Same book, different chapter → switch chapter in the book page
+      navigateToChapterRef.current?.(session.chapterId);
+    } else {
+      // Different book → navigate to the session's book
+      router.push(`/${session.bookId}`);
+    }
+  }, [audioRef, session, pageContextRef, navigateToChapterRef, router]);
+
+  // Mismatch: load the current page's audio and start playing
+  const handleMismatchHere = useCallback(() => {
+    setResumeModal(null);
+    const pageCtx = pageContextRef.current;
+    if (!pageCtx) return;
+    loadSession(pageCtx, 0, true);
+  }, [pageContextRef, loadSession]);
+
+  // Close modal on outside click
+  useEffect(() => {
+    if (!resumeModal) return;
+    const handler = (e: MouseEvent) => {
+      if (resumeModalRef.current && !resumeModalRef.current.contains(e.target as Node)) {
+        setResumeModal(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [resumeModal]);
+
   // DOM refs for imperative scrubber updates (no React re-renders)
   const fillRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
@@ -244,6 +377,8 @@ export default function AudioPlayer() {
   // Tracking refs for imperative highlighting & scroll
   const activeWordRef = useRef<string | null>(null);
   const activeParaRef = useRef<number | null>(null);
+  // Auto-scroll: enabled on play start, disabled when user scrolls away
+  const autoScrollRef = useRef(true);
 
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
@@ -251,9 +386,6 @@ export default function AudioPlayer() {
   const [trackHovered, setTrackHovered] = useState(false);
   const [playHovered, setPlayHovered] = useState(false);
   const [speedHovered, setSpeedHovered] = useState(false);
-
-  const pathname = usePathname();
-  const isOnBookPage = session ? pathname === `/${session.bookId}` : false;
 
   const duration = session?.durationMs ?? 0;
   const disabled = !session;
@@ -280,12 +412,26 @@ export default function AudioPlayer() {
   }, [wordTimingsRef]);
 
   const updateScroll = useCallback((ms: number) => {
+    if (!autoScrollRef.current) return;
     const sd = scrollDataRef.current;
     if (!sd) return;
     for (let i = 0; i < sd.ranges.length; i++) {
       const r = sd.ranges[i];
       if (r && ms >= r.start_ms && ms < r.end_ms) {
         if (i !== activeParaRef.current) {
+          // If we had a previous paragraph, check it's still visible (user hasn't scrolled away)
+          if (activeParaRef.current !== null) {
+            const prevEl = sd.elements[activeParaRef.current];
+            if (prevEl) {
+              const rect = prevEl.getBoundingClientRect();
+              const visible = rect.top < window.innerHeight && rect.bottom > 0;
+              if (!visible) {
+                autoScrollRef.current = false;
+                activeParaRef.current = i;
+                return;
+              }
+            }
+          }
           activeParaRef.current = i;
           sd.elements[i]?.scrollIntoView({ behavior: "smooth", block: "center" });
         }
@@ -313,6 +459,24 @@ export default function AudioPlayer() {
       if (!paused) {
         const ms = Math.floor(audio.currentTime * 1000);
         const dur = session?.durationMs ?? 0;
+
+        // Just started playing — re-engage auto-scroll and jump to audio position
+        if (wasPaused) {
+          autoScrollRef.current = true;
+          activeParaRef.current = null;
+          const sd = scrollDataRef.current;
+          if (sd) {
+            for (let i = 0; i < sd.ranges.length; i++) {
+              const r = sd.ranges[i];
+              if (r && ms >= r.start_ms && ms < r.end_ms) {
+                activeParaRef.current = i;
+                sd.elements[i]?.scrollIntoView({ behavior: "smooth", block: "center" });
+                break;
+              }
+            }
+          }
+        }
+
         updateScrubber(ms, dur);
         updateHighlight(ms);
         updateScroll(ms);
@@ -328,7 +492,7 @@ export default function AudioPlayer() {
     };
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [audioRef, session, updateScrubber, updateHighlight, updateScroll, clearHighlight]);
+  }, [audioRef, session, scrollDataRef, updateScrubber, updateHighlight, updateScroll, clearHighlight]);
 
   // Sync scrubber on mount / session change
   useEffect(() => {
@@ -386,7 +550,127 @@ export default function AudioPlayer() {
   const speedLabel = SPEEDS[speedIdx] === 1 ? "1×" : `${SPEEDS[speedIdx]}×`;
 
   return (
-    <div style={{ width: "100%" }}>
+    <div style={{ width: "100%", position: "relative" }}>
+      {/* ── Resume modal (offscreen or mismatch) ────────────────────────── */}
+      {resumeModal && (
+        <div
+          ref={resumeModalRef}
+          style={{
+            position: "absolute",
+            bottom: "100%",
+            left: "50%",
+            transform: "translateX(-50%)",
+            marginBottom: 12,
+            backgroundColor: "var(--color-bg)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-lg)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)",
+            padding: "12px 16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            minWidth: 240,
+            zIndex: 100,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-ui)",
+              fontSize: "0.75rem",
+              color: "var(--color-text-secondary)",
+              textAlign: "center",
+            }}
+          >
+            {resumeModal.mode === "offscreen" ? "Resume audio from..." : "Continue listening?"}
+          </span>
+          {resumeModal.mode === "offscreen" ? (
+            <>
+              <button
+                onClick={handleResumeContinue}
+                style={{
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "0.8125rem",
+                  fontWeight: 500,
+                  color: "var(--color-text)",
+                  backgroundColor: "var(--color-bg-secondary)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius)",
+                  padding: "8px 14px",
+                  cursor: "pointer",
+                  transition: "background-color 0.13s",
+                }}
+                className="hover:opacity-80"
+              >
+                Continue from {formatTime(resumeModal.savedTimeMs)}
+              </button>
+              <button
+                onClick={handleResumeHere}
+                style={{
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "0.8125rem",
+                  fontWeight: 500,
+                  color: "var(--color-accent)",
+                  backgroundColor: "transparent",
+                  border: "1px solid var(--color-accent)",
+                  borderRadius: "var(--radius)",
+                  padding: "8px 14px",
+                  cursor: "pointer",
+                  transition: "background-color 0.13s",
+                }}
+                className="hover:opacity-80"
+              >
+                Play from here
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleMismatchContinue}
+                style={{
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "0.8125rem",
+                  fontWeight: 500,
+                  color: "var(--color-text)",
+                  backgroundColor: "var(--color-bg-secondary)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius)",
+                  padding: "8px 14px",
+                  cursor: "pointer",
+                  transition: "background-color 0.13s",
+                  textAlign: "left",
+                }}
+                className="hover:opacity-80"
+              >
+                Resume {resumeModal.isCrossBook
+                  ? `${session?.bookTitle}, `
+                  : ""}{session?.chapterTitle} at {formatTime(resumeModal.savedTimeMs)}
+              </button>
+              <button
+                onClick={handleMismatchHere}
+                style={{
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "0.8125rem",
+                  fontWeight: 500,
+                  color: "var(--color-accent)",
+                  backgroundColor: "transparent",
+                  border: "1px solid var(--color-accent)",
+                  borderRadius: "var(--radius)",
+                  padding: "8px 14px",
+                  cursor: "pointer",
+                  transition: "background-color 0.13s",
+                  textAlign: "left",
+                }}
+                className="hover:opacity-80"
+              >
+                Start {resumeModal.isCrossBook
+                  ? `${resumeModal.pageBookTitle}, `
+                  : ""}{resumeModal.pageChapterTitle}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {/* ── Title bar ────────────────────────────────────────────────────── */}
       {session && (
         <div

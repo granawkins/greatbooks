@@ -325,6 +325,9 @@ export default function BookPage() {
     loadSession,
     wordTimingsRef,
     scrollDataRef,
+    viewingChapterRef,
+    pageContextRef,
+    navigateToChapterRef,
     onPauseRef,
     onChatClickRef,
   } = useAudioPlayer();
@@ -450,12 +453,11 @@ export default function BookPage() {
     ? `/api/audio/${chapter.audio_file.replace(/^data\//, "")}`
     : null;
 
-  // ── Load audio session into global player ──────────────────────────────────
+  // ── Load audio session into global player (only when no session exists) ─────
   useEffect(() => {
     if (!progressLoaded) return;
     if (!chapter?.audio_file || !audioSrc || !bookMeta) return;
-    if (session && session.bookId !== bookId) return;
-    if (session?.bookId === bookId && session?.chapterId === activeChapterId) return;
+    if (session) return; // keep existing session (even if different chapter/book)
 
     loadSession(
       {
@@ -470,35 +472,73 @@ export default function BookPage() {
       initialAudioMsRef.current
     );
     initialAudioMsRef.current = 0;
-  }, [progressLoaded, chapter, audioSrc, bookMeta, bookId, activeChapterId, session?.bookId, session?.chapterId, segmentBoundaries, loadSession]);
+  }, [progressLoaded, chapter, audioSrc, bookMeta, bookId, activeChapterId, session, segmentBoundaries, loadSession]);
+
+  // ── Tell the player what chapter we're viewing (immediate, no async deps) ───
+  useEffect(() => {
+    viewingChapterRef.current = { bookId, chapterId: activeChapterId };
+    return () => { viewingChapterRef.current = null; };
+  }, [bookId, activeChapterId, viewingChapterRef]);
+
+  // ── Publish page audio context for the player's mismatch detection ─────────
+  useEffect(() => {
+    if (loading || !chapter?.audio_file || !audioSrc || !bookMeta) {
+      pageContextRef.current = null;
+      return;
+    }
+    pageContextRef.current = {
+      bookId,
+      bookTitle: bookMeta.title,
+      chapterTitle: chapter.title,
+      chapterId: activeChapterId,
+      src: audioSrc,
+      durationMs: chapter.audio_duration_ms ?? 0,
+      segmentBoundaries,
+    };
+    return () => { pageContextRef.current = null; };
+  }, [loading, chapter, audioSrc, bookMeta, bookId, activeChapterId, segmentBoundaries, pageContextRef]);
+
+  // ── Let the audio player navigate back to the session's chapter ────────────
+  useEffect(() => {
+    navigateToChapterRef.current = (chapterId: number) => {
+      window.scrollTo({ top: 0, behavior: "instant" });
+      window.history.pushState({ chapter: chapterId }, "");
+      setActiveChapterId(chapterId);
+    };
+    return () => { navigateToChapterRef.current = null; };
+  }, [navigateToChapterRef]);
 
   // ── Populate data refs for the player's imperative rAF loop ────────────────
 
   useEffect(() => {
-    if (session?.bookId !== bookId) return;
+    if (session?.bookId !== bookId || session?.chapterId !== activeChapterId) return;
     wordTimingsRef.current = wordTimings;
     return () => { wordTimingsRef.current = null; };
-  }, [session?.bookId, bookId, wordTimings, wordTimingsRef]);
+  }, [session?.bookId, session?.chapterId, bookId, activeChapterId, wordTimings, wordTimingsRef]);
 
   useEffect(() => {
-    if (session?.bookId !== bookId || !paraRanges) return;
+    if (session?.bookId !== bookId || session?.chapterId !== activeChapterId || !paraRanges) return;
     scrollDataRef.current = { ranges: paraRanges, elements: paraRefs.current };
     return () => { scrollDataRef.current = null; };
-  }, [session?.bookId, bookId, paraRanges, scrollDataRef]);
+  }, [session?.bookId, session?.chapterId, bookId, activeChapterId, paraRanges, scrollDataRef]);
 
-  // ── Register pause + chat callbacks ────────────────────────────────────────
+  // ── Register pause callback (saves progress for the session's chapter) ─────
 
   useEffect(() => {
-    if (session?.bookId !== bookId) return;
+    if (!session || session.bookId !== bookId) return;
+    const chapterId = session.chapterId;
     onPauseRef.current = (timeMs: number) => {
-      saveProgressNow(activeChapterRef.current, timeMs, 0);
+      saveProgressNow(chapterId, timeMs, 0);
     };
+    return () => { onPauseRef.current = null; };
+  }, [session, bookId, saveProgressNow, onPauseRef]);
+
+  // ── Register chat callback (always available on book page) ────────────────
+
+  useEffect(() => {
     onChatClickRef.current = () => setChatOpen((o) => !o);
-    return () => {
-      onPauseRef.current = null;
-      onChatClickRef.current = null;
-    };
-  }, [session?.bookId, bookId, saveProgressNow, onPauseRef, onChatClickRef]);
+    return () => { onChatClickRef.current = null; };
+  }, [onChatClickRef]);
 
   if (chatOpen) {
     return (

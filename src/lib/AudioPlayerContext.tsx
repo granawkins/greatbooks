@@ -36,12 +36,24 @@ type AudioPlayerContextValue = {
   session: AudioSession | null;
   audioRef: MutableRefObject<HTMLAudioElement | null>;
 
-  loadSession: (session: AudioSession, initialPositionMs?: number) => void;
+  loadSession: (session: AudioSession, initialPositionMs?: number, autoPlay?: boolean) => void;
   dismiss: () => void;
 
   // Data refs — the book page populates these, the player reads them imperatively
   wordTimingsRef: MutableRefObject<WordTiming[] | null>;
   scrollDataRef: MutableRefObject<ScrollData | null>;
+
+  // Index of the paragraph currently centered in viewport (written by BookPage, read by AudioPlayer)
+  viewportParaRef: MutableRefObject<number>;
+
+  // What book/chapter the user is currently viewing (set synchronously, no async deps)
+  viewingChapterRef: MutableRefObject<{ bookId: string; chapterId: number } | null>;
+
+  // Page context — full audio data for the current page (set after chapter fetch completes)
+  pageContextRef: MutableRefObject<AudioSession | null>;
+
+  // Navigate to a chapter within the current book page (set by BookPage)
+  navigateToChapterRef: MutableRefObject<((chapterId: number) => void) | null>;
 
   // Sparse callbacks — only fired on discrete events, never at 60fps
   onPauseRef: MutableRefObject<((ms: number) => void) | null>;
@@ -62,9 +74,14 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
   const seekedRef = useRef(false);
   const initialMsRef = useRef(0);
+  const autoPlayRef = useRef(false);
 
   const wordTimingsRef = useRef<WordTiming[] | null>(null);
   const scrollDataRef = useRef<ScrollData | null>(null);
+  const viewportParaRef = useRef<number>(0);
+  const viewingChapterRef = useRef<{ bookId: string; chapterId: number } | null>(null);
+  const pageContextRef = useRef<AudioSession | null>(null);
+  const navigateToChapterRef = useRef<((chapterId: number) => void) | null>(null);
   const onPauseRef = useRef<((ms: number) => void) | null>(null);
   const onChatClickRef = useRef<(() => void) | null>(null);
 
@@ -92,16 +109,21 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [session]);
 
-  // Restore initial position after audio loads
+  // Restore initial position after audio loads, and auto-play if requested
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !session) return;
-    if (seekedRef.current) return;
 
     const handleCanPlay = () => {
-      if (!seekedRef.current && initialMsRef.current > 0) {
-        audio.currentTime = initialMsRef.current / 1000;
+      if (!seekedRef.current) {
+        if (initialMsRef.current > 0) {
+          audio.currentTime = initialMsRef.current / 1000;
+        }
         seekedRef.current = true;
+      }
+      if (autoPlayRef.current) {
+        autoPlayRef.current = false;
+        audio.play().catch(() => {});
       }
     };
     audio.addEventListener("canplay", handleCanPlay);
@@ -110,7 +132,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   }, [session]);
 
   const loadSession = useCallback(
-    (newSession: AudioSession, initialPositionMs?: number) => {
+    (newSession: AudioSession, initialPositionMs?: number, autoPlay?: boolean) => {
       const audio = audioRef.current;
       if (audio) {
         audio.pause();
@@ -121,6 +143,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       setSession(newSession);
       seekedRef.current = false;
       initialMsRef.current = initialPositionMs ?? 0;
+      autoPlayRef.current = autoPlay ?? false;
     },
     []
   );
@@ -142,6 +165,10 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     dismiss,
     wordTimingsRef,
     scrollDataRef,
+    viewportParaRef,
+    viewingChapterRef,
+    pageContextRef,
+    navigateToChapterRef,
     onPauseRef,
     onChatClickRef,
   };
