@@ -23,14 +23,14 @@ type Message = {
   status: "pending" | "streaming" | "completed" | "error";
 };
 
-type ChatBubbleProps = {
+type ChatViewProps = {
   bookId: string;
   bookTitle: string;
   authorName: string;
   onClose: () => void;
 };
 
-export default function ChatBubble({ bookId, bookTitle, authorName, onClose }: ChatBubbleProps) {
+export default function ChatView({ bookId, bookTitle, authorName, onClose }: ChatViewProps) {
   const [userId] = useState(getUserId);
   const [messages, setMessages] = useState<Message[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -117,9 +117,7 @@ export default function ChatBubble({ bookId, bookTitle, authorName, onClose }: C
   return (
     <div
       style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 50,
+        height: "100dvh",
         backgroundColor: "var(--color-bg)",
         display: "flex",
         flexDirection: "column",
@@ -169,46 +167,53 @@ export default function ChatBubble({ bookId, bookTitle, authorName, onClose }: C
       {/* Divider */}
       <div style={{ borderBottom: "1px solid var(--color-border)", flexShrink: 0 }} />
 
-      {/* Messages — justify-end so sparse history hugs the bottom */}
+      {/* Messages — inner wrapper with justify-end so sparse history hugs the bottom,
+           outer div scrolls normally when messages overflow */}
       <div
         ref={scrollRef}
         style={{
           flex: 1,
           overflowY: "auto",
-          padding: "1.25rem 1.5rem",
           maxWidth: "68ch",
           width: "100%",
           margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "flex-end",
-          gap: "0.75rem",
           boxSizing: "border-box",
         }}
       >
-        {displayMessages.map((msg) => {
-          if (msg.status === "pending" || msg.status === "streaming") {
-            return (
-              <div key={msg.id} className="flex justify-start">
-                <div
-                  className="rounded-[var(--radius-lg)] px-4 py-2.5 text-sm"
-                  style={{
-                    backgroundColor: "var(--color-bg-secondary)",
-                    color: "var(--color-text-secondary)",
-                    fontFamily: "var(--font-ui)",
-                  }}
-                >
-                  <span className="inline-flex gap-1">
-                    <span className="animate-bounce" style={{ animationDelay: "0ms" }}>·</span>
-                    <span className="animate-bounce" style={{ animationDelay: "150ms" }}>·</span>
-                    <span className="animate-bounce" style={{ animationDelay: "300ms" }}>·</span>
-                  </span>
+        <div
+          style={{
+            minHeight: "100%",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+            gap: "0.75rem",
+            padding: "1.25rem 1.5rem",
+          }}
+        >
+          {displayMessages.map((msg) => {
+            if (msg.status === "pending" || msg.status === "streaming") {
+              return (
+                <div key={msg.id} className="flex justify-start">
+                  <div
+                    className="rounded-[var(--radius-lg)] px-4 py-2.5 text-sm"
+                    style={{
+                      backgroundColor: "var(--color-bg-secondary)",
+                      color: "var(--color-text-secondary)",
+                      fontFamily: "var(--font-ui)",
+                    }}
+                  >
+                    <span className="inline-flex gap-1">
+                      <span className="animate-bounce" style={{ animationDelay: "0ms" }}>·</span>
+                      <span className="animate-bounce" style={{ animationDelay: "150ms" }}>·</span>
+                      <span className="animate-bounce" style={{ animationDelay: "300ms" }}>·</span>
+                    </span>
+                  </div>
                 </div>
-              </div>
-            );
-          }
-          return <ChatMessage key={msg.id} role={msg.role} content={msg.text} />;
-        })}
+              );
+            }
+            return <ChatMessage key={msg.id} role={msg.role} content={msg.text} />;
+          })}
+        </div>
       </div>
 
       {/* Input */}

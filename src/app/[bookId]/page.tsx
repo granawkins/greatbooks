@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import AudioPlayer, { SegmentBoundary } from "@/components/AudioPlayer";
-import ChatBubble from "@/components/ChatBubble";
+import ChatView from "@/components/ChatView";
 import { useProgress } from "@/lib/useProgress";
 
 type WordTs = {
@@ -519,6 +519,17 @@ export default function BookPage() {
     ? `/api/audio/${chapter.audio_file.replace(/^data\//, "")}`
     : null;
 
+  if (chatOpen) {
+    return (
+      <ChatView
+        bookId={bookId}
+        bookTitle={bookMeta?.title ?? ""}
+        authorName={bookMeta?.author ?? ""}
+        onClose={() => window.history.back()}
+      />
+    );
+  }
+
   return (
     <>
       <article
@@ -616,16 +627,6 @@ export default function BookPage() {
           />
         </div>
       </div>
-
-      {/* Full-screen chat overlay — sits above article, below player bar */}
-      {chatOpen && (
-        <ChatBubble
-          bookId={bookId}
-          bookTitle={bookMeta?.title ?? ""}
-          authorName={bookMeta?.author ?? ""}
-          onClose={() => window.history.back()}
-        />
-      )}
     </>
   );
 }
