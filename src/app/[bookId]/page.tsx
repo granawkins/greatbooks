@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import AudioPlayer, { SegmentBoundary } from "@/components/AudioPlayer";
+import { type SegmentBoundary } from "@/lib/AudioPlayerContext";
 import ChatView from "@/components/ChatView";
 import { useProgress } from "@/lib/useProgress";
+import { useAudioPlayer, type WordTiming } from "@/lib/AudioPlayerContext";
 
 type WordTs = {
   start_ms: number;
@@ -125,45 +126,15 @@ function HighlightedParagraph({ para, paraIndex }: { para: Paragraph; paraIndex:
   return <>{elements}</>;
 }
 
-// Flat sorted list of every word span across all paragraphs, for binary search.
-type FlatSpan = { id: string; start_ms: number; end_ms: number; paraIdx: number };
-
-function buildFlatSpans(paragraphs: Paragraph[]): FlatSpan[] {
-  const result: FlatSpan[] = [];
+// Flat sorted list of every word span across all paragraphs, for the player's rAF loop.
+function buildWordTimings(paragraphs: Paragraph[]): WordTiming[] {
+  const result: WordTiming[] = [];
   for (let i = 0; i < paragraphs.length; i++) {
     for (const s of buildWordSpans(paragraphs[i])) {
-      result.push({ id: `w-${i}-${s.charStart}`, start_ms: s.start_ms, end_ms: s.end_ms, paraIdx: i });
+      result.push({ id: `w-${i}-${s.charStart}`, start_ms: s.start_ms, end_ms: s.end_ms });
     }
   }
   return result;
-}
-
-function highlightWord(el: HTMLElement | null) {
-  if (!el) return;
-  el.style.textDecorationLine = "underline";
-  el.style.textDecorationColor = "#2563eb";
-  el.style.textDecorationThickness = "2px";
-  el.style.textUnderlineOffset = "3px";
-}
-
-function clearWord(el: HTMLElement | null) {
-  if (!el) return;
-  el.style.textDecorationLine = "";
-  el.style.textDecorationColor = "";
-  el.style.textDecorationThickness = "";
-  el.style.textUnderlineOffset = "";
-}
-
-function findActiveSpanIdx(spans: FlatSpan[], ms: number): number {
-  let lo = 0, hi = spans.length - 1;
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    const s = spans[mid];
-    if (ms >= s.start_ms && ms < s.end_ms) return mid;
-    if (ms < s.start_ms) hi = mid - 1;
-    else lo = mid + 1;
-  }
-  return -1;
 }
 
 type NavChapter = { id: number; title: string };
@@ -348,19 +319,29 @@ function ChapterFooterNav({
 
 export default function BookPage() {
   const { bookId } = useParams<{ bookId: string }>();
-  const { progress, loaded: progressLoaded, saveProgress, saveProgressNow } = useProgress(bookId);
+  const { progress, loaded: progressLoaded, saveProgressNow } = useProgress(bookId);
+  const {
+    session,
+    loadSession,
+    wordTimingsRef,
+    scrollDataRef,
+    onPauseRef,
+    onChatClickRef,
+  } = useAudioPlayer();
 
   const [bookMeta, setBookMeta] = useState<BookMeta | null>(null);
   const [bookChapters, setBookChapters] = useState<NavChapter[]>([]);
   const [activeChapterId, setActiveChapterId] = useState(1);
-  const [initialAudioMs, setInitialAudioMs] = useState(0);
   const [chapter, setChapter] = useState<ChapterData | null>(null);
   const [loading, setLoading] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
   const paraRefs = useRef<(HTMLParagraphElement | null)[]>([]);
-  const activeParaRef = useRef<number | null>(null);
-  const activeWordIdRef = useRef<string | null>(null);
   const restoredRef = useRef(false);
+  const initialAudioMsRef = useRef(0);
+  const activeChapterRef = useRef(1);
+
+  // Keep activeChapterRef in sync (for the progress timer closure)
+  useEffect(() => { activeChapterRef.current = activeChapterId; }, [activeChapterId]);
 
   // Push a history entry when chat opens so the browser back button closes it
   useEffect(() => {
@@ -373,7 +354,7 @@ export default function BookPage() {
       setChatOpen(false);
       if (e.state?.chapter !== undefined) {
         setActiveChapterId(e.state.chapter);
-        setInitialAudioMs(0);
+        initialAudioMsRef.current = 0;
         window.scrollTo({ top: 0, behavior: "instant" });
       }
     };
@@ -404,7 +385,7 @@ export default function BookPage() {
     if (!progressLoaded || restoredRef.current || !progress) return;
     restoredRef.current = true;
     setActiveChapterId(progress.chapter_number);
-    setInitialAudioMs(progress.audio_position_ms);
+    initialAudioMsRef.current = progress.audio_position_ms;
     window.history.replaceState({ chapter: progress.chapter_number }, "");
   }, [progressLoaded, progress]);
 
@@ -412,12 +393,6 @@ export default function BookPage() {
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
-    activeParaRef.current = null;
-    if (activeWordIdRef.current) {
-      const el = document.getElementById(activeWordIdRef.current);
-      clearWord(el);
-      activeWordIdRef.current = null;
-    }
     fetch(`/api/books/${bookId}/chapters/${activeChapterId}`, {
       signal: controller.signal,
     })
@@ -440,7 +415,7 @@ export default function BookPage() {
       window.scrollTo({ top: 0, behavior: "instant" });
       window.history.pushState({ chapter: chapterId }, "");
       setActiveChapterId(chapterId);
-      setInitialAudioMs(0);
+      initialAudioMsRef.current = 0;
       if (restoredRef.current) {
         saveProgressNow(chapterId, 0, 0);
       }
@@ -448,9 +423,9 @@ export default function BookPage() {
     [saveProgressNow]
   );
 
-  // Flat sorted word spans + paragraph ranges, rebuilt only when chapter changes
-  const flatSpans = useMemo(
-    () => (chapter?.paragraphs ? buildFlatSpans(chapter.paragraphs) : []),
+  // Word timings + paragraph ranges, rebuilt only when chapter changes
+  const wordTimings = useMemo(
+    () => (chapter?.paragraphs ? buildWordTimings(chapter.paragraphs) : []),
     [chapter]
   );
   const paraRanges = useMemo(
@@ -471,53 +446,59 @@ export default function BookPage() {
     return result.sort((a, b) => a.start_ms - b.start_ms);
   }, [chapter]);
 
-  const handleTimeUpdate = useCallback(
-    (timeMs: number) => {
-      saveProgress(activeChapterId, timeMs, 0);
-
-      // Highlight active word — pure DOM, no React re-render
-      const idx = findActiveSpanIdx(flatSpans, timeMs);
-      const newId = idx >= 0 ? flatSpans[idx].id : null;
-      if (newId !== activeWordIdRef.current) {
-        if (activeWordIdRef.current) {
-          clearWord(document.getElementById(activeWordIdRef.current));
-        }
-        if (newId) {
-          highlightWord(document.getElementById(newId));
-        }
-        activeWordIdRef.current = newId;
-      }
-
-      // Auto-scroll to active paragraph
-      if (!paraRanges) return;
-      let activePara: number | null = null;
-      for (let i = 0; i < paraRanges.length; i++) {
-        const r = paraRanges[i];
-        if (r && timeMs >= r.start_ms && timeMs < r.end_ms) { activePara = i; break; }
-      }
-      if (activePara !== null && activePara !== activeParaRef.current) {
-        activeParaRef.current = activePara;
-        paraRefs.current[activePara]?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    },
-    [flatSpans, paraRanges, activeChapterId, saveProgress]
-  );
-
-  const handlePause = useCallback(
-    (timeMs: number) => {
-      if (activeWordIdRef.current) {
-        const el = document.getElementById(activeWordIdRef.current);
-        clearWord(el);
-        activeWordIdRef.current = null;
-      }
-      saveProgressNow(activeChapterId, timeMs, 0);
-    },
-    [activeChapterId, saveProgressNow]
-  );
-
   const audioSrc = chapter?.audio_file
     ? `/api/audio/${chapter.audio_file.replace(/^data\//, "")}`
     : null;
+
+  // ── Load audio session into global player ──────────────────────────────────
+  useEffect(() => {
+    if (!progressLoaded) return;
+    if (!chapter?.audio_file || !audioSrc || !bookMeta) return;
+    if (session && session.bookId !== bookId) return;
+    if (session?.bookId === bookId && session?.chapterId === activeChapterId) return;
+
+    loadSession(
+      {
+        bookId,
+        bookTitle: bookMeta.title,
+        chapterTitle: chapter.title,
+        chapterId: activeChapterId,
+        src: audioSrc,
+        durationMs: chapter.audio_duration_ms ?? 0,
+        segmentBoundaries,
+      },
+      initialAudioMsRef.current
+    );
+    initialAudioMsRef.current = 0;
+  }, [progressLoaded, chapter, audioSrc, bookMeta, bookId, activeChapterId, session?.bookId, session?.chapterId, segmentBoundaries, loadSession]);
+
+  // ── Populate data refs for the player's imperative rAF loop ────────────────
+
+  useEffect(() => {
+    if (session?.bookId !== bookId) return;
+    wordTimingsRef.current = wordTimings;
+    return () => { wordTimingsRef.current = null; };
+  }, [session?.bookId, bookId, wordTimings, wordTimingsRef]);
+
+  useEffect(() => {
+    if (session?.bookId !== bookId || !paraRanges) return;
+    scrollDataRef.current = { ranges: paraRanges, elements: paraRefs.current };
+    return () => { scrollDataRef.current = null; };
+  }, [session?.bookId, bookId, paraRanges, scrollDataRef]);
+
+  // ── Register pause + chat callbacks ────────────────────────────────────────
+
+  useEffect(() => {
+    if (session?.bookId !== bookId) return;
+    onPauseRef.current = (timeMs: number) => {
+      saveProgressNow(activeChapterRef.current, timeMs, 0);
+    };
+    onChatClickRef.current = () => setChatOpen((o) => !o);
+    return () => {
+      onPauseRef.current = null;
+      onChatClickRef.current = null;
+    };
+  }, [session?.bookId, bookId, saveProgressNow, onPauseRef, onChatClickRef]);
 
   if (chatOpen) {
     return (
@@ -531,102 +512,79 @@ export default function BookPage() {
   }
 
   return (
-    <>
-      <article
-        className="mx-auto"
-        style={{
-          maxWidth: "68ch",
-          paddingLeft: "1.5rem",
-          paddingRight: "1.5rem",
-          paddingBottom: "180px",
-        }}
-      >
-        {/* Book header */}
-        <div className="flex items-center mb-8 mt-6">
-          <Link
-            href="/"
-            className="flex items-center gap-2 -ml-1 px-1 py-1 rounded-[var(--radius)] transition-opacity hover:opacity-60"
-            style={{ color: "var(--color-text-secondary)" }}
-            aria-label="Back to library"
+    <article
+      className="mx-auto"
+      style={{
+        maxWidth: "68ch",
+        paddingLeft: "1.5rem",
+        paddingRight: "1.5rem",
+        paddingBottom: "200px",
+      }}
+    >
+      {/* Book header */}
+      <div className="flex items-center mb-8 mt-6">
+        <Link
+          href="/"
+          className="flex items-center gap-2 -ml-1 px-1 py-1 rounded-[var(--radius)] transition-opacity hover:opacity-60"
+          style={{ color: "var(--color-text-secondary)" }}
+          aria-label="Back to library"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 4L6 9l5 5" />
+          </svg>
+          <span
+            style={{
+              fontFamily: "var(--font-ui)",
+              fontSize: "0.9375rem",
+            }}
           >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4L6 9l5 5" />
-            </svg>
-            <span
+            {bookMeta ? `${bookMeta.title}, ${bookMeta.author}` : ""}
+          </span>
+        </Link>
+      </div>
+
+      {bookChapters.length > 0 && (
+        <ChapterHeading
+          chapters={bookChapters}
+          activeChapterId={activeChapterId}
+          onSelect={handleChapterSelect}
+        />
+      )}
+
+      {loading ? (
+        <p className="text-sm text-center py-16" style={{ color: "var(--color-text-secondary)" }}>
+          Loading…
+        </p>
+      ) : !chapter?.paragraphs?.length ? (
+        <p className="text-sm text-center py-16" style={{ color: "var(--color-text-secondary)" }}>
+          No text available for this chapter.
+        </p>
+      ) : (
+        <div className="space-y-5">
+          {chapter.paragraphs.map((p, i) => (
+            <p
+              key={i}
+              ref={(el) => { paraRefs.current[i] = el; }}
               style={{
-                fontFamily: "var(--font-ui)",
-                fontSize: "0.9375rem",
+                color: "var(--color-text)",
+                fontFamily: "var(--font-body)",
+                fontSize: "1.125rem",
+                lineHeight: "1.85",
               }}
             >
-              {bookMeta ? `${bookMeta.title}, ${bookMeta.author}` : ""}
-            </span>
-          </Link>
+              <HighlightedParagraph para={p} paraIndex={i} />
+            </p>
+          ))}
         </div>
+      )}
 
-        {bookChapters.length > 0 && (
-          <ChapterHeading
-            chapters={bookChapters}
-            activeChapterId={activeChapterId}
-            onSelect={handleChapterSelect}
-          />
-        )}
-
-        {loading ? (
-          <p className="text-sm text-center py-16" style={{ color: "var(--color-text-secondary)" }}>
-            Loading…
-          </p>
-        ) : !chapter?.paragraphs?.length ? (
-          <p className="text-sm text-center py-16" style={{ color: "var(--color-text-secondary)" }}>
-            No text available for this chapter.
-          </p>
-        ) : (
-          <div className="space-y-5">
-            {chapter.paragraphs.map((p, i) => (
-              <p
-                key={i}
-                ref={(el) => { paraRefs.current[i] = el; }}
-                style={{
-                  color: "var(--color-text)",
-                  fontFamily: "var(--font-body)",
-                  fontSize: "1.125rem",
-                  lineHeight: "1.85",
-                }}
-              >
-                <HighlightedParagraph para={p} paraIndex={i} />
-              </p>
-            ))}
-          </div>
-        )}
-
-        {!loading && bookChapters.length > 0 && (
-          <ChapterFooterNav
-            chapters={bookChapters}
-            activeChapterId={activeChapterId}
-            onSelect={handleChapterSelect}
-          />
-        )}
-      </article>
-
-      {/* Sticky audio player at bottom */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-40 border-t"
-        style={{
-          borderColor: "var(--color-border)",
-          backgroundColor: "var(--color-bg)",
-        }}
-      >
-        <div className="mx-auto px-6 py-4" style={{ maxWidth: "68ch" }}>
-          <AudioPlayer
-            src={audioSrc}
-            durationMs={chapter?.audio_duration_ms ?? null}
-            initialPositionMs={initialAudioMs}
-            segmentBoundaries={segmentBoundaries}
-            onTimeUpdate={handleTimeUpdate}
-            onPause={handlePause}
-            onChatClick={() => setChatOpen((o) => !o)}
-          />
-        </div>
-      </div>
-    </>
+      {!loading && bookChapters.length > 0 && (
+        <ChapterFooterNav
+          chapters={bookChapters}
+          activeChapterId={activeChapterId}
+          onSelect={handleChapterSelect}
+        />
+      )}
+    </article>
   );
 }

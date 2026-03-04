@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import type { BookRow } from "@/lib/db";
 import BookCard from "@/components/BookCard";
+import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 
 const STORAGE_KEY = "greatbooks:userId";
 
 type ProgressMap = Record<string, { chapter_number: number }>;
 
 export default function Home() {
+  const { session } = useAudioPlayer();
   const [books, setBooks] = useState<BookRow[]>([]);
   const [progressMap, setProgressMap] = useState<ProgressMap>({});
 
@@ -51,7 +53,7 @@ export default function Home() {
         </p>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 pb-16">
+      <main className="max-w-4xl mx-auto px-6" style={{ paddingBottom: session ? 220 : 64 }}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {books.map((book) => (
             <BookCard

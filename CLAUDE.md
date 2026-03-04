@@ -93,12 +93,14 @@ src/
     page.tsx                  ← Home page (book grid)
     globals.css               ← CSS variables / theme
     [bookId]/
-      page.tsx                ← Unified book view (text + audio player + chat bubble)
+      page.tsx                ← Book view (text reader + chat); audio managed globally
     api/
       books/[bookId]/         ← Book + chapter metadata
       audio/[...path]/        ← Streams MP3 files from data/
-  components/                 ← Flat: BookCard, ChapterNav, AudioPlayer, ChatBubble, etc.
-  lib/db.ts                   ← SQLite connection (readonly) + typed query helpers
+  components/                 ← Flat: BookCard, AudioPlayer, PersistentPlayerBar, ChatView, etc.
+  lib/
+    db.ts                     ← SQLite connection (readonly) + typed query helpers
+    AudioPlayerContext.tsx     ← Global audio session context (persists across navigation)
 
 data/<book-id>/
   SKILL.md                    ← Provenance, context, audio status
