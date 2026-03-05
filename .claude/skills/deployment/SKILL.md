@@ -15,8 +15,10 @@ Server setup and deployment reference for the Great Books production environment
 | **Machine Type** | `e2-small` (2 vCPU shared, 2GB RAM) |
 | **OS** | Ubuntu 24.04 LTS |
 | **Boot Disk** | 30GB standard persistent |
-| **External IP** | `136.116.7.146` (ephemeral) |
+| **External IP** | `35.202.125.196` (static — `greatbooks-ip`) |
 | **Firewall** | `allow-http` (tcp:80), `allow-https` (tcp:443) |
+| **Domain** | `greatbooks.earmark.fm` |
+| **SSL** | Let's Encrypt (certbot, auto-renews) |
 
 ## SSH Access
 
@@ -27,7 +29,7 @@ ssh greatbooks
 Config in `~/.ssh/config`:
 ```
 Host greatbooks
-    HostName 136.116.7.146
+    HostName 35.202.125.196
     IdentityFile ~/.ssh/greatbooks
     User granawkins
 ```
@@ -78,16 +80,48 @@ ssh greatbooks
 gcloud compute instances describe greatbooks --zone=us-central1-a --format='table(name,status,machineType,networkInterfaces[0].accessConfigs[0].natIP)'
 ```
 
-## Deployment (TODO)
+## Server Software
 
-Not yet configured. Future steps:
-- Install Node.js, npm, git on VM
-- Clone repo, build, run with pm2 or systemd
-- Set up nginx reverse proxy
-- Set up Let's Encrypt (certbot) for HTTPS
-- Configure domain DNS A record
+- **Node.js** 22.x (via nodesource)
+- **nginx** 1.24 — reverse proxy on port 80 → localhost:3000
+- **pm2** — process manager, auto-restarts on crash, survives reboots
+
+### App location
+```
+~/greatbooks/          ← cloned repo
+~/greatbooks/greatbooks.db  ← SQLite database (copied from local)
+~/greatbooks/data/     ← audio files, raw HTML, etc. (copied from local)
+```
+
+### nginx config
+`/etc/nginx/sites-available/greatbooks` — proxies all traffic to Next.js on port 3000.
+
+### pm2 commands
+```bash
+ssh greatbooks "pm2 status"          # check app status
+ssh greatbooks "pm2 logs greatbooks" # view logs
+ssh greatbooks "pm2 restart greatbooks" # restart app
+```
+
+## Deploy Updates
+
+```bash
+# From local machine:
+ssh greatbooks "cd ~/greatbooks && git pull && npm install && npm run build && pm2 restart greatbooks"
+
+# If DB changed — MUST checkpoint WAL first and remove stale WAL/SHM on server:
+sqlite3 greatbooks.db "PRAGMA wal_checkpoint(TRUNCATE);"
+ssh greatbooks "pm2 stop greatbooks && rm -f ~/greatbooks/greatbooks.db-wal ~/greatbooks/greatbooks.db-shm"
+scp greatbooks.db greatbooks:~/greatbooks/greatbooks.db
+ssh greatbooks "pm2 start greatbooks"
+
+# If new audio files were generated:
+scp -r data/<book-id>/audio/ greatbooks:~/greatbooks/data/<book-id>/audio/
+```
+
+## TODO
 - Set up Google Cloud Storage bucket for audio/image files
-- CI/CD via GitHub Actions or manual rsync
+- CI/CD via GitHub Actions
 
 ## Cost Estimate
 
