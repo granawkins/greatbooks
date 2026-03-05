@@ -19,17 +19,17 @@ sqlite3 greatbooks.db < schema.sql
 
 - **books** — one row per book (id is a slug like `iliad`)
 - **chapters** — ordered by `number` within a book. Audio columns (`audio_file`, `audio_duration_ms`) are NULL until audio is generated.
-- **segments** — the atomic text unit. A sentence (prose) or line (poetry). Ordered by `sequence` within a chapter. Grouped into paragraphs/stanzas by `group_number`. Audio timing columns (`audio_start_ms`, `audio_end_ms`, `word_timestamps`) are NULL until audio is generated.
+- **segments** — the atomic text unit. A sentence (prose) or line (poetry). Ordered by `sequence` within a chapter. Audio timing columns (`audio_start_ms`, `audio_end_ms`, `word_timestamps`) are NULL until audio is generated.
 
 ## Segment Types
 
 | `segment_type` | Meaning | Rendering |
 |---|---|---|
-| `text` | Normal content (sentence or line) | Rendered inline within its paragraph group |
-| `heading` | Section heading within a chapter | Rendered as a subheading |
-| `section_break` | Visual divider | Rendered as whitespace / decorative break |
+| `text` | Normal content (sentence or line) | Consecutive text segments form a paragraph |
+| `heading` | Inline heading (e.g. speaker labels in Republic) | Rendered as small uppercase label; also breaks paragraphs |
+| `paragraph_break` | Paragraph boundary marker | Not rendered; splits consecutive text segments into separate paragraphs |
 
-Segments with the same `group_number` form a paragraph (prose) or stanza (poetry). A `NULL` group_number means the segment stands alone (headings, breaks).
+Consecutive `text` segments form a paragraph. Any non-text segment (`paragraph_break` or `heading`) splits them. The frontend handles grouping.
 
 ## Common Queries
 
@@ -71,6 +71,5 @@ ORDER BY c.number, s.sequence;
 - Always use parameterized queries (never string interpolation)
 - Book IDs are lowercase slugs: `iliad`, `odyssey`, `republic`, `paradise-lost`
 - Segment sequences are 1-indexed, contiguous within a chapter
-- Group numbers are 1-indexed, contiguous within a chapter
 - Audio file paths are relative to the project root: `data/iliad/audio/01.mp3`
 - Word timestamps JSON format (on segments table): `[{start_ms, end_ms, char_start, char_end}]` — char indices reference `segments.text`

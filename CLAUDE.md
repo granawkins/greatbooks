@@ -57,8 +57,9 @@ All external API calls (TTS, STT, LLM, image) are logged to `logs/api_costs.json
 A **segment** is a sentence (prose) or line (poetry). Segments are the smallest unit we store, display, and annotate.
 
 - Segments are ordered by `sequence` within a chapter
-- Segments with the same `group_number` form a **paragraph** (prose) or **stanza** (poetry)
-- `segment_type` controls rendering: `text` (normal), `heading` (subheading), `section_break` (visual divider)
+- `segment_type` controls rendering: `text` (normal content), `heading` (inline subheading, e.g. speaker labels), `paragraph_break` (splits consecutive text segments into separate paragraphs)
+- Consecutive `text` segments form a paragraph; any non-text segment breaks the group
+- The API returns raw segments; the frontend handles paragraph grouping and rendering
 
 ### Audio
 Audio is **one MP3 file per chapter** (e.g. `data/iliad/audio/01.mp3`). Internally, TTS is called in ~1800-char chunks (due to API limits), then the chunks are merged via ffmpeg concat into a single file. Word-level timestamps are offset to match the merged file's timeline.
