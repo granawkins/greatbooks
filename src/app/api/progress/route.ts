@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { userId, bookId, chapterNumber, audioPositionMs, textPositionSegment } = body;
+  const { userId, bookId, chapterNumber, audioPositionMs } = body;
 
   if (!userId || !bookId || chapterNumber == null) {
     return NextResponse.json(
@@ -26,8 +26,7 @@ export async function POST(req: NextRequest) {
     userId,
     bookId,
     chapterNumber,
-    audioPositionMs ?? 0,
-    textPositionSegment ?? 0
+    audioPositionMs ?? 0
   );
 
   return NextResponse.json({ ok: true });

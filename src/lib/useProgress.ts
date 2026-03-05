@@ -6,7 +6,6 @@ type BookProgress = {
   book_id: string;
   chapter_number: number;
   audio_position_ms: number;
-  text_position_segment: number;
 };
 
 const STORAGE_KEY = "greatbooks:userId";
@@ -57,7 +56,6 @@ export function useProgress(bookId: string) {
         bookId: data.book_id,
         chapterNumber: data.chapter_number,
         audioPositionMs: data.audio_position_ms,
-        textPositionSegment: data.text_position_segment,
       }),
     }).catch(() => {});
   }, [userId]);
@@ -72,12 +70,11 @@ export function useProgress(bookId: string) {
 
   // Debounced save
   const saveProgress = useCallback(
-    (chapterNumber: number, audioPositionMs: number, textPositionSegment: number) => {
+    (chapterNumber: number, audioPositionMs: number) => {
       const data: BookProgress = {
         book_id: bookId,
         chapter_number: chapterNumber,
         audio_position_ms: audioPositionMs,
-        text_position_segment: textPositionSegment,
       };
       setProgress(data);
       pendingRef.current = data;
@@ -94,12 +91,11 @@ export function useProgress(bookId: string) {
 
   // Immediate save (for pause, chapter change)
   const saveProgressNow = useCallback(
-    (chapterNumber: number, audioPositionMs: number, textPositionSegment: number) => {
+    (chapterNumber: number, audioPositionMs: number) => {
       const data: BookProgress = {
         book_id: bookId,
         chapter_number: chapterNumber,
         audio_position_ms: audioPositionMs,
-        text_position_segment: textPositionSegment,
       };
       setProgress(data);
       pendingRef.current = data;

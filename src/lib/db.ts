@@ -65,7 +65,6 @@ export type UserProgressRow = {
   book_id: string;
   chapter_number: number;
   audio_position_ms: number;
-  text_position_segment: number;
   updated_at: string;
 };
 
@@ -126,20 +125,18 @@ export const db = {
     userId: string,
     bookId: string,
     chapterNumber: number,
-    audioPositionMs: number,
-    textPositionSegment: number
+    audioPositionMs: number
   ): void => {
     rwConnection
       .prepare(
-        `INSERT INTO user_progress (user_id, book_id, chapter_number, audio_position_ms, text_position_segment, updated_at)
-         VALUES (?, ?, ?, ?, ?, datetime('now'))
+        `INSERT INTO user_progress (user_id, book_id, chapter_number, audio_position_ms, updated_at)
+         VALUES (?, ?, ?, ?, datetime('now'))
          ON CONFLICT (user_id, book_id) DO UPDATE SET
            chapter_number = excluded.chapter_number,
            audio_position_ms = excluded.audio_position_ms,
-           text_position_segment = excluded.text_position_segment,
            updated_at = excluded.updated_at`
       )
-      .run(userId, bookId, chapterNumber, audioPositionMs, textPositionSegment);
+      .run(userId, bookId, chapterNumber, audioPositionMs);
   },
 
   getMessages: (userId: string, bookId: string): MessageRow[] =>

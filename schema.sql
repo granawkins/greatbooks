@@ -44,7 +44,6 @@ CREATE TABLE IF NOT EXISTS user_progress (
   book_id TEXT NOT NULL REFERENCES books(id),
   chapter_number INTEGER NOT NULL,
   audio_position_ms INTEGER DEFAULT 0,
-  text_position_segment INTEGER DEFAULT 0,
   updated_at TEXT DEFAULT (datetime('now')),
   PRIMARY KEY (user_id, book_id)
 );

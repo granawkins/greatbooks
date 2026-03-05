@@ -463,7 +463,7 @@ export default function BookPage() {
       setActiveChapterId(chapterId);
       initialAudioMsRef.current = 0;
       if (restoredRef.current) {
-        saveProgressNow(chapterId, 0, 0);
+        saveProgressNow(chapterId, 0);
       }
     },
     [saveProgressNow]
@@ -575,7 +575,7 @@ export default function BookPage() {
     if (!session || session.bookId !== bookId) return;
     const chapterId = session.chapterId;
     onPauseRef.current = (timeMs: number) => {
-      saveProgressNow(chapterId, timeMs, 0);
+      saveProgressNow(chapterId, timeMs);
     };
     return () => { onPauseRef.current = null; };
   }, [session, bookId, saveProgressNow, onPauseRef]);
