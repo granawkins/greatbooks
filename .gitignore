@@ -37,8 +37,8 @@ greatbooks.db-wal
 # generated cover art
 /public/covers/
 
-# api cost logs
-/logs/
+# api cost logs (keep cost_log.py, ignore the actual log data)
+/logs/api_costs.jsonl
 
 # debug
 npm-debug.log*
