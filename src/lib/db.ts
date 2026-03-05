@@ -41,8 +41,7 @@ export type SegmentRow = {
   chapter_id: number;
   sequence: number;
   text: string;
-  segment_type: "heading" | "text" | "section_break";
-  group_number: number | null;
+  segment_type: "heading" | "text" | "paragraph_break";
   audio_start_ms: number | null;
   audio_end_ms: number | null;
   word_timestamps: string | null; // JSON string

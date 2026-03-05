@@ -11,8 +11,8 @@ Usage:
 
 Input format (segments.json):
     [
-      {"id": 1, "sequence": 1, "text": "Rage—Goddess...", "segment_type": "text", "group_number": 1},
-      {"id": 2, "sequence": 2, "text": "That cost the...", "segment_type": "text", "group_number": 1},
+      {"id": 1, "sequence": 1, "text": "Rage—Goddess...", "segment_type": "text"},
+      {"id": 2, "sequence": 2, "text": "That cost the...", "segment_type": "text"},
       ...
     ]
 
@@ -53,7 +53,7 @@ def chunk_segments(segments: list[dict], max_chars: int = None) -> list[list[dic
     Each chunk is a list of segments whose combined text fits within max_chars.
 
     Args:
-        segments: List of segment dicts with text, group_number, segment_type
+        segments: List of segment dicts with text, segment_type
         max_chars: Max characters per chunk (default: TTS limit * 0.9)
 
     Returns:
@@ -67,18 +67,16 @@ def chunk_segments(segments: list[dict], max_chars: int = None) -> list[list[dic
     chunks = []
     current_chunk = []
     current_len = 0
-    current_group = None
+    at_paragraph_boundary = False
 
     for seg in segments:
         seg_text = seg.get("text", "")
         seg_type = seg.get("segment_type", "text")
-        group = seg.get("group_number")
 
-        # Section breaks and headings always start a new chunk
-        is_boundary = seg_type in ("section_break", "heading")
-
-        # New paragraph (different group_number)
-        is_new_paragraph = group != current_group and current_group is not None
+        # Non-text segments (paragraph_break, heading) mark boundaries
+        if seg_type != "text":
+            at_paragraph_boundary = True
+            continue
 
         # Would this segment push us over the limits?
         added_len = len(seg_text) + (1 if current_len > 0 else 0)  # space separator
@@ -86,10 +84,9 @@ def chunk_segments(segments: list[dict], max_chars: int = None) -> list[list[dic
         would_overflow_hard = current_len + added_len > hard_limit
 
         # Start new chunk if:
-        # - structural boundary (section break / heading)
         # - soft overflow at a paragraph boundary (preferred break point)
         # - hard overflow (must break, even mid-paragraph)
-        if current_chunk and (is_boundary or (would_overflow_soft and is_new_paragraph) or would_overflow_hard):
+        if current_chunk and ((would_overflow_soft and at_paragraph_boundary) or would_overflow_hard):
             chunks.append(current_chunk)
             current_chunk = []
             current_len = 0
@@ -97,14 +94,12 @@ def chunk_segments(segments: list[dict], max_chars: int = None) -> list[list[dic
         # If a single segment overflows, it gets its own chunk
         if not current_chunk and len(seg_text) > hard_limit:
             chunks.append([seg])
-            current_group = group
+            at_paragraph_boundary = False
             continue
 
-        if seg_text:  # skip empty segments
-            current_chunk.append(seg)
-            current_len += added_len if current_len > 0 else len(seg_text)
-
-        current_group = group
+        current_chunk.append(seg)
+        current_len += added_len if current_len > 0 else len(seg_text)
+        at_paragraph_boundary = False
 
     if current_chunk:
         chunks.append(current_chunk)

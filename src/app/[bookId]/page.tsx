@@ -15,62 +15,105 @@ type WordTs = {
   char_end: number;
 };
 
-type SegmentInfo = {
+type Segment = {
   id: number;
+  text: string;
+  segment_type: "heading" | "text" | "paragraph_break";
   audio_start_ms: number | null;
   audio_end_ms: number | null;
   word_timestamps: WordTs[] | null;
-  char_offset: number;
-};
-
-type Paragraph = {
-  text: string;
-  segments: SegmentInfo[];
 };
 
 type ChapterData = {
   title: string;
-  paragraphs: Paragraph[];
+  segments: Segment[];
   audio_file: string | null;
   audio_duration_ms: number | null;
 };
 
-// Build a flat list of word spans for a paragraph, with global char positions
-// and interpolated sub-second timestamps. The raw STT data has 1-second
-// resolution, so multiple words share the same start/end. We evenly distribute
-// words between known time boundaries so highlighting moves smoothly.
+// A block is either a paragraph (consecutive text segments) or a heading
+type ParagraphBlock = {
+  type: "paragraph";
+  segments: Segment[];
+  text: string; // joined segment texts
+  charOffsets: number[]; // where each segment starts in `text`
+};
+
+type HeadingBlock = {
+  type: "heading";
+  text: string;
+};
+
+type Block = ParagraphBlock | HeadingBlock;
+
+function groupIntoBlocks(segments: Segment[]): Block[] {
+  const blocks: Block[] = [];
+  let current: Segment[] = [];
+
+  const flush = () => {
+    if (current.length === 0) return;
+    let offset = 0;
+    const offsets = current.map((seg) => {
+      const o = offset;
+      offset += seg.text.length + 1; // +1 for joining space
+      return o;
+    });
+    blocks.push({
+      type: "paragraph",
+      segments: current,
+      text: current.map((s) => s.text).join(" "),
+      charOffsets: offsets,
+    });
+  };
+
+  for (const seg of segments) {
+    if (seg.segment_type === "heading") {
+      flush();
+      current = [];
+      blocks.push({ type: "heading", text: seg.text });
+      continue;
+    }
+    if (seg.segment_type !== "text") {
+      flush();
+      current = [];
+      continue;
+    }
+    current.push(seg);
+  }
+  flush();
+  return blocks;
+}
+
+// Build a flat list of word spans for a paragraph with interpolated timestamps.
+// Raw STT has 1-second resolution, so we distribute words evenly within time buckets.
 type WordSpan = { start_ms: number; end_ms: number; charStart: number; charEnd: number };
 
-function buildWordSpans(para: Paragraph): WordSpan[] {
-  // Collect raw spans
+function buildWordSpans(para: ParagraphBlock): WordSpan[] {
   const raw: WordSpan[] = [];
-  for (const seg of para.segments) {
+  for (let si = 0; si < para.segments.length; si++) {
+    const seg = para.segments[si];
     if (!seg.word_timestamps) continue;
+    const offset = para.charOffsets[si];
     for (const w of seg.word_timestamps) {
       raw.push({
         start_ms: w.start_ms,
         end_ms: w.end_ms,
-        charStart: seg.char_offset + w.char_start,
-        charEnd: seg.char_offset + w.char_end,
+        charStart: offset + w.char_start,
+        charEnd: offset + w.char_end,
       });
     }
   }
   if (raw.length === 0) return raw;
 
-  // Interpolate: evenly space words between time boundaries.
-  // Walk through words and find runs that share the same time bucket,
-  // then distribute them evenly within [prevEnd, nextStart].
+  // Interpolate: evenly space words between time boundaries
   const spans: WordSpan[] = new Array(raw.length);
   for (let i = 0; i < raw.length; i++) {
-    // Find the run of words at this time position
     const runStart = i;
     const timeRef = raw[i].start_ms;
     while (i < raw.length - 1 && raw[i + 1].start_ms === timeRef) i++;
-    const runEnd = i; // inclusive
+    const runEnd = i;
     const count = runEnd - runStart + 1;
 
-    // Time boundaries: start of first word in run, end of last word in run
-    // Use the previous word's end as the actual start if available
     const tStart = runStart > 0 ? raw[runStart - 1].end_ms : raw[runStart].start_ms;
     const tEnd = raw[runEnd].end_ms;
     const duration = tEnd - tStart;
@@ -89,8 +132,7 @@ function buildWordSpans(para: Paragraph): WordSpan[] {
   return spans;
 }
 
-// Build paragraph time range from its segments
-function paraTimeRange(para: Paragraph): { start_ms: number; end_ms: number } | null {
+function paraTimeRange(para: ParagraphBlock): { start_ms: number; end_ms: number } | null {
   let start = Infinity;
   let end = 0;
   for (const seg of para.segments) {
@@ -102,9 +144,8 @@ function paraTimeRange(para: Paragraph): { start_ms: number; end_ms: number } | 
 }
 
 // Renders paragraph text with stable word-span IDs.
-// Highlighting is applied imperatively via document.getElementById —
-// React never re-renders this component during playback.
-function HighlightedParagraph({ para, paraIndex }: { para: Paragraph; paraIndex: number }) {
+// Highlighting is applied imperatively via document.getElementById.
+function HighlightedParagraph({ para, paraIndex }: { para: ParagraphBlock; paraIndex: number }) {
   const spans = useMemo(() => buildWordSpans(para), [para]);
   const text = para.text;
 
@@ -126,11 +167,13 @@ function HighlightedParagraph({ para, paraIndex }: { para: Paragraph; paraIndex:
   return <>{elements}</>;
 }
 
-// Flat sorted list of every word span across all paragraphs, for the player's rAF loop.
-function buildWordTimings(paragraphs: Paragraph[]): WordTiming[] {
+// Flat sorted list of every word span across all paragraph blocks, for the player's rAF loop.
+function buildWordTimings(blocks: Block[]): WordTiming[] {
   const result: WordTiming[] = [];
-  for (let i = 0; i < paragraphs.length; i++) {
-    for (const s of buildWordSpans(paragraphs[i])) {
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+    if (block.type !== "paragraph") continue;
+    for (const s of buildWordSpans(block)) {
       result.push({ id: `w-${i}-${s.charStart}`, start_ms: s.start_ms, end_ms: s.end_ms });
     }
   }
@@ -426,24 +469,28 @@ export default function BookPage() {
     [saveProgressNow]
   );
 
-  // Word timings + paragraph ranges, rebuilt only when chapter changes
-  const wordTimings = useMemo(
-    () => (chapter?.paragraphs ? buildWordTimings(chapter.paragraphs) : []),
-    [chapter]
-  );
-  const paraRanges = useMemo(
-    () => chapter?.paragraphs?.map((p) => paraTimeRange(p)) ?? null,
+  // Group raw segments into blocks (paragraphs + headings) for rendering
+  const blocks = useMemo(
+    () => (chapter?.segments ? groupIntoBlocks(chapter.segments) : []),
     [chapter]
   );
 
+  // Word timings + paragraph ranges, rebuilt only when chapter changes
+  const wordTimings = useMemo(
+    () => buildWordTimings(blocks),
+    [blocks]
+  );
+  const paraRanges = useMemo(
+    () => blocks.map((b) => b.type === "paragraph" ? paraTimeRange(b) : null),
+    [blocks]
+  );
+
   const segmentBoundaries = useMemo((): SegmentBoundary[] => {
-    if (!chapter?.paragraphs) return [];
+    if (!chapter?.segments) return [];
     const result: SegmentBoundary[] = [];
-    for (const para of chapter.paragraphs) {
-      for (const seg of para.segments) {
-        if (seg.audio_start_ms != null && seg.audio_end_ms != null) {
-          result.push({ start_ms: seg.audio_start_ms, end_ms: seg.audio_end_ms });
-        }
+    for (const seg of chapter.segments) {
+      if (seg.audio_start_ms != null && seg.audio_end_ms != null) {
+        result.push({ start_ms: seg.audio_start_ms, end_ms: seg.audio_end_ms });
       }
     }
     return result.sort((a, b) => a.start_ms - b.start_ms);
@@ -595,26 +642,44 @@ export default function BookPage() {
         <p className="text-sm text-center py-16" style={{ color: "var(--color-text-secondary)" }}>
           Loading…
         </p>
-      ) : !chapter?.paragraphs?.length ? (
+      ) : !blocks.length ? (
         <p className="text-sm text-center py-16" style={{ color: "var(--color-text-secondary)" }}>
           No text available for this chapter.
         </p>
       ) : (
         <div className="space-y-5">
-          {chapter.paragraphs.map((p, i) => (
-            <p
-              key={i}
-              ref={(el) => { paraRefs.current[i] = el; }}
-              style={{
-                color: "var(--color-text)",
-                fontFamily: "var(--font-body)",
-                fontSize: "1.125rem",
-                lineHeight: "1.85",
-              }}
-            >
-              <HighlightedParagraph para={p} paraIndex={i} />
-            </p>
-          ))}
+          {blocks.map((block, i) =>
+            block.type === "heading" ? (
+              <p
+                key={i}
+                ref={(el) => { paraRefs.current[i] = el; }}
+                style={{
+                  color: "var(--color-text-secondary)",
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "0.8125rem",
+                  fontWeight: 500,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  marginTop: "2rem",
+                }}
+              >
+                {block.text}
+              </p>
+            ) : (
+              <p
+                key={i}
+                ref={(el) => { paraRefs.current[i] = el; }}
+                style={{
+                  color: "var(--color-text)",
+                  fontFamily: "var(--font-body)",
+                  fontSize: "1.125rem",
+                  lineHeight: "1.85",
+                }}
+              >
+                <HighlightedParagraph para={block} paraIndex={i} />
+              </p>
+            )
+          )}
         </div>
       )}
 

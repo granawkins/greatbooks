@@ -19,14 +19,13 @@ CREATE TABLE IF NOT EXISTS chapters (
 );
 
 -- A segment is the smallest unit of text: a sentence (prose) or line (poetry).
--- Segments are grouped into paragraphs/stanzas by group_number.
+-- Consecutive 'text' segments form a paragraph; 'paragraph_break' segments split them.
 CREATE TABLE IF NOT EXISTS segments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   chapter_id INTEGER NOT NULL REFERENCES chapters(id),
   sequence INTEGER NOT NULL,           -- ordering within chapter
   text TEXT NOT NULL DEFAULT '',
-  segment_type TEXT NOT NULL DEFAULT 'text',  -- 'heading' | 'text' | 'section_break'
-  group_number INTEGER,                -- paragraph/stanza grouping
+  segment_type TEXT NOT NULL DEFAULT 'text',  -- 'heading' | 'text' | 'paragraph_break'
   audio_start_ms INTEGER,              -- start time in chapter audio (ms)
   audio_end_ms INTEGER,                -- end time in chapter audio (ms)
   word_timestamps JSON                 -- [{start_ms, end_ms, char_start, char_end}, ...]
