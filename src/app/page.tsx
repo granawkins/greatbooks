@@ -5,7 +5,7 @@ import type { BookRow } from "@/lib/db";
 import BookCard from "@/components/BookCard";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 
-const STORAGE_KEY = "greatbooks:userId";
+import { getUserId } from "@/lib/userId";
 
 type ProgressMap = Record<string, { chapter_number: number }>;
 
@@ -22,7 +22,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const userId = localStorage.getItem(STORAGE_KEY);
+    const userId = getUserId();
     if (!userId) return;
     fetch(`/api/progress?userId=${userId}`)
       .then((r) => (r.ok ? r.json() : []))

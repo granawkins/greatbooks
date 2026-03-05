@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { getUserId } from "./userId";
 
 type BookProgress = {
   book_id: string;
@@ -8,18 +9,7 @@ type BookProgress = {
   audio_position_ms: number;
 };
 
-const STORAGE_KEY = "greatbooks:userId";
 const SAVE_INTERVAL_MS = 5000;
-
-function getUserId(): string {
-  if (typeof window === "undefined") return "";
-  let id = localStorage.getItem(STORAGE_KEY);
-  if (!id) {
-    id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
-    localStorage.setItem(STORAGE_KEY, id);
-  }
-  return id;
-}
 
 export function useProgress(bookId: string) {
   const [userId] = useState(getUserId);

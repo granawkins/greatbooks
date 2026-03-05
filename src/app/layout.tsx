@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { AudioPlayerProvider } from "@/lib/AudioPlayerContext";
-import PersistentPlayerBar from "@/components/PersistentPlayerBar";
+import PersistentPlayerBar from "@/components/audio/PersistentPlayerBar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

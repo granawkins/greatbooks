@@ -1,20 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { getUserId } from "@/lib/userId";
 import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
-
-const STORAGE_KEY = "greatbooks:userId";
-
-function getUserId(): string {
-  if (typeof window === "undefined") return "";
-  let id = localStorage.getItem(STORAGE_KEY);
-  if (!id) {
-    id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
-    localStorage.setItem(STORAGE_KEY, id);
-  }
-  return id;
-}
 
 type Message = {
   id: number;
@@ -36,7 +25,6 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
   const scrollRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -52,12 +40,10 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
     return rows;
   }, [userId, bookId]);
 
-  // Load messages on mount
   useEffect(() => {
     if (userId) fetchMessages();
   }, [userId, fetchMessages]);
 
-  // Poll every 1s while any message is pending or streaming
   const needsPoll = messages.some(
     (m) => m.status === "pending" || m.status === "streaming"
   );
@@ -121,9 +107,9 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
         backgroundColor: "var(--color-bg)",
         display: "flex",
         flexDirection: "column",
+        paddingBottom: 200,
       }}
     >
-      {/* Header — matches the reader page's book header style */}
       <div
         style={{
           display: "flex",
@@ -164,11 +150,8 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
         </button>
       </div>
 
-      {/* Divider */}
       <div style={{ borderBottom: "1px solid var(--color-border)", flexShrink: 0 }} />
 
-      {/* Messages — inner wrapper with justify-end so sparse history hugs the bottom,
-           outer div scrolls normally when messages overflow */}
       <div
         ref={scrollRef}
         style={{
@@ -216,7 +199,6 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
         </div>
       </div>
 
-      {/* Input */}
       <div
         style={{
           maxWidth: "68ch",
