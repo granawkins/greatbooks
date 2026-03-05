@@ -250,7 +250,7 @@ def generate_chapter(
     segments: list[dict],
     output_dir: str,
     chapter_number: int,
-    voice: str = "Charon",
+    voice: str = "Algieba",
     max_workers: int = DEFAULT_WORKERS,
     stt_provider: str | None = None,
 ) -> dict:
@@ -341,8 +341,8 @@ def main():
     )
     parser.add_argument(
         "--voice",
-        default="Charon",
-        help="Chirp3 HD voice name (default: Charon)",
+        default="Algieba",
+        help="Chirp3 HD voice name (default: Algieba)",
     )
     parser.add_argument(
         "--workers",

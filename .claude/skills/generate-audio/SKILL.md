@@ -25,22 +25,38 @@ GOOGLE_APPLICATION_CREDENTIALS=/path/to/google-credentials.json
 
 ### tts.py — Text-to-Speech
 
-Generates MP3 audio from text using Google Chirp3 HD. Includes retry with backoff for transient errors.
+Generates MP3 audio from text using **Google Chirp3 HD** or **ElevenLabs**. Includes retry with backoff for transient errors.
 
-**CLI:**
+**CLI (Google — default):**
 ```bash
 python .claude/skills/generate-audio/tts.py --text "Hello world" --output out.mp3
 python .claude/skills/generate-audio/tts.py --file input.txt --output out.mp3 --voice Orus
 ```
 
+**CLI (ElevenLabs):**
+```bash
+python .claude/skills/generate-audio/tts.py --text "Hello world" --output out.mp3 \
+  --provider elevenlabs --voice "Frederick Surrey"
+python .claude/skills/generate-audio/tts.py --text "Hello world" --output out.mp3 \
+  --provider elevenlabs --model eleven_multilingual_v2
+```
+
 **Importable:**
 ```python
 from tts import generate
-result = generate("Hello world", "out.mp3", voice="Charon")
+
+# Google (default)
+result = generate("Hello world", "out.mp3", voice="Algieba")
+
+# ElevenLabs
+result = generate("Hello world", "out.mp3", provider="elevenlabs", voice="Frederick Surrey")
+result = generate("Hello world", "out.mp3", provider="elevenlabs", model="eleven_multilingual_v2")
 # Returns {"file_path": str, "duration_ms": int}
 ```
 
-Max 2000 characters per call. Available voices: Charon, Orus, Kore, Puck, Zephyr, Aoede, and others (see [Chirp3 HD docs](https://cloud.google.com/text-to-speech/docs/chirp3-hd)).
+**Google**: Max 2000 chars/call. Voices: Algieba, Orus, Kore, Puck, Zephyr, Aoede ([Chirp3 HD docs](https://cloud.google.com/text-to-speech/docs/chirp3-hd)).
+
+**ElevenLabs**: Max 5000 chars/call. Voices: Frederick Surrey (default). Models: `eleven_v3` (default, best quality), `eleven_multilingual_v2`, `eleven_flash_v2_5` (fastest/cheapest). Voice ID `j9jfwdrw7BRfcR43Qohk`.
 
 ### stt.py — Speech-to-Text + Word Alignment
 
@@ -87,13 +103,13 @@ python .claude/skills/generate-audio/generate_chapter.py \
   --segments segments.json \
   --output-dir data/iliad/audio/ \
   --chapter 1 \
-  --voice Charon
+  --voice Algieba
 ```
 
 **Importable:**
 ```python
 from generate_chapter import generate_chapter, chunk_segments
-manifest = generate_chapter(segments, "data/iliad/audio/", chapter_number=1, voice="Charon")
+manifest = generate_chapter(segments, "data/iliad/audio/", chapter_number=1, voice="Algieba")
 ```
 
 Input segments JSON: `[{"id", "sequence", "text", "segment_type", "group_number"}]`
@@ -125,7 +141,7 @@ GREATBOOKS_ENTITY_ID=<BOOK_ID> python3 .claude/skills/generate-audio/generate_ch
   --segments /tmp/segments.json \
   --output-dir data/<BOOK_ID>/audio/ \
   --chapter <CHAPTER_NUM> \
-  --voice Charon
+  --voice Algieba
 ```
 
 ### 3. Store in database
@@ -163,11 +179,20 @@ Example: `data/iliad/audio/01.mp3`
 
 ## TTS Configuration
 
-- **Model**: Google Chirp3 HD
-- **Default voice**: Charon
+### Google Chirp3 HD (default)
+- **Default voice**: Algieba
 - **Format**: MP3, 24kHz
 - **Max input**: 2000 characters per call
+- **Cost**: ~$0.016/1K chars ($16/1M chars)
 - **Retry**: 3 attempts with exponential backoff on 503/UNAVAILABLE
+
+### ElevenLabs
+- **Default voice**: Frederick Surrey (`j9jfwdrw7BRfcR43Qohk`)
+- **Default model**: eleven_v3 (best quality)
+- **Format**: MP3
+- **Max input**: 5000 characters per call
+- **Cost**: ~$0.30/1K chars for v3, ~$0.18/1K for v2, ~$0.08/1K for flash (varies by plan)
+- **Retry**: 3 attempts with exponential backoff on 503/429
 
 ## Cost Tracking
 

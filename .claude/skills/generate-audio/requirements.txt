@@ -1,4 +1,5 @@
 google-cloud-texttospeech
 google-cloud-speech
+elevenlabs
 python-dotenv
 httpx
