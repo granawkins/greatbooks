@@ -52,6 +52,7 @@ type AudioPlayerContextValue = {
   // Sparse callbacks — only fired on discrete events, never at 60fps
   onPauseRef: MutableRefObject<((ms: number) => void) | null>;
   onChatClickRef: MutableRefObject<(() => void) | null>;
+  onChapterSelectRef: MutableRefObject<((chapterId: number) => void) | null>;
 };
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
@@ -76,6 +77,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const navigateToChapterRef = useRef<((chapterId: number) => void) | null>(null);
   const onPauseRef = useRef<((ms: number) => void) | null>(null);
   const onChatClickRef = useRef<(() => void) | null>(null);
+  const onChapterSelectRef = useRef<((chapterId: number) => void) | null>(null);
 
   // Save progress on any pause (user-initiated, loadSession, dismiss, ended)
   useEffect(() => {
@@ -161,6 +163,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     navigateToChapterRef,
     onPauseRef,
     onChatClickRef,
+    onChapterSelectRef,
   };
 
   return (
