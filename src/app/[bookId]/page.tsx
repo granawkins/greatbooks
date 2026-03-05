@@ -210,8 +210,12 @@ export default function BookPage() {
   }, [onChatClickRef]);
 
   useEffect(() => {
-    onChapterSelectRef.current = (chapterId: number) => {
-      handleChapterJump(chapterId);
+    onChapterSelectRef.current = (chapterId: number, startMs?: number, autoPlay?: boolean) => {
+      if (startMs == null) {
+        handleChapterJump(chapterId);
+      } else {
+        setActiveChapterId(chapterId);
+      }
       const chapterData = loadedChapters[chapterId];
       if (chapterData?.audio_file && bookMeta) {
         const src = `/api/audio/${chapterData.audio_file.replace(/^data\//, "")}`;
@@ -222,19 +226,23 @@ export default function BookPage() {
           }
         }
         boundaries.sort((a, b) => a.start_ms - b.start_ms);
-        loadSession({
-          bookId,
-          bookTitle: bookMeta.title,
-          chapterTitle: chapterData.title,
-          chapterId,
-          src,
-          durationMs: chapterData.audio_duration_ms ?? 0,
-          segmentBoundaries: boundaries,
-        });
+        loadSession(
+          {
+            bookId,
+            bookTitle: bookMeta.title,
+            chapterTitle: chapterData.title,
+            chapterId,
+            src,
+            durationMs: chapterData.audio_duration_ms ?? 0,
+            segmentBoundaries: boundaries,
+          },
+          startMs,
+          autoPlay ?? true,
+        );
       }
     };
     return () => { onChapterSelectRef.current = null; };
-  }, [onChapterSelectRef, handleChapterJump, loadedChapters, bookMeta, bookId, loadSession]);
+  }, [onChapterSelectRef, handleChapterJump, setActiveChapterId, loadedChapters, bookMeta, bookId, loadSession]);
 
   if (chatOpen) {
     return (

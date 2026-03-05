@@ -68,7 +68,7 @@ export function ChapterBlocks({
               lineHeight: "1.85",
             }}
           >
-            <HighlightedParagraph para={block} idPrefix={`${chapterNum}-${i}`} />
+            <HighlightedParagraph para={block} idPrefix={`${chapterNum}-${i}`} chapterNum={chapterNum} />
           </p>
         )
       )}

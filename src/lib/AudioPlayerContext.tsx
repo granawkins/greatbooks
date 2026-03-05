@@ -52,7 +52,7 @@ type AudioPlayerContextValue = {
   // Sparse callbacks — only fired on discrete events, never at 60fps
   onPauseRef: MutableRefObject<((ms: number) => void) | null>;
   onChatClickRef: MutableRefObject<(() => void) | null>;
-  onChapterSelectRef: MutableRefObject<((chapterId: number) => void) | null>;
+  onChapterSelectRef: MutableRefObject<((chapterId: number, startMs?: number, autoPlay?: boolean) => void) | null>;
 };
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
