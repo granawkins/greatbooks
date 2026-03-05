@@ -43,14 +43,8 @@ type AudioPlayerContextValue = {
   wordTimingsRef: MutableRefObject<WordTiming[] | null>;
   scrollDataRef: MutableRefObject<ScrollData | null>;
 
-  // Index of the paragraph currently centered in viewport (written by BookPage, read by AudioPlayer)
-  viewportParaRef: MutableRefObject<number>;
-
   // What book/chapter the user is currently viewing (set synchronously, no async deps)
   viewingChapterRef: MutableRefObject<{ bookId: string; chapterId: number } | null>;
-
-  // Page context — full audio data for the current page (set after chapter fetch completes)
-  pageContextRef: MutableRefObject<AudioSession | null>;
 
   // Navigate to a chapter within the current book page (set by BookPage)
   navigateToChapterRef: MutableRefObject<((chapterId: number) => void) | null>;
@@ -78,9 +72,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
   const wordTimingsRef = useRef<WordTiming[] | null>(null);
   const scrollDataRef = useRef<ScrollData | null>(null);
-  const viewportParaRef = useRef<number>(0);
   const viewingChapterRef = useRef<{ bookId: string; chapterId: number } | null>(null);
-  const pageContextRef = useRef<AudioSession | null>(null);
   const navigateToChapterRef = useRef<((chapterId: number) => void) | null>(null);
   const onPauseRef = useRef<((ms: number) => void) | null>(null);
   const onChatClickRef = useRef<(() => void) | null>(null);
@@ -165,9 +157,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     dismiss,
     wordTimingsRef,
     scrollDataRef,
-    viewportParaRef,
     viewingChapterRef,
-    pageContextRef,
     navigateToChapterRef,
     onPauseRef,
     onChatClickRef,

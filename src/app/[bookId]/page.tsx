@@ -369,7 +369,6 @@ export default function BookPage() {
     wordTimingsRef,
     scrollDataRef,
     viewingChapterRef,
-    pageContextRef,
     navigateToChapterRef,
     onPauseRef,
     onChatClickRef,
@@ -526,24 +525,6 @@ export default function BookPage() {
     viewingChapterRef.current = { bookId, chapterId: activeChapterId };
     return () => { viewingChapterRef.current = null; };
   }, [bookId, activeChapterId, viewingChapterRef]);
-
-  // ── Publish page audio context for the player's mismatch detection ─────────
-  useEffect(() => {
-    if (loading || !chapter?.audio_file || !audioSrc || !bookMeta) {
-      pageContextRef.current = null;
-      return;
-    }
-    pageContextRef.current = {
-      bookId,
-      bookTitle: bookMeta.title,
-      chapterTitle: chapter.title,
-      chapterId: activeChapterId,
-      src: audioSrc,
-      durationMs: chapter.audio_duration_ms ?? 0,
-      segmentBoundaries,
-    };
-    return () => { pageContextRef.current = null; };
-  }, [loading, chapter, audioSrc, bookMeta, bookId, activeChapterId, segmentBoundaries, pageContextRef]);
 
   // ── Let the audio player navigate back to the session's chapter ────────────
   useEffect(() => {
