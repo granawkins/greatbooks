@@ -2,11 +2,16 @@
 -- SQLite, lives at ./greatbooks.db
 
 CREATE TABLE IF NOT EXISTS books (
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY,                  -- author-title slug (e.g. "homer-iliad")
   title TEXT NOT NULL,
   author TEXT NOT NULL,
   description TEXT,
-  cover_image TEXT                      -- relative path under public/covers/ (e.g. "homer-iliad.png")
+  cover_image TEXT,                     -- relative path under public/covers/ (e.g. "homer-iliad.png")
+  original_date TEXT,                   -- when the work was written (e.g. "~8th century BCE")
+  translator TEXT,                      -- translator name (NULL for English originals)
+  translation_date TEXT,                -- year of translation (e.g. "1898")
+  source_url TEXT,                      -- URL where the text was sourced
+  license TEXT                          -- copyright status (e.g. "Public Domain")
 );
 
 CREATE TABLE IF NOT EXISTS chapters (

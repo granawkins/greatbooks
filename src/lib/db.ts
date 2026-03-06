@@ -24,7 +24,12 @@ export type BookRow = {
   title: string;
   author: string;
   description: string | null;
-  cover_image: string | null;  // public URL e.g. "/covers/homer-iliad.png"
+  cover_image: string | null;
+  original_date: string | null;
+  translator: string | null;
+  translation_date: string | null;
+  source_url: string | null;
+  license: string | null;
 };
 
 export type ChapterRow = {
