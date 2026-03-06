@@ -234,8 +234,8 @@ ICA_BOOKS = [
         "translation_date": "1876",
         "source_url": "http://classics.mit.edu/Tacitus/annals.html",
         "license": "Public Domain",
-        "url_pattern": "http://classics.mit.edu/Tacitus/annals.{n}.{word}.html",
-        "pages": 16,
+        "url_pattern": "http://classics.mit.edu/Tacitus/annals.{n}.{numeral}.html",
+        "pages": 6,  # Only books 1-6 on ICA; books 7-10 are historically lost
     },
     {
         "id": "plutarch-lives",
@@ -364,8 +364,6 @@ def fetch_book(book: dict) -> list[tuple[str, str]]:
         # Single-page or explicit page list
         for slug, _title in pages:
             url = book["url_pattern"].replace("{slug}", slug)
-            if "{n}" not in url and "{slug}" not in url:
-                url = book["url_pattern"]
             log.info(f"  Fetching {url}")
             html = fetch_url(url)
             html_files.append((f"{slug}.html", html))
