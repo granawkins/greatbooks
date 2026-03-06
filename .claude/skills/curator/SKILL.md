@@ -8,23 +8,46 @@ Compiled from two canonical collections:
 
 Focus: major literary, philosophical, and historical works that appear on one or both lists, are public domain, and work well as reading/listening experiences.
 
-See also: `GBWW_LIST.md` (full Britannica list), `SJC_LIST.md` (full St. John's list).
+## Book ID Convention
+
+IDs use `{author-lastname}-{short-title}` format: all lowercase, hyphens only, English. Examples:
+- `homer-iliad`, `homer-odyssey`
+- `plato-republic`, `plato-apology`, `plato-symposium`
+- `aristotle-ethics`, `aristotle-politics`, `aristotle-poetics`
+- `shakespeare-hamlet`, `shakespeare-king-lear`
+- `dostoevsky-brothers-karamazov`
+- `austen-pride-and-prejudice`
+- `smith-wealth-of-nations`
+
+Shorten long titles to the recognizable part (not the full subtitle).
+
+See also: `GBWW_LIST.md` (full Britannica list), `SJC_LIST.md` (full St. John's list), `SOURCES.md` (verified URLs, translators, formats, parser requirements).
 
 ## Sources
 
 ### MIT Internet Classics Archive (classics.mit.edu)
 Ancient Greek and Roman works. HTML format, one page per chapter. Free, no login.
-Known limitation: ~100KB server response limit can truncate large chapters.
-
-**Authors available:** Aeschines, Aeschylus, Aesop, Andocides, Antiphon, Apollodorus, Apollonius, Apuleius, Aristophanes, Aristotle, Marcus Aurelius, Augustus, Bacchylides, Julius Caesar, Cicero, Demades, Demosthenes, Dinarchus, Diodorus, Epictetus, Epicurus, Euclid, Euripides, Galen, Herodotus, Hesiod, Hippocrates, Hirtius, Homer, Horace, Hyperides, Isaeus, Isocrates, Josephus, Livy, Lucan, Lucretius, Lycurgus, Lysias, Ovid, Pausanias, Pindar, Plato, Plotinus, Plutarch, Porphyry, Quintus, Sophocles, Strabo, Tacitus, Thucydides, Virgil, Xenophon. Also: Confucius, Lao-tzu, Sun Tzu, Ferdowsi, Omar Khayyam, Sa'di.
+- **Format**: `<A NAME="start">`/`<A NAME="end">` markers, `<BR><BR>` paragraph breaks
+- **Genres**: prose (flowing text), verse epic (`<BR>` per line), verse drama (`<B>SPEAKER</B>` + `<BLOCKQUOTE>`)
+- **Parser**: `parse_html.py --source classics` — handles prose; drama/verse need extensions
+- **Limitation**: ~100KB server response limit truncates large single-page works; use `.pl.txt` fallback
+- **URL quirks**: some slugs are non-obvious (Lucretius → `Carus/`, Marcus Aurelius → `Antoninus/`)
+- **Coverage**: 20 Tier 1 titles across 25+ individual works
 
 ### Project Gutenberg (gutenberg.org)
-Massive public-domain library. Everything pre-1928. HTML/plain text. Good for medieval through 19th century works.
+Massive public-domain library. Everything pre-1928. HTML/plain text.
+- **Format**: `<p>` tags, `<h2>` chapter headings, `<div class="chapter">` containers
+- **Two HTML versions**: `/files/` (older, more consistent) and `/cache/epub/` (newer, has `#pg-header`/`#pg-footer`)
+- **CSS classes**: `.poem` (verse), `.drama` (dialogue), `.letter` (epistolary), `.noindent`
+- **Parser**: `parse_html.py --source gutenberg` — **NOT YET IMPLEMENTED**
+- **Coverage**: 32 Tier 1 titles, all verified available
 
 ### Other potential sources
 - Perseus Digital Library (perseus.tufts.edu) — Greek/Latin with translations
 - Standard Ebooks (standardebooks.org) — beautifully formatted public domain
 - Wikisource — community-transcribed public domain texts
+
+Full details: `SOURCES.md` (verified URLs, Gutenberg IDs, translators, copyright status, format analysis).
 
 ## Tier 1: Both Lists, Public Domain, High Impact
 

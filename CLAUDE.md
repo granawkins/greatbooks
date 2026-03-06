@@ -62,7 +62,7 @@ A **segment** is a sentence (prose) or line (poetry). Segments are the smallest 
 - The API returns raw segments; the frontend handles paragraph grouping and rendering
 
 ### Audio
-Audio is **one MP3 file per chapter** (e.g. `data/iliad/audio/01.mp3`). Internally, TTS is called in ~1800-char chunks (due to API limits), then the chunks are merged via ffmpeg concat into a single file. Word-level timestamps are offset to match the merged file's timeline.
+Audio is **one MP3 file per chapter** (e.g. `data/homer-iliad/audio/01.mp3`). Internally, TTS is called in ~1800-char chunks (due to API limits), then the chunks are merged via ffmpeg concat into a single file. Word-level timestamps are offset to match the merged file's timeline.
 
 Chapter-level audio metadata (`audio_file`, `audio_duration_ms`) lives on the `chapters` table. Word-level timestamps live on each **segment** row:
 - `audio_start_ms` / `audio_end_ms` — when the segment starts/ends in the chapter MP3

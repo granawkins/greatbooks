@@ -17,7 +17,7 @@ sqlite3 greatbooks.db < schema.sql
 
 ## Schema Overview
 
-- **books** — one row per book (id is a slug like `iliad`)
+- **books** — one row per book (id is `author-title` slug like `homer-iliad`)
 - **chapters** — ordered by `number` within a book. Audio columns (`audio_file`, `audio_duration_ms`) are NULL until audio is generated.
 - **segments** — the atomic text unit. A sentence (prose) or line (poetry). Ordered by `sequence` within a chapter. Audio timing columns (`audio_start_ms`, `audio_end_ms`, `word_timestamps`) are NULL until audio is generated.
 
@@ -69,7 +69,7 @@ ORDER BY c.number, s.sequence;
 ## Conventions
 
 - Always use parameterized queries (never string interpolation)
-- Book IDs are lowercase slugs: `iliad`, `odyssey`, `republic`, `paradise-lost`
+- Book IDs use `author-title` format: `homer-iliad`, `plato-republic`, `milton-paradise-lost`
 - Segment sequences are 1-indexed, contiguous within a chapter
-- Audio file paths are relative to the project root: `data/iliad/audio/01.mp3`
+- Audio file paths are relative to the project root: `data/homer-iliad/audio/01.mp3`
 - Word timestamps JSON format (on segments table): `[{start_ms, end_ms, char_start, char_end}]` — char indices reference `segments.text`

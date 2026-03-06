@@ -101,7 +101,7 @@ Chunks segments by paragraph boundaries, runs TTS + STT for each chunk. Skips ch
 ```bash
 python .claude/skills/generate-audio/generate_chapter.py \
   --segments segments.json \
-  --output-dir data/iliad/audio/ \
+  --output-dir data/homer-iliad/audio/ \
   --chapter 1 \
   --voice Algieba
 ```
@@ -109,7 +109,7 @@ python .claude/skills/generate-audio/generate_chapter.py \
 **Importable:**
 ```python
 from generate_chapter import generate_chapter, chunk_segments
-manifest = generate_chapter(segments, "data/iliad/audio/", chapter_number=1, voice="Algieba")
+manifest = generate_chapter(segments, "data/homer-iliad/audio/", chapter_number=1, voice="Algieba")
 ```
 
 Input segments JSON: `[{"id", "sequence", "text", "segment_type", "group_number"}]`
@@ -175,7 +175,7 @@ Final output (one file per chapter):
 ```
 data/<book-id>/audio/<chapter_number>.mp3
 ```
-Example: `data/iliad/audio/01.mp3`
+Example: `data/homer-iliad/audio/01.mp3`
 
 ## TTS Configuration
 
