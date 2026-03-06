@@ -18,8 +18,9 @@ Add a new book to the Great Books corpus.
 4. **Review the output** — check that chapter breaks, paragraphs, and segment boundaries look right
 5. **Insert into database** — add rows to `books`, `chapters`, and `segments` tables
 6. **Write the book's SKILL.md** — create `data/<book-id>/SKILL.md` with provenance and context
-7. **Update the frontend** — add the book to `src/data/books.ts` so it appears on the home page
-8. **Generate cover art** — choose a subject, run `img.py`, record the subject in `data/<book-id>/SKILL.md`
+7. **Generate cover art** — choose a subject, run `img.py`, record the subject in `data/<book-id>/SKILL.md`
+
+Book IDs use `{author-lastname}-{short-title}` format (e.g. `homer-iliad`, `plato-republic`). See curator skill for full convention.
 
 ## Generating Cover Art
 
@@ -82,7 +83,14 @@ After parsing, insert using sqlite3:
 sqlite3 greatbooks.db
 ```
 
-Follow the schema and conventions in the `database` skill. Assign `sequence` numbers sequentially within each chapter. Assign `group_number` sequentially, resetting per chapter. Headings and section breaks get `group_number = NULL`.
+The `books` row must include provenance fields:
+- `original_date` — when the work was written (e.g. "~8th century BCE", "1667")
+- `translator` — translator name (NULL for English originals)
+- `translation_date` — year of translation (e.g. "1898")
+- `source_url` — URL where the text was sourced
+- `license` — copyright status (e.g. "Public Domain")
+
+Follow the schema and conventions in the `database` skill. Assign `sequence` numbers sequentially within each chapter. `paragraph_break` segments split consecutive text segments into separate paragraphs.
 
 ## Where to Find Content
 

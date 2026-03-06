@@ -59,12 +59,16 @@ def parse_classics(html: str) -> dict:
     <A NAME="N"> are interspersed throughout.
     """
     # Extract content between start and end markers
-    start_match = re.search(r'<A NAME="start"></A>', html, re.IGNORECASE)
-    end_match = re.search(r'<A NAME="end"></A>', html, re.IGNORECASE)
-    if not start_match or not end_match:
-        raise ValueError("Could not find start/end markers in HTML")
+    start_match = re.search(r'<A NAME="start">\s*</A>', html, re.IGNORECASE)
+    end_match = re.search(r'<A NAME="end">\s*</A>', html, re.IGNORECASE)
+    if not start_match:
+        raise ValueError("Could not find start marker in HTML")
 
-    content = html[start_match.end():end_match.start()]
+    # If no end marker (truncated response ~100KB), use all content after start
+    if end_match:
+        content = html[start_match.end():end_match.start()]
+    else:
+        content = html[start_match.end():]
 
     # Split into paragraphs on <BR><BR> (with optional whitespace)
     paragraphs = re.split(r'<BR>\s*<BR>', content, flags=re.IGNORECASE)
@@ -106,9 +110,19 @@ def parse_classics_multi(html_files: list[tuple[str, str]]) -> dict:
         Combined result with all chapters.
     """
     chapters = []
+    skipped = []
     for filename, html in html_files:
-        result = parse_classics(html)
+        try:
+            result = parse_classics(html)
+        except ValueError as e:
+            skipped.append((filename, str(e)))
+            continue
         chapters.extend(result["chapters"])
+    if skipped and not chapters:
+        raise ValueError(f"All files failed to parse: {skipped}")
+    result = {"chapters": chapters}
+    if skipped:
+        result["skipped"] = skipped
     return {"chapters": chapters}
 
 
