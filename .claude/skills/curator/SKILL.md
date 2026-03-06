@@ -54,25 +54,25 @@ Full details: `SOURCES.md` (verified URLs, Gutenberg IDs, translators, copyright
 | # | Author | Title | Lists | Source | Notes | Status |
 |---|--------|-------|-------|--------|-------|--------|
 | 1 | Homer | Iliad | GBWW+SJC | MIT Classics (Butler) | Greek epic | DONE |
-| 2 | Homer | Odyssey | GBWW+SJC | MIT Classics (Butler) | Greek epic | |
+| 2 | Homer | Odyssey | GBWW+SJC | MIT Classics (Butler) | Greek epic | DONE |
 | 3 | Plato | Republic | GBWW+SJC | MIT Classics (Jowett) | Political philosophy | DONE |
 | 4 | Milton | Paradise Lost | GBWW+SJC | Gutenberg | English epic poem | |
-| 5 | Aeschylus | Oresteia (Agamemnon, Libation Bearers, Eumenides) | GBWW+SJC | MIT Classics | Greek tragedy trilogy | |
-| 6 | Sophocles | Oedipus Rex, Oedipus at Colonus, Antigone | GBWW+SJC | MIT Classics | Theban plays | |
-| 7 | Euripides | Medea, Hippolytus, Bacchae | GBWW+SJC | MIT Classics | Key tragedies | |
-| 8 | Aristophanes | Clouds | GBWW+SJC | MIT Classics | Comedy | |
-| 9 | Herodotus | Histories | GBWW+SJC | MIT Classics | First history | |
-| 10 | Thucydides | History of the Peloponnesian War | GBWW+SJC | MIT Classics | Political history | |
-| 11 | Plato | Apology, Crito, Phaedo, Symposium, Meno | GBWW+SJC | MIT Classics (Jowett) | Key dialogues beyond Republic | |
-| 12 | Aristotle | Nicomachean Ethics | GBWW+SJC | MIT Classics | Ethics | |
-| 13 | Aristotle | Politics | GBWW+SJC | MIT Classics | Political philosophy | |
-| 14 | Aristotle | Poetics | GBWW+SJC | MIT Classics | Literary theory | |
-| 15 | Virgil | Aeneid | GBWW+SJC | MIT Classics | Roman epic | |
-| 16 | Plutarch | Lives (selections) | GBWW+SJC | MIT Classics | Parallel biographies | |
-| 17 | Marcus Aurelius | Meditations | GBWW+SJC | MIT Classics | Stoic philosophy | |
-| 18 | Epictetus | Discourses | GBWW+SJC | MIT Classics | Stoic philosophy | |
-| 19 | Lucretius | On the Nature of Things | GBWW+SJC | MIT Classics | Epicurean philosophy/poem | |
-| 20 | Tacitus | Annals | GBWW+SJC | MIT Classics | Roman history | |
+| 5 | Aeschylus | Oresteia (Agamemnon, Libation Bearers, Eumenides) | GBWW+SJC | MIT Classics | Greek tragedy trilogy — needs drama parser | |
+| 6 | Sophocles | Oedipus Rex, Oedipus at Colonus, Antigone | GBWW+SJC | MIT Classics | Theban plays — needs drama parser | |
+| 7 | Euripides | Medea, Hippolytus, Bacchae | GBWW+SJC | MIT Classics | Key tragedies — needs drama parser | |
+| 8 | Aristophanes | Clouds | GBWW+SJC | MIT Classics | Comedy — needs drama parser | |
+| 9 | Herodotus | Histories | GBWW+SJC | MIT Classics (Rawlinson) | First history | DONE |
+| 10 | Thucydides | History of the Peloponnesian War | GBWW+SJC | MIT Classics (Crawley) | Political history; Book 5 missing (different HTML format) | DONE |
+| 11 | Plato | Apology, Crito, Phaedo, Symposium, Meno | GBWW+SJC | MIT Classics (Jowett) | Key dialogues beyond Republic | DONE |
+| 12 | Aristotle | Nicomachean Ethics | GBWW+SJC | MIT Classics (Ross) | Ethics | DONE |
+| 13 | Aristotle | Politics | GBWW+SJC | MIT Classics (Jowett) | Political philosophy | DONE |
+| 14 | Aristotle | Poetics | GBWW+SJC | MIT Classics (Butcher) | Literary theory | DONE |
+| 15 | Virgil | Aeneid | GBWW+SJC | MIT Classics (Dryden) | Roman epic — needs verse parser | |
+| 16 | Plutarch | Lives (selections) | GBWW+SJC | MIT Classics (Dryden) | 4 lives: Lycurgus, Solon, Caesar, Antony | DONE |
+| 17 | Marcus Aurelius | Meditations | GBWW+SJC | MIT Classics (Long) | Stoic philosophy | DONE |
+| 18 | Epictetus | Discourses | GBWW+SJC | MIT Classics (Long) | Stoic philosophy | DONE |
+| 19 | Lucretius | On the Nature of Things | GBWW+SJC | MIT Classics (Leonard) | Epicurean philosophy/poem — verse parsed as prose | DONE |
+| 20 | Tacitus | Annals | GBWW+SJC | MIT Classics (Church & Brodribb) | Books 1-6 only (7-10 lost; 11-16 not on ICA) | DONE |
 | 21 | Augustine | Confessions | GBWW+SJC | Gutenberg | Christian autobiography | |
 | 22 | Dante | Divine Comedy | GBWW+SJC | Gutenberg | Medieval epic poem | |
 | 23 | Chaucer | Canterbury Tales | GBWW+SJC | Gutenberg | Middle English tales | |
@@ -146,28 +146,31 @@ May need to find PD editions or skip.
 | Arendt | The Human Condition | SJC | Copyrighted |
 | Morrison | Song of Solomon | SJC | Copyrighted |
 
-## Recommended Implementation Order
+## Next Steps
 
-**Phase 1 — Greek Classics (MIT Classics, same pipeline as Iliad/Odyssey):**
-Oresteia, Oedipus trilogy, Medea/Bacchae, Apology+Crito+Phaedo, Symposium, Nicomachean Ethics
+**ICA remaining (need parser extensions):**
+- Drama parser: Oresteia, Oedipus trilogy, Euripides plays, Aristophanes Clouds
+- Verse parser: Aeneid (verse epic with `<BR>` line breaks)
 
-**Phase 2 — Roman Classics (MIT Classics):**
-Aeneid, Meditations, Lucretius, Plutarch Lives (selections)
+**Gutenberg (need `--source gutenberg` parser):**
+- All 32 Gutenberg Tier 1 titles — see `SOURCES.md` for verified IDs and formats
+- Script: `add_ica_books.py` pattern can be adapted for a `add_gutenberg_books.py`
 
-**Phase 3 — Medieval/Renaissance (Gutenberg, new parser needed):**
-Divine Comedy, Canterbury Tales, The Prince, Don Quixote
+## Batch Ingestion
 
-**Phase 4 — Early Modern Philosophy (Gutenberg):**
-Leviathan, Discourse on Method, Pensees, Social Contract, Wealth of Nations
-
-**Phase 5 — Modern Literature (Gutenberg):**
-Shakespeare plays, Gulliver's Travels, Pride and Prejudice, Middlemarch, Huckleberry Finn
-
-**Phase 6 — 19th Century Giants (Gutenberg):**
-Moby Dick, Brothers Karamazov, War and Peace, Faust
+**ICA script**: `.claude/skills/add-book/add_ica_books.py`
+```bash
+.venv/bin/python .claude/skills/add-book/add_ica_books.py           # all books
+.venv/bin/python .claude/skills/add-book/add_ica_books.py --dry-run # test without DB insert
+.venv/bin/python .claude/skills/add-book/add_ica_books.py --only homer-odyssey  # single book
+```
+Skips books already in DB. Logs every step.
 
 ## Statistics
-- Tier 1: 52 titles (both lists, public domain) — 2 done
+- Tier 1: 52 titles (both lists, public domain) — 18 done (16 ICA prose + 2 original)
 - Tier 2: 14 titles (one list, public domain)
 - Tier 3: 14+ titles (20th century, copyright issues)
-- Total unique public domain titles: ~66
+- Total in DB: 18 books, 130 chapters, ~47,000 segments
+- ICA prose titles: all done
+- ICA drama/verse titles: 6 remaining (need parser extensions)
+- Gutenberg titles: 32 remaining (need new parser)
