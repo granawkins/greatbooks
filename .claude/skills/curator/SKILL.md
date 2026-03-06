@@ -56,7 +56,7 @@ Full details: `SOURCES.md` (verified URLs, Gutenberg IDs, translators, copyright
 | 1 | Homer | Iliad | GBWW+SJC | MIT Classics (Butler) | Greek epic | DONE |
 | 2 | Homer | Odyssey | GBWW+SJC | MIT Classics (Butler) | Greek epic | DONE |
 | 3 | Plato | Republic | GBWW+SJC | MIT Classics (Jowett) | Political philosophy | DONE |
-| 4 | Milton | Paradise Lost | GBWW+SJC | Gutenberg | English epic poem | |
+| 4 | Milton | Paradise Lost | GBWW+SJC | Gutenberg (PG 26) | English epic poem | DONE |
 | 5 | Aeschylus | Oresteia (Agamemnon, Libation Bearers, Eumenides) | GBWW+SJC | MIT Classics | Greek tragedy trilogy — needs drama parser | |
 | 6 | Sophocles | Oedipus Rex, Oedipus at Colonus, Antigone | GBWW+SJC | MIT Classics | Theban plays — needs drama parser | |
 | 7 | Euripides | Medea, Hippolytus, Bacchae | GBWW+SJC | MIT Classics | Key tragedies — needs drama parser | |
@@ -73,38 +73,38 @@ Full details: `SOURCES.md` (verified URLs, Gutenberg IDs, translators, copyright
 | 18 | Epictetus | Discourses | GBWW+SJC | MIT Classics (Long) | Stoic philosophy | DONE |
 | 19 | Lucretius | On the Nature of Things | GBWW+SJC | MIT Classics (Leonard) | Epicurean philosophy/poem — verse parsed as prose | DONE |
 | 20 | Tacitus | Annals | GBWW+SJC | MIT Classics (Church & Brodribb) | Books 1-6 only (7-10 lost; 11-16 not on ICA) | DONE |
-| 21 | Augustine | Confessions | GBWW+SJC | Gutenberg | Christian autobiography | |
-| 22 | Dante | Divine Comedy | GBWW+SJC | Gutenberg | Medieval epic poem | |
-| 23 | Chaucer | Canterbury Tales | GBWW+SJC | Gutenberg | Middle English tales | |
-| 24 | Machiavelli | The Prince | GBWW+SJC | Gutenberg | Political philosophy | |
-| 25 | Montaigne | Essays (selections) | GBWW+SJC | Gutenberg | Personal essays | |
-| 26 | Shakespeare | Hamlet, King Lear, Othello, Macbeth, The Tempest | GBWW+SJC | Gutenberg | Major tragedies + romance | |
-| 27 | Cervantes | Don Quixote | GBWW+SJC | Gutenberg | First modern novel | |
-| 28 | Hobbes | Leviathan | GBWW+SJC | Gutenberg | Political philosophy | |
-| 29 | Descartes | Discourse on Method, Meditations | GBWW+SJC | Gutenberg | Modern philosophy | |
-| 30 | Spinoza | Ethics | GBWW+SJC | Gutenberg | Rationalist philosophy | |
-| 31 | Pascal | Pensees | GBWW+SJC | Gutenberg | Religious philosophy | |
-| 32 | Locke | Second Treatise of Government | GBWW+SJC | Gutenberg | Liberal political theory | |
-| 33 | Swift | Gulliver's Travels | GBWW+SJC | Gutenberg | Satire | |
-| 34 | Hume | Enquiry Concerning Human Understanding | GBWW+SJC | Gutenberg | Empiricism | |
-| 35 | Rousseau | Social Contract | GBWW+SJC | Gutenberg | Political philosophy | |
-| 36 | Adam Smith | Wealth of Nations | GBWW+SJC | Gutenberg | Economics | |
-| 37 | Kant | Critique of Pure Reason | GBWW+SJC | Gutenberg | Critical philosophy | |
-| 38 | Hamilton/Madison/Jay | The Federalist | GBWW+SJC | Gutenberg | American political thought | |
-| 39 | Goethe | Faust | GBWW+SJC | Gutenberg | German dramatic poem | |
-| 40 | Austen | Emma / Pride and Prejudice | GBWW+SJC | Gutenberg | English novel | |
-| 41 | Hegel | Phenomenology of Mind | GBWW+SJC | Gutenberg | Idealist philosophy | |
-| 42 | Tocqueville | Democracy in America | GBWW+SJC | Gutenberg | Political analysis | |
-| 43 | Kierkegaard | Fear and Trembling | GBWW+SJC | Gutenberg | Existentialism | |
-| 44 | Eliot (George) | Middlemarch | GBWW+SJC | Gutenberg | Victorian novel | |
-| 45 | Melville | Moby Dick | GBWW+SJC | Gutenberg | American novel | |
-| 46 | Dostoevsky | Brothers Karamazov | GBWW+SJC | Gutenberg | Russian novel | |
-| 47 | Tolstoy | War and Peace | GBWW+SJC | Gutenberg | Russian novel | |
-| 48 | Darwin | Origin of Species | GBWW+SJC | Gutenberg | Natural science | |
-| 49 | Marx | Capital (selections) | GBWW+SJC | Gutenberg | Political economy | |
-| 50 | Nietzsche | Beyond Good and Evil | GBWW+SJC | Gutenberg | Philosophy | |
-| 51 | Twain | Adventures of Huckleberry Finn | GBWW+SJC | Gutenberg | American novel | |
-| 52 | Conrad | Heart of Darkness | GBWW+SJC | Gutenberg | Novella (d.1924, PD) | |
+| 21 | Augustine | Confessions | GBWW+SJC | Gutenberg (PG 3296, Pusey) | Christian autobiography | DONE |
+| 22 | Dante | Divine Comedy | GBWW+SJC | Gutenberg (PG 8800, Cary) | Medieval epic poem, 101 cantos | DONE |
+| 23 | Chaucer | Canterbury Tales | GBWW+SJC | Gutenberg (PG 2383) | Middle English tales | DONE |
+| 24 | Machiavelli | The Prince | GBWW+SJC | Gutenberg (PG 1232, Marriott) | Political philosophy | DONE |
+| 25 | Montaigne | Essays | GBWW+SJC | Gutenberg (PG 3600, Cotton) | Complete essays, 126 chapters | DONE |
+| 26 | Shakespeare | Hamlet, King Lear, Othello, Macbeth, The Tempest | GBWW+SJC | Gutenberg | 5 plays as separate books | DONE |
+| 27 | Cervantes | Don Quixote | GBWW+SJC | Gutenberg (PG 996, Ormsby) | First modern novel, 143 chapters | DONE |
+| 28 | Hobbes | Leviathan | GBWW+SJC | Gutenberg (PG 3207) | Political philosophy | DONE |
+| 29 | Descartes | Discourse on Method | GBWW+SJC | Gutenberg (PG 59, Veitch) | Modern philosophy | DONE |
+| 30 | Spinoza | Ethics | GBWW+SJC | Gutenberg (PG 3800, Elwes) | Rationalist philosophy | DONE |
+| 31 | Pascal | Pensées | GBWW+SJC | Gutenberg (PG 18269, Trotter) | Religious philosophy | DONE |
+| 32 | Locke | Second Treatise of Government | GBWW+SJC | Gutenberg (PG 7370) | Liberal political theory | DONE |
+| 33 | Swift | Gulliver's Travels | GBWW+SJC | Gutenberg (PG 829) | Satire | DONE |
+| 34 | Hume | Enquiry Concerning Human Understanding | GBWW+SJC | Gutenberg (PG 9662) | Empiricism | DONE |
+| 35 | Rousseau | Social Contract | GBWW+SJC | Gutenberg (PG 46333, Cole) | Political philosophy; 1 chapter | DONE |
+| 36 | Adam Smith | Wealth of Nations | GBWW+SJC | Gutenberg (PG 3300) | Economics | DONE |
+| 37 | Kant | Critique of Pure Reason | GBWW+SJC | Gutenberg (PG 4280, Meiklejohn) | Critical philosophy | DONE |
+| 38 | Hamilton/Madison/Jay | The Federalist | GBWW+SJC | Gutenberg (PG 18) | 87 papers | DONE |
+| 39 | Goethe | Faust | GBWW+SJC | Gutenberg (PG 14591, Taylor) | German dramatic poem; 1 chapter | DONE |
+| 40 | Austen | Emma / Pride and Prejudice | GBWW+SJC | Gutenberg (PG 158, 1342) | Two novels as separate books | DONE |
+| 41 | Hegel | Phenomenology of Mind | GBWW+SJC | — | NOT on Gutenberg in English | UNAVAILABLE |
+| 42 | Tocqueville | Democracy in America | GBWW+SJC | Gutenberg (PG 815+816, Reeve) | 2 volumes combined | DONE |
+| 43 | Kierkegaard | Fear and Trembling | GBWW+SJC | Gutenberg (PG 45868, Lowrie) | Existentialism; 1 chapter | DONE |
+| 44 | Eliot (George) | Middlemarch | GBWW+SJC | Gutenberg (PG 145) | Victorian novel, 87 chapters | DONE |
+| 45 | Melville | Moby Dick | GBWW+SJC | Gutenberg (PG 2701) | American novel, 138 chapters | DONE |
+| 46 | Dostoevsky | Brothers Karamazov | GBWW+SJC | Gutenberg (PG 28054, Garnett) | Russian novel, 98 chapters | DONE |
+| 47 | Tolstoy | War and Peace | GBWW+SJC | Gutenberg (PG 2600, Maude) | Russian novel, 365 chapters | DONE |
+| 48 | Darwin | Origin of Species | GBWW+SJC | Gutenberg (PG 22764) | Natural science | DONE |
+| 49 | Marx | Capital (selections) | GBWW+SJC | — | NOT on Gutenberg in English | UNAVAILABLE |
+| 50 | Nietzsche | Beyond Good and Evil | GBWW+SJC | Gutenberg (PG 4363, Zimmern) | Philosophy | DONE |
+| 51 | Twain | Adventures of Huckleberry Finn | GBWW+SJC | Gutenberg (PG 76) | American novel | DONE |
+| 52 | Conrad | Heart of Darkness | GBWW+SJC | Gutenberg (PG 219) | Novella (d.1924, PD) | DONE |
 
 ## Tier 2: One List Only, Public Domain, High Impact
 
@@ -152,9 +152,14 @@ May need to find PD editions or skip.
 - Drama parser: Oresteia, Oedipus trilogy, Euripides plays, Aristophanes Clouds
 - Verse parser: Aeneid (verse epic with `<BR>` line breaks)
 
-**Gutenberg (need `--source gutenberg` parser):**
-- All 32 Gutenberg Tier 1 titles — see `SOURCES.md` for verified IDs and formats
-- Script: `add_ica_books.py` pattern can be adapted for a `add_gutenberg_books.py`
+**Unavailable on Gutenberg:**
+- Hegel's Phenomenology of Mind — not available in English on PG
+- Marx's Capital — not available in English on PG
+- Both may be findable on other sources (Standard Ebooks, Internet Archive)
+
+**Improvements to existing ingestions:**
+- Some books parsed as single chapter (King Lear, Rousseau, Faust, Kierkegaard) — could refine parser for non-standard heading structures
+- Some title-page stubs as first chapters — could filter out
 
 ## Batch Ingestion
 
@@ -164,13 +169,21 @@ May need to find PD editions or skip.
 .venv/bin/python .claude/skills/add-book/add_ica_books.py --dry-run # test without DB insert
 .venv/bin/python .claude/skills/add-book/add_ica_books.py --only homer-odyssey  # single book
 ```
-Skips books already in DB. Logs every step.
+
+**Gutenberg script**: `.claude/skills/add-book/add_gutenberg_books.py`
+```bash
+.venv/bin/python .claude/skills/add-book/add_gutenberg_books.py           # all books
+.venv/bin/python .claude/skills/add-book/add_gutenberg_books.py --dry-run # test without DB insert
+.venv/bin/python .claude/skills/add-book/add_gutenberg_books.py --only melville-moby-dick  # single book
+```
+
+Both scripts skip books already in DB. Logs every step.
 
 ## Statistics
-- Tier 1: 52 titles (both lists, public domain) — 18 done (16 ICA prose + 2 original)
+- Tier 1: 52 titles (both lists, public domain) — 50 done, 2 unavailable (Hegel, Marx)
 - Tier 2: 14 titles (one list, public domain)
 - Tier 3: 14+ titles (20th century, copyright issues)
-- Total in DB: 18 books, 130 chapters, ~47,000 segments
-- ICA prose titles: all done
+- Total in DB: 54 books, 1,858 chapters, ~364,000 segments
+- ICA prose titles: all 16 done
 - ICA drama/verse titles: 6 remaining (need parser extensions)
-- Gutenberg titles: 32 remaining (need new parser)
+- Gutenberg titles: all 36 done (34 Tier 1 + 2 Austen novels)
