@@ -30,6 +30,7 @@ export type BookRow = {
   translation_date: string | null;
   source_url: string | null;
   license: string | null;
+  layout: "prose" | "verse";
 };
 
 export type ChapterRow = {

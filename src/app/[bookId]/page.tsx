@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import { type SegmentBoundary, useAudioPlayer, type WordTiming } from "@/lib/AudioPlayerContext";
 import { useProgress } from "@/lib/useProgress";
 import ChatView from "@/components/chat/ChatView";
 import {
+  BookHeader,
   ChapterBlocks,
   ChapterDivider,
   useInfiniteScroll,
@@ -56,13 +56,14 @@ export default function BookPage() {
   const initialLoading = sortedChapterNums.length === 0;
 
   // Blocks per chapter
+  const layout = bookMeta?.layout || "prose";
   const allChapterBlocks = useMemo(() => {
     const result: Record<number, Block[]> = {};
     for (const [num, data] of Object.entries(loadedChapters)) {
-      result[Number(num)] = groupIntoBlocks(data.segments);
+      result[Number(num)] = groupIntoBlocks(data.segments, layout);
     }
     return result;
-  }, [loadedChapters]);
+  }, [loadedChapters, layout]);
 
   // Push a history entry when chat opens so browser back button closes it
   useEffect(() => {
@@ -87,7 +88,14 @@ export default function BookPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.chapters) {
-          setBookMeta({ title: data.title, author: data.author });
+          setBookMeta({
+            title: data.title,
+            author: data.author,
+            original_date: data.original_date,
+            translator: data.translator,
+            source_url: data.source_url,
+            layout: data.layout || "prose",
+          });
           setBookChapters(
             data.chapters.map((c: { number: number; title: string }) => ({
               id: c.number,
@@ -263,23 +271,15 @@ export default function BookPage() {
         paddingLeft: "1.5rem",
         paddingRight: "1.5rem",
         paddingBottom: "200px",
+        position: "relative",
       }}
     >
-      <div className="flex items-center mb-8 mt-6">
-        <Link
-          href="/"
-          className="flex items-center gap-2 -ml-1 px-1 py-1 rounded-[var(--radius)] transition-opacity hover:opacity-60"
-          style={{ color: "var(--color-text-secondary)" }}
-          aria-label="Back to library"
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M11 4L6 9l5 5" />
-          </svg>
-          <span style={{ fontFamily: "var(--font-ui)", fontSize: "0.9375rem" }}>
-            {bookMeta ? `${bookMeta.title}, ${bookMeta.author}` : ""}
-          </span>
-        </Link>
-      </div>
+      <BookHeader
+        bookMeta={bookMeta}
+        chapters={bookChapters}
+        activeChapterId={activeChapterId}
+        onChapterSelect={handleChapterJump}
+      />
 
       <div ref={topSentinelRef} style={{ height: 1 }} />
 
@@ -297,14 +297,14 @@ export default function BookPage() {
               ref={(el) => { chapterSectionRefs.current[chapterNum] = el; }}
               data-chapter={chapterNum}
             >
-              {chapterMeta && <ChapterDivider title={chapterMeta.title} />}
+              {chapterMeta && bookChapters.length > 1 && <ChapterDivider title={chapterMeta.title} />}
 
               {blocks.length === 0 ? (
                 <p className="text-sm text-center py-16" style={{ color: "var(--color-text-secondary)" }}>
                   No text available for this chapter.
                 </p>
               ) : (
-                <ChapterBlocks blocks={blocks} chapterNum={chapterNum} paraRefsMap={paraRefsMap} />
+                <ChapterBlocks blocks={blocks} chapterNum={chapterNum} paraRefsMap={paraRefsMap} verse={layout === "verse"} />
               )}
             </div>
           );

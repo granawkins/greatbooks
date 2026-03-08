@@ -1,21 +1,22 @@
 import type { Segment, Block, ParagraphBlock, WordSpan } from "./types";
 
-export function groupIntoBlocks(segments: Segment[]): Block[] {
+export function groupIntoBlocks(segments: Segment[], layout: "prose" | "verse" = "prose"): Block[] {
   const blocks: Block[] = [];
   let current: Segment[] = [];
+  const sep = layout === "verse" ? "\n" : " ";
 
   const flush = () => {
     if (current.length === 0) return;
     let offset = 0;
     const offsets = current.map((seg) => {
       const o = offset;
-      offset += seg.text.length + 1; // +1 for joining space
+      offset += seg.text.length + 1; // +1 for joining char
       return o;
     });
     blocks.push({
       type: "paragraph",
       segments: current,
-      text: current.map((s) => s.text).join(" "),
+      text: current.map((s) => s.text).join(sep),
       charOffsets: offsets,
     });
   };

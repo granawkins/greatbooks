@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS books (
   translator TEXT,                      -- translator name (NULL for English originals)
   translation_date TEXT,                -- year of translation (e.g. "1898")
   source_url TEXT,                      -- URL where the text was sourced
-  license TEXT                          -- copyright status (e.g. "Public Domain")
+  license TEXT,                         -- copyright status (e.g. "Public Domain")
+  layout TEXT DEFAULT 'prose'           -- 'prose' (sentences flow) or 'verse' (line breaks between segments)
 );
 
 CREATE TABLE IF NOT EXISTS chapters (

@@ -27,10 +27,12 @@ export function ChapterBlocks({
   blocks,
   chapterNum,
   paraRefsMap,
+  verse,
 }: {
   blocks: Block[];
   chapterNum: number;
   paraRefsMap: React.RefObject<Record<number, (HTMLParagraphElement | null)[]>>;
+  verse?: boolean;
 }) {
   return (
     <div className="space-y-5">
@@ -49,6 +51,7 @@ export function ChapterBlocks({
               fontWeight: 500,
               letterSpacing: "0.04em",
               textTransform: "uppercase",
+              whiteSpace: "pre-line",
               marginTop: "2rem",
             }}
           >
@@ -66,6 +69,7 @@ export function ChapterBlocks({
               fontFamily: "var(--font-body)",
               fontSize: "1.125rem",
               lineHeight: "1.85",
+              ...(verse ? { whiteSpace: "pre-line" as const } : {}),
             }}
           >
             <HighlightedParagraph para={block} idPrefix={`${chapterNum}-${i}`} chapterNum={chapterNum} />

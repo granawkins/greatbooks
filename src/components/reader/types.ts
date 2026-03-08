@@ -43,4 +43,11 @@ export type WordSpan = {
 };
 
 export type NavChapter = { id: number; title: string };
-export type BookMeta = { title: string; author: string };
+export type BookMeta = {
+  title: string;
+  author: string;
+  original_date?: string | null;
+  translator?: string | null;
+  source_url?: string | null;
+  layout?: "prose" | "verse";
+};
