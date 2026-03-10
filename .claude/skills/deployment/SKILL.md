@@ -2,12 +2,46 @@
 
 Deploy code, data, and database updates to the Great Books production server.
 
+## GCP Projects
+
+Two GCP projects are used, both under `granthawkins88@gmail.com`:
+
+| Project | Purpose |
+|---------|---------|
+| `greatbooks-app` | Compute Engine VM (production server) |
+| `readtomelater` | All Google APIs: TTS (Chirp3), STT (Chirp 2), Generative Language (Gemini), Cloud Storage |
+
+The service account `earmark-tts@readtomelater.iam.gserviceaccount.com` (via `google-credentials.json`) is used by both the server and local scripts for TTS, STT, and GCS access.
+
+## Google Cloud Storage
+
+| Resource | Value |
+|----------|-------|
+| **Bucket** | `greatbooks-assets` (in `readtomelater` project) |
+| **Region** | `us-central1` |
+| **Access** | Uniform bucket-level, public read (`allUsers:objectViewer`) |
+| **Covers** | `gs://greatbooks-assets/covers/{book-id}.jpg` — served directly via public URL |
+| **Audio** | `gs://greatbooks-assets/audio/{book-id}/{chapter}.mp3` — proxied via `/api/audio/` with auth check |
+
+Covers are referenced in the frontend as `https://storage.googleapis.com/greatbooks-assets/covers/...`. Audio is never accessed directly by clients — the `/api/audio/` route checks the auth cookie, then streams from GCS.
+
+**Upload assets to GCS:**
+```bash
+.venv/bin/python scripts/upload_to_gcs.py            # upload all (covers + audio)
+.venv/bin/python scripts/upload_to_gcs.py --covers    # covers only
+.venv/bin/python scripts/upload_to_gcs.py --audio     # audio only
+.venv/bin/python scripts/upload_to_gcs.py --force     # re-upload existing files
+```
+
+**Cost note:** GCS egress is $0.12/GB after 1GB free/month. At ~170MB per book x 50 books = ~8.5GB stored (~$0.18/mo storage). Egress depends on traffic — if costs grow, add Cloudflare CDN in front of the bucket to cache and eliminate most egress charges.
+
 ## Infrastructure
 
 | Resource | Value |
 |----------|-------|
 | **Cloud** | Google Cloud Platform |
-| **Project ID** | `greatbooks-app` |
+| **Compute Project** | `greatbooks-app` |
+| **Storage/API Project** | `readtomelater` |
 | **GCP Account** | `granthawkins88@gmail.com` |
 | **Billing Account** | Earmark (`018761-888595-29BC0B`) |
 | **VM Name** | `greatbooks` |
@@ -38,22 +72,14 @@ scp greatbooks.db greatbooks:~/greatbooks/greatbooks.db
 ssh greatbooks "pm2 start greatbooks"
 ```
 
-### Data files (audio, covers, etc.)
+### Data files (audio, covers)
 
-**IMPORTANT: `scp -r dir/` creates a nested subdirectory on the remote.** Use trailing `/.` or specify files directly:
+Audio and cover images are served from GCS, not the server filesystem. After generating new audio or covers locally, upload to GCS:
 ```bash
-# WRONG — creates data/book/audio/audio/ on server:
-scp -r data/book/audio/ greatbooks:~/greatbooks/data/book/audio/
-
-# RIGHT — copies contents into existing directory:
-scp data/book/audio/*.mp3 greatbooks:~/greatbooks/data/book/audio/
-
-# RIGHT — rsync handles this correctly:
-rsync -av data/book/audio/ greatbooks:~/greatbooks/data/book/audio/
-
-# Covers:
-rsync -av public/covers/ greatbooks:~/greatbooks/public/covers/
+.venv/bin/python scripts/upload_to_gcs.py
 ```
+
+No need to scp files to the server — the app streams audio from GCS at runtime.
 
 ## Debugging
 

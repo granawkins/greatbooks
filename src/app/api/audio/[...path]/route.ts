@@ -37,25 +37,14 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const [metadata] = await file.getMetadata();
-    const stream = file.createReadStream();
-
-    const webStream = new ReadableStream({
-      start(controller) {
-        stream.on("data", (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
-        stream.on("end", () => controller.close());
-        stream.on("error", (err: Error) => controller.error(err));
-      },
+    // Generate a signed URL valid for 1 hour, redirect client to fetch directly from GCS
+    const [signedUrl] = await file.getSignedUrl({
+      version: "v4",
+      action: "read",
+      expires: Date.now() + 60 * 60 * 1000,
     });
 
-    return new NextResponse(webStream, {
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Content-Length": String(metadata.size),
-        "Accept-Ranges": "bytes",
-        "Cache-Control": "public, max-age=31536000, immutable",
-      },
-    });
+    return NextResponse.redirect(signedUrl);
   } catch {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
