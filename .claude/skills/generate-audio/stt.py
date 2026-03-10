@@ -50,16 +50,28 @@ def _transcribe_deepgram(audio_path: str) -> list[dict]:
     with open(audio_path, "rb") as f:
         audio_data = f.read()
 
-    response = httpx.post(
-        "https://api.deepgram.com/v1/listen?model=nova-3&smart_format=false&punctuate=true",
-        headers={
-            "Authorization": f"Token {api_key}",
-            "Content-Type": "audio/mp3",
-        },
-        content=audio_data,
-        timeout=60.0,
-    )
-    response.raise_for_status()
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = httpx.post(
+                "https://api.deepgram.com/v1/listen?model=nova-3&smart_format=false&punctuate=true",
+                headers={
+                    "Authorization": f"Token {api_key}",
+                    "Content-Type": "audio/mp3",
+                },
+                content=audio_data,
+                timeout=120.0,
+            )
+            response.raise_for_status()
+            break
+        except (httpx.HTTPStatusError, httpx.TimeoutException) as e:
+            if attempt < max_retries - 1:
+                import time
+                wait = 2 ** (attempt + 1)
+                print(f"    STT retry {attempt + 1}/{max_retries} after {wait}s: {e}")
+                time.sleep(wait)
+            else:
+                raise
     data = response.json()
 
     words = []
