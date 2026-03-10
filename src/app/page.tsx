@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import type { BookRow } from "@/lib/db";
 import BookCard from "@/components/BookCard";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
-
-import { getUserId } from "@/lib/userId";
+import LoginButtons from "@/components/auth/LoginButtons";
 
 type ProgressMap = Record<string, { chapter_number: number }>;
 
@@ -22,9 +21,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const userId = getUserId();
-    if (!userId) return;
-    fetch(`/api/progress?userId=${userId}`)
+    fetch("/api/progress", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : []))
       .then((rows: { book_id: string; chapter_number: number }[]) => {
         const map: ProgressMap = {};
@@ -39,18 +36,23 @@ export default function Home() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)" }}>
       <header className="max-w-4xl mx-auto px-6 pt-12 pb-8">
-        <h1
-          className="text-3xl font-bold"
-          style={{ color: "var(--color-text)", fontFamily: "var(--font-ui)" }}
-        >
-          Great Books
-        </h1>
-        <p
-          className="mt-2 text-lg"
-          style={{ color: "var(--color-text-secondary)" }}
-        >
-          Classic literature, reimagined for reading, listening, and exploring.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1
+              className="text-3xl font-bold"
+              style={{ color: "var(--color-text)", fontFamily: "var(--font-ui)" }}
+            >
+              Great Books
+            </h1>
+            <p
+              className="mt-2 text-lg"
+              style={{ color: "var(--color-text-secondary)" }}
+            >
+              Classic literature, reimagined for reading, listening, and exploring.
+            </p>
+          </div>
+          <LoginButtons />
+        </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-6" style={{ paddingBottom: session ? 220 : 64 }}>

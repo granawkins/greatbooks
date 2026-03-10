@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { getUserId } from "@/lib/userId";
+import { useAuth } from "@/lib/AuthContext";
 import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
 
@@ -20,7 +20,8 @@ type ChatViewProps = {
 };
 
 export default function ChatView({ bookId, bookTitle, authorName, onClose }: ChatViewProps) {
-  const [userId] = useState(getUserId);
+  const { user } = useAuth();
+  const userId = user?.id;
   const [messages, setMessages] = useState<Message[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -33,7 +34,7 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
 
   const fetchMessages = useCallback(async (): Promise<Message[]> => {
     if (!userId || !bookId) return [];
-    const res = await fetch(`/api/chat?userId=${userId}&bookId=${bookId}`);
+    const res = await fetch(`/api/chat?bookId=${bookId}`, { credentials: "include" });
     if (!res.ok) return [];
     const rows: Message[] = await res.json();
     setMessages(rows);
@@ -83,7 +84,7 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
     await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, bookId, text }),
+      body: JSON.stringify({ bookId, text }),
     });
     fetchMessages();
   };

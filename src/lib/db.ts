@@ -122,6 +122,22 @@ export const db = {
       .run(id);
   },
 
+  getUser: (id: string): UserRow | undefined =>
+    connection
+      .prepare("SELECT * FROM users WHERE id = ?")
+      .get(id) as UserRow | undefined,
+
+  getUserByEmail: (email: string): UserRow | undefined =>
+    connection
+      .prepare("SELECT * FROM users WHERE email = ?")
+      .get(email) as UserRow | undefined,
+
+  updateUserEmail: (id: string, email: string): void => {
+    rwConnection
+      .prepare("UPDATE users SET email = ? WHERE id = ?")
+      .run(email, id);
+  },
+
   getProgress: (userId: string): UserProgressRow[] =>
     connection
       .prepare("SELECT * FROM user_progress WHERE user_id = ?")

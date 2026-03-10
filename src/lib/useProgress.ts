@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getUserId } from "./userId";
 
 type BookProgress = {
   book_id: string;
@@ -12,7 +11,6 @@ type BookProgress = {
 const SAVE_INTERVAL_MS = 5000;
 
 export function useProgress(bookId: string) {
-  const [userId] = useState(getUserId);
   const [progress, setProgress] = useState<BookProgress | null>(null);
   const [allProgress, setAllProgress] = useState<BookProgress[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -21,8 +19,7 @@ export function useProgress(bookId: string) {
 
   // Fetch progress on mount
   useEffect(() => {
-    if (!userId) return;
-    fetch(`/api/progress?userId=${userId}`)
+    fetch("/api/progress", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : []))
       .then((rows: BookProgress[]) => {
         setAllProgress(rows);
@@ -31,24 +28,24 @@ export function useProgress(bookId: string) {
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
-  }, [userId, bookId]);
+  }, [bookId]);
 
   // Flush pending save to API
   const flush = useCallback(() => {
     const data = pendingRef.current;
-    if (!data || !userId) return;
+    if (!data) return;
     pendingRef.current = null;
     fetch("/api/progress", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({
-        userId,
         bookId: data.book_id,
         chapterNumber: data.chapter_number,
         audioPositionMs: data.audio_position_ms,
       }),
     }).catch(() => {});
-  }, [userId]);
+  }, []);
 
   // Flush on unmount
   useEffect(() => {
@@ -98,5 +95,5 @@ export function useProgress(bookId: string) {
     [bookId, flush]
   );
 
-  return { userId, progress, allProgress, loaded, saveProgress, saveProgressNow };
+  return { progress, allProgress, loaded, saveProgress, saveProgressNow };
 }

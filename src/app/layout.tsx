@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { AudioPlayerProvider } from "@/lib/AudioPlayerContext";
+import { AuthProvider } from "@/lib/AuthContext";
 import PersistentPlayerBar from "@/components/audio/PersistentPlayerBar";
 
 const geistSans = Geist({
@@ -23,10 +24,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} antialiased`}>
-        <AudioPlayerProvider>
-          {children}
-          <PersistentPlayerBar />
-        </AudioPlayerProvider>
+        <AuthProvider>
+          <AudioPlayerProvider>
+            {children}
+            <PersistentPlayerBar />
+          </AudioPlayerProvider>
+        </AuthProvider>
       </body>
     </html>
   );
