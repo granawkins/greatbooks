@@ -21,6 +21,7 @@ export type AudioSession = {
   src: string;
   durationMs: number;
   segmentBoundaries: SegmentBoundary[];
+  initialPositionMs?: number;
 };
 
 // Word-timing span the player uses for imperative highlighting
@@ -134,7 +135,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         audio.currentTime = 0;
         audio.playbackRate = 1;
       }
-      setSession(newSession);
+      setSession({ ...newSession, initialPositionMs: initialPositionMs ?? 0 });
       seekedRef.current = false;
       initialMsRef.current = initialPositionMs ?? 0;
       autoPlayRef.current = autoPlay ?? false;

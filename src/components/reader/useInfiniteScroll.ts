@@ -7,9 +7,12 @@ export function useInfiniteScroll(
   bookId: string,
   bookChapters: NavChapter[],
   saveProgressNow: (chapterNumber: number, audioPositionMs: number) => void,
+  initialChapters?: Record<number, ChapterData>,
 ) {
-  const [loadedChapters, setLoadedChapters] = useState<Record<number, ChapterData>>({});
-  const [activeChapterId, setActiveChapterId] = useState(1);
+  const [loadedChapters, setLoadedChapters] = useState<Record<number, ChapterData>>(initialChapters ?? {});
+  const [activeChapterId, setActiveChapterId] = useState(
+    initialChapters ? Number(Object.keys(initialChapters)[0]) : 1
+  );
 
   const chapterSectionRefs = useRef<Record<number, HTMLElement | null>>({});
   const activeChapterRef = useRef(1);

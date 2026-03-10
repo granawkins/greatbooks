@@ -261,10 +261,9 @@ export default function AudioPlayer() {
   }, [audioRef, session, scrollDataRef, updateScrubber, updateHighlight, updateScroll, clearHighlight]);
 
   useEffect(() => {
-    const audio = audioRef.current;
-    const ms = audio ? Math.floor(audio.currentTime * 1000) : 0;
+    const ms = session?.initialPositionMs ?? 0;
     updateScrubber(ms, duration);
-  }, [session, duration, audioRef, updateScrubber]);
+  }, [session, duration, updateScrubber]);
 
   // ── Seek handler for Scrubber ───────────────────────────────────────────
 

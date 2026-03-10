@@ -28,6 +28,7 @@ export default function BookCard({ book, progress }: BookCardProps) {
               src={getCoverUrl(book.cover_image)}
               alt={`${book.title} cover`}
               fill
+              sizes="(max-width: 640px) 50vw, 25vw"
               className="object-cover"
             />
           ) : (

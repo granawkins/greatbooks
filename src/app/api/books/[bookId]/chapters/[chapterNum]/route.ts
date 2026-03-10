@@ -20,12 +20,19 @@ export async function GET(
     word_timestamps: seg.word_timestamps ? JSON.parse(seg.word_timestamps) : null,
   }));
 
-  return NextResponse.json({
-    id: chapter.id,
-    number: chapter.number,
-    title: chapter.title,
-    segments,
-    audio_file: chapter.audio_file,
-    audio_duration_ms: chapter.audio_duration_ms,
-  });
+  return NextResponse.json(
+    {
+      id: chapter.id,
+      number: chapter.number,
+      title: chapter.title,
+      segments,
+      audio_file: chapter.audio_file,
+      audio_duration_ms: chapter.audio_duration_ms,
+    },
+    {
+      headers: {
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+      },
+    }
+  );
 }
