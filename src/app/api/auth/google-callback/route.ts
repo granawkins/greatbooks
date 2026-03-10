@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
   const stateParam = searchParams.get("state");
-  const baseUrl = getBaseUrl();
+  const baseUrl = getBaseUrl(req);
 
   if (!code || !stateParam) {
     return new Response(null, {

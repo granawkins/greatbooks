@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     expiresAt: Date.now() + 15 * 60 * 1000,
   });
 
-  const baseUrl = getBaseUrl();
+  const baseUrl = getBaseUrl(req);
   const verifyUrl = `${baseUrl}/api/auth/verify?token=${token}`;
 
   const { error } = await resend.emails.send({

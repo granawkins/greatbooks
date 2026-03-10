@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const baseUrl = getBaseUrl();
+  const baseUrl = getBaseUrl(req);
   const redirectUri = `${baseUrl}/api/auth/google-callback`;
 
   const state = Buffer.from(

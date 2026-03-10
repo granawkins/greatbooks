@@ -11,7 +11,7 @@ import { magicLinkTokens } from "@/lib/magic-link-tokens";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const token = searchParams.get("token");
-  const baseUrl = getBaseUrl();
+  const baseUrl = getBaseUrl(req);
 
   if (!token) {
     return new Response(null, {

@@ -34,6 +34,8 @@ export async function getAuthUserId(): Promise<string | null> {
   return verifyJWT(token);
 }
 
-export function getBaseUrl(): string {
-  return process.env.PUBLIC_BASE_URL || "http://localhost:3000";
+/** Derive base URL from the incoming request's origin. */
+export function getBaseUrl(req: Request): string {
+  const url = new URL(req.url);
+  return url.origin;
 }
