@@ -1,27 +1,57 @@
 import { NextResponse } from "next/server";
-import { readFile, stat } from "fs/promises";
-import path from "path";
+import { Storage } from "@google-cloud/storage";
+import { getAuthUserId } from "@/lib/auth";
+
+const storage = new Storage();
+const bucket = storage.bucket("greatbooks-assets");
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const { path: segments } = await params;
-  const filePath = path.join(process.cwd(), "data", ...segments);
+  // Auth check — only authenticated users can stream audio
+  const userId = await getAuthUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  // Only serve files from data/ directory, only .mp3
+  const { path: segments } = await params;
+  const filePath = segments.join("/");
+
+  // Only serve .mp3 files
   if (!filePath.endsWith(".mp3")) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  try {
-    const stats = await stat(filePath);
-    const buffer = await readFile(filePath);
+  // Map URL path to GCS path
+  // URL: /api/audio/homer-iliad/audio/01.mp3 → segments: ["homer-iliad", "audio", "01.mp3"]
+  // GCS: audio/homer-iliad/01.mp3
+  const bookId = segments[0];
+  const audioFile = segments.slice(2).join("/");
+  const gcsPath = `audio/${bookId}/${audioFile}`;
 
-    return new NextResponse(buffer, {
+  try {
+    const file = bucket.file(gcsPath);
+    const [exists] = await file.exists();
+    if (!exists) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const [metadata] = await file.getMetadata();
+    const stream = file.createReadStream();
+
+    const webStream = new ReadableStream({
+      start(controller) {
+        stream.on("data", (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
+        stream.on("end", () => controller.close());
+        stream.on("error", (err: Error) => controller.error(err));
+      },
+    });
+
+    return new NextResponse(webStream, {
       headers: {
         "Content-Type": "audio/mpeg",
-        "Content-Length": stats.size.toString(),
+        "Content-Length": String(metadata.size),
         "Accept-Ranges": "bytes",
         "Cache-Control": "public, max-age=31536000, immutable",
       },

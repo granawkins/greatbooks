@@ -77,3 +77,22 @@ gcloud compute instances start greatbooks --zone=us-central1-a
 ```
 
 Machine types: `e2-micro` (1GB, free tier), `e2-small` (2GB, ~$14/mo), `e2-medium` (4GB, ~$24/mo)
+
+## Swap
+
+2GB swap file configured at `/swapfile` (added 2025-03-10 to prevent OOM during npm installs). Persists across reboots via `/etc/fstab`.
+
+```bash
+# Verify swap is active
+ssh greatbooks "swapon --show && free -h"
+```
+
+## OpenClaw
+
+OpenClaw (AI agent / Telegram bot) is installed globally via npm on the server.
+
+- **Config:** `~/.openclaw/` (workspace, identity, Telegram bot config)
+- **Binary:** `~/.npm-global/bin/openclaw`
+- **Runs as:** systemd daemon (installed via `openclaw onboard --install-daemon`)
+- **Gateway port:** 18789
+- **RAM usage:** ~300-500MB — tight on `e2-small`, consider `e2-medium` if unstable

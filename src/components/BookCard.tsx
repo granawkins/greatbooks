@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { BookRow } from "@/lib/db";
+import { getCoverUrl } from "@/lib/assets";
 
 type BookCardProps = {
   book: BookRow;
@@ -24,7 +25,7 @@ export default function BookCard({ book, progress }: BookCardProps) {
         >
           {book.cover_image ? (
             <Image
-              src={book.cover_image}
+              src={getCoverUrl(book.cover_image)}
               alt={`${book.title} cover`}
               fill
               className="object-cover"
