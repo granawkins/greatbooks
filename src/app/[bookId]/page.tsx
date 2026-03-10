@@ -109,18 +109,20 @@ export default function BookPage() {
 
   // Restore saved chapter on first load
   useEffect(() => {
-    if (!progressLoaded || restoredRef.current) return;
+    if (!progressLoaded || restoredRef.current || bookChapters.length === 0) return;
     restoredRef.current = true;
+    const firstChapter = bookChapters[0].id;
     if (progress) {
       setActiveChapterId(progress.chapter_number);
       initialAudioMsRef.current = progress.audio_position_ms;
       fetchChapter(progress.chapter_number);
       window.history.replaceState({ chapter: progress.chapter_number }, "");
     } else {
-      fetchChapter(1);
-      window.history.replaceState({ chapter: 1 }, "");
+      setActiveChapterId(firstChapter);
+      fetchChapter(firstChapter);
+      window.history.replaceState({ chapter: firstChapter }, "");
     }
-  }, [progressLoaded, progress]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [progressLoaded, progress, bookChapters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Audio integration ─────────────────────────────────────────────────────
 

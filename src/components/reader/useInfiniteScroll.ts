@@ -65,16 +65,19 @@ export function useInfiniteScroll(
   useEffect(() => {
     if (sortedChapterNums.length === 0 || bookChapters.length === 0) return;
 
+    const chapterIds = bookChapters.map(c => c.id);
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
         if (entry.target === topSentinelRef.current) {
           const minChapter = Math.min(...sortedChapterNums);
-          if (minChapter > 1) fetchChapter(minChapter - 1);
+          const idx = chapterIds.indexOf(minChapter);
+          if (idx > 0) fetchChapter(chapterIds[idx - 1]);
         }
         if (entry.target === bottomSentinelRef.current) {
           const maxChapter = Math.max(...sortedChapterNums);
-          if (maxChapter < bookChapters.length) fetchChapter(maxChapter + 1);
+          const idx = chapterIds.indexOf(maxChapter);
+          if (idx >= 0 && idx < chapterIds.length - 1) fetchChapter(chapterIds[idx + 1]);
         }
       }
     }, { rootMargin: "400px" });
