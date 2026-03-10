@@ -17,7 +17,7 @@ Deploy code, data, and database updates to the Great Books production server.
 | **Boot Disk** | 30GB standard persistent |
 | **External IP** | `35.202.125.196` (static — `greatbooks-ip`) |
 | **Firewall** | `allow-http` (tcp:80), `allow-https` (tcp:443) |
-| **Domain** | `greatbooks.earmark.fm` |
+| **Domain** | `greatbooks.fm` |
 | **SSL** | Let's Encrypt (certbot, auto-renews) |
 | **SSH** | `ssh greatbooks` (config in `~/.ssh/config`) |
 | **Stack** | nginx → Next.js (port 3000) via pm2 |
