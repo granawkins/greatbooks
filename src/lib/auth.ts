@@ -34,8 +34,9 @@ export async function getAuthUserId(): Promise<string | null> {
   return verifyJWT(token);
 }
 
-/** Derive base URL from the incoming request's origin. */
+/** Derive base URL from forwarded headers (behind nginx) or request URL. */
 export function getBaseUrl(req: Request): string {
-  const url = new URL(req.url);
-  return url.origin;
+  const proto = req.headers.get("x-forwarded-proto") || "http";
+  const host = req.headers.get("host") || "localhost:3000";
+  return `${proto}://${host}`;
 }
