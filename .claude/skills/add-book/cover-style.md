@@ -1,38 +1,38 @@
 # Cover Art Style Guide
 
-All Great Books covers share a unified aesthetic: **fine-art oil illustration**. Think Vermeer meets Penguin Clothbound — deeply saturated colors, dramatic directional lighting, a single iconic object rendered with painterly detail.
+Every Great Books cover should look like a **modern mass-market paperback** — the kind you'd pick up at an airport bookstore. Think Penguin Classics meets Vintage International: clean, confident, commercially appealing, but with an unmistakable academic gravitas.
+
+## Aesthetic
+
+**St. John's University energy**: elite, intellectual, rooted in the Western tradition. The cover should make you feel like reading this book will make you smarter, more perceptive, more connected to something ancient and enduring. It generates anticipation for the *enlightenment* and *perspective* that come from engaging with great literature.
 
 ## Rules
 
-- **One subject**: A single object, artifact, or tightly-framed small group. No panoramas, no crowds, no full scenes.
-- **Oil painting technique**: Visible brushwork, impasto texture, deep warm shadows and luminous highlights.
-- **Rich, saturated palette**: One dominant color + 2–3 supporting tones. Blacks are warm. Whites are never pure white.
-- **Dramatic lighting**: Strong directional light from upper-left. Subject glows against a dark or neutral ground.
-- **No text**: No words, letters, numbers, glyphs, runes, inscriptions, or labels anywhere. Ever.
-- **Portrait 2:3**: Taller than wide. Subject centered or slightly above center with breathing room.
-- **Timeless materials**: Ancient, crafted, worn. No modern elements.
-
-## Mood
-
-Each cover should feel like a museum object study. Quiet but charged. The subject carries the weight of the whole story without depicting it literally.
+- **Title and author appear exactly once each**: The book's title and the author's name must each appear exactly one time on the cover — never repeated. Use contrasting typographic styles: e.g. title in bold serif and author in lighter sans-serif, or title large uppercase and author in small caps. The title should be large and dominant. Author name smaller but clearly legible.
+- **One iconic subject**: A single object, artifact, or tightly-framed scene chosen for each book. Evocative but not literal — it should intrigue, not illustrate.
+- **Sophisticated color palette**: Muted, refined tones — deep navy, oxblood, ivory, sage, charcoal, gold accents. Nothing garish. Colors should feel like a well-appointed library.
+- **Modern design sensibility**: Clean composition, generous whitespace or breathing room around the subject. Could sit next to contemporary literary fiction and not look out of place.
+- **Classical gravitas**: The image should feel weighty and timeless. Ancient materials, textures, and forms — marble, bronze, weathered stone, aged parchment — but rendered with contemporary design clarity.
+- **Aspect ratio 2:3 (portrait)**: Standard paperback proportions, taller than wide. The artwork must fill the ENTIRE image from edge to edge — no white bars, no gray borders, no letterboxing, no padding on any side. The background color or imagery must extend all the way to every edge of the image. Do not render a mockup of a physical book or add any frame around the cover.
+- **No busy scenes**: No action shots, no crowds, no panoramas. Stillness and focus.
 
 ## Choosing a Subject (per book)
 
 Pick one thing that is:
 
 1. **Iconic to the book** — a reader who has finished it would recognize the reference immediately
-2. **Visually compelling alone** — beautiful, strange, or evocative as a standalone object
-3. **Not a character portrait** — avoid faces; objects travel better across readers and cultures
+2. **Visually striking in isolation** — beautiful, strange, or evocative as a standalone image
+3. **Not a character portrait** — avoid faces; objects and architectural elements work better
 
-**Good subjects**: a specific weapon or piece of armor described at length, a vessel, an architectural fragment, a symbolic object central to the plot or themes.
+**Good subjects**: a specific weapon or artifact, an architectural fragment, a symbolic object central to the themes, a landscape element described memorably.
 
-**Avoid**: generic symbols (laurel wreaths, flames), composite scenes, anything that looks like an action shot.
+**Avoid**: generic classical symbols (laurel wreaths, columns), composite scenes, anything that looks like fan art or illustration.
 
 ## Examples by book
 
-| Book | Subject |
-|------|---------|
-| The Iliad | The Shield of Achilles — a vast bronze shield with hammered scenes of cities, fields, and dancing |
-| The Odyssey | Odysseus's great bow, unstrung, lying on stone |
-| The Republic | A single oil lamp casting light on a cave wall — suggesting the allegory of the cave |
-| Paradise Lost | A single dark wing, half-furled, feathers catching a shaft of golden light |
+| Book | Subject | Title/Author |
+|------|---------|--------------|
+| The Iliad | The Shield of Achilles — a vast bronze shield with hammered scenes of cities, fields, and dancing | HOMER / THE ILIAD |
+| The Odyssey | Odysseus's great bow, unstrung, lying on stone | HOMER / THE ODYSSEY |
+| The Republic | A single oil lamp casting light on a cave wall — suggesting the allegory of the cave | PLATO / THE REPUBLIC |
+| Paradise Lost | A single dark wing, half-furled, feathers catching a shaft of golden light | JOHN MILTON / PARADISE LOST |

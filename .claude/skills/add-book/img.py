@@ -51,26 +51,31 @@ def _get_client():
     return _client
 
 
-def _build_prompt(subject: str) -> str:
+def _load_style_guide() -> str:
+    """Load cover-style.md from the same directory as this script."""
+    style_path = Path(__file__).resolve().parent / "cover-style.md"
+    return style_path.read_text()
+
+
+def _build_prompt(subject: str, title: str, author: str) -> str:
     """Build a cover art prompt from the style guide + book-specific subject."""
-    # Distilled from cover-style.md
-    style = (
-        "Fine-art oil painting illustration for a classic book cover. "
-        "Single focal object, dramatically lit from upper-left, "
-        "deep saturated colors with one dominant hue and warm shadows. "
-        "Painterly impasto brushwork, luminous highlights, "
-        "dark or neutral background. "
-        "No text, no words, no letters, no inscriptions anywhere. "
-        "Portrait orientation, taller than wide. "
-        "Timeless materials — ancient, crafted, worn. "
-        "Museum-quality object study: quiet but charged."
+    style_guide = _load_style_guide()
+    return (
+        f"Generate a book cover image following this style guide:\n\n"
+        f"{style_guide}\n\n"
+        f"---\n\n"
+        f"For this specific book:\n"
+        f"- Title: {title}\n"
+        f"- Author: {author}\n"
+        f"- Subject/scene: {subject}\n"
     )
-    return f"{style} Subject: {subject}"
 
 
 def generate(
     subject: str,
     output_path: str,
+    title: str = "",
+    author: str = "",
     prompt: str | None = None,
 ) -> dict:
     """
@@ -78,15 +83,16 @@ def generate(
 
     Args:
         subject: What to depict — specific object/scene chosen for this book
-                 (e.g. "The Shield of Achilles, a vast bronze shield with hammered scenes")
         output_path: Where to save the PNG file
+        title: Book title (e.g. "The Iliad")
+        author: Author name (e.g. "Homer")
         prompt: Override everything with a fully custom prompt
 
     Returns:
         {"file_path": str, "prompt": str}
     """
     client = _get_client()
-    image_prompt = prompt or _build_prompt(subject)
+    image_prompt = prompt or _build_prompt(subject, title, author)
 
     print(f"Prompt: {image_prompt}")
     print(f"Calling {MODEL}...")
@@ -96,6 +102,7 @@ def generate(
         contents=image_prompt,
         config=types.GenerateContentConfig(
             response_modalities=["TEXT", "IMAGE"],
+            image_config=types.ImageConfig(aspect_ratio="2:3"),
         ),
     )
 
@@ -164,10 +171,12 @@ def main():
         help='What to depict — specific object/scene for this book (see cover-style.md). '
              'E.g. "The Shield of Achilles, a vast bronze shield with hammered scenes of cities and fields"',
     )
+    parser.add_argument("--title", required=True, help="Book title (e.g. 'The Iliad')")
+    parser.add_argument("--author", required=True, help="Author name (e.g. 'Homer')")
     parser.add_argument("--prompt", help="Override everything with a fully custom prompt")
     parser.add_argument(
         "--output",
-        help="Output PNG path (default: data/<book-id>/cover.png)",
+        help="Output PNG path (default: public/covers/<book-id>.png)",
     )
     parser.add_argument(
         "--no-db",
@@ -183,6 +192,8 @@ def main():
     result = generate(
         subject=args.subject,
         output_path=output_path,
+        title=args.title,
+        author=args.author,
         prompt=args.prompt,
     )
 
