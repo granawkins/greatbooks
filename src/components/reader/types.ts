@@ -48,6 +48,7 @@ export type BookMeta = {
   author: string;
   original_date?: string | null;
   translator?: string | null;
+  translation_date?: string | null;
   source_url?: string | null;
   layout?: "prose" | "verse";
 };

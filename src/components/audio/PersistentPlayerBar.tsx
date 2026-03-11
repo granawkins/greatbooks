@@ -11,7 +11,9 @@ export default function PersistentPlayerBar() {
     <div
       className="fixed bottom-0 left-0 right-0 z-50"
       style={{
-        backgroundColor: "var(--color-bg)",
+        backgroundColor: "var(--color-surface)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
         borderTop: "1px solid var(--color-border)",
         padding: "8px 24px 16px",
       }}

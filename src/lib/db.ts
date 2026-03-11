@@ -183,6 +183,13 @@ export const db = {
     return result;
   },
 
+  getBookStats: (): { book_id: string; chapter_count: number; total_duration_ms: number | null }[] =>
+    connection
+      .prepare(
+        "SELECT book_id, COUNT(*) as chapter_count, SUM(audio_duration_ms) as total_duration_ms FROM chapters GROUP BY book_id"
+      )
+      .all() as { book_id: string; chapter_count: number; total_duration_ms: number | null }[],
+
   updateMessage: (
     id: number,
     text: string,

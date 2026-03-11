@@ -1,13 +1,24 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { AudioPlayerProvider } from "@/lib/AudioPlayerContext";
 import { AuthProvider } from "@/lib/AuthContext";
 import PersistentPlayerBar from "@/components/audio/PersistentPlayerBar";
+import TopBar from "@/components/TopBar";
+import { ThemeProvider } from "@/lib/ThemeProvider";
+import { TopBarProvider } from "@/lib/TopBarContext";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-cormorant",
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -16,17 +27,29 @@ export const metadata: Metadata = {
     "Classic literature — read, listen, and explore with AI.",
 };
 
+// Inline script to set dark class before first paint (prevents flash)
+const themeScript = `(function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")}catch(e){}})()`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className={`${cormorant.variable} ${dmSans.variable} antialiased`}>
+        <ThemeProvider />
         <AuthProvider>
           <AudioPlayerProvider>
-            {children}
+            <TopBarProvider>
+              <TopBar />
+              <div style={{ paddingTop: "var(--topbar-height)" }}>
+                {children}
+              </div>
+            </TopBarProvider>
             <PersistentPlayerBar />
           </AudioPlayerProvider>
         </AuthProvider>
