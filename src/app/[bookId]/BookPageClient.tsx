@@ -70,16 +70,12 @@ export default function BookPageClient({
     window.history.replaceState({ chapter: initialChapterNum }, "");
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Scroll to the user's saved position before the browser paints
-  useLayoutEffect(() => {
-    if (initialScrollDone.current) return;
-    if (!loadedChapters[initialChapterNum]) return;
-    initialScrollDone.current = true;
-
-    if (initialAudioPositionMs <= 0) return;
+  // Compute the target block index for scrolling (stable, from props)
+  const scrollTargetBlockIdx = useMemo(() => {
+    if (initialAudioPositionMs <= 0) return -1;
+    const segments = initialChapterData.segments;
 
     // Find the segment closest to the saved audio position
-    const segments = loadedChapters[initialChapterNum].segments;
     let targetSegIdx = 0;
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
@@ -92,27 +88,28 @@ export default function BookPageClient({
     const layout = bookMeta.layout || "prose";
     const blocks = groupIntoBlocks(segments, layout);
     let segCount = 0;
-    let targetBlockIdx = 0;
     for (let bi = 0; bi < blocks.length; bi++) {
       const block = blocks[bi];
       if (block.type === "paragraph") {
-        const blockSegCount = block.segments.length;
-        if (segCount + blockSegCount > targetSegIdx) {
-          targetBlockIdx = bi;
-          break;
-        }
-        segCount += blockSegCount;
+        if (segCount + block.segments.length > targetSegIdx) return bi;
+        segCount += block.segments.length;
       }
-      targetBlockIdx = bi;
     }
+    return blocks.length - 1;
+  }, [initialChapterData.segments, initialAudioPositionMs, bookMeta.layout]);
 
-    // Scroll to the target paragraph
+  // Scroll to the user's saved position before the browser paints
+  useLayoutEffect(() => {
+    if (initialScrollDone.current) return;
+    initialScrollDone.current = true;
+    if (scrollTargetBlockIdx < 0) return;
+
     const paraEls = paraRefsMap.current[initialChapterNum];
-    const el = paraEls?.[targetBlockIdx];
+    const el = paraEls?.[scrollTargetBlockIdx];
     if (el) {
       el.scrollIntoView({ block: "center", behavior: "instant" });
     }
-  }, [loadedChapters, initialChapterNum, initialAudioPositionMs, bookMeta.layout]);
+  }, [scrollTargetBlockIdx, initialChapterNum]);
 
   // Blocks per chapter
   const layout = bookMeta.layout || "prose";
