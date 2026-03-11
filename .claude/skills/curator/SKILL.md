@@ -43,7 +43,7 @@ Three launch courses, each requiring all four pipeline stages to be complete:
 **Book ID convention:** `{author-lastname}-{short-title}` — all lowercase, hyphens only, English.
 Examples: `homer-iliad`, `plato-republic`, `marcus-aurelius-meditations`
 
-Full book selection: `GBWW_LIST.md` (Britannica), `SJC_LIST.md` (St. John's), `SOURCES.md` (verified URLs).
+Full book selection: `sources/GBWW_LIST.md` (Britannica), `sources/SJC_LIST.md` (St. John's), `sources/SOURCES.md` (verified URLs).
 
 **Tier 1 status:** 54 books in DB, 1,858 chapters, ~364,000 segments. Remaining corpus gaps: drama/verse parser (Oresteia, Oedipus, Aeneid), Hegel and Marx (not on Gutenberg in English).
 
@@ -177,7 +177,7 @@ Build the scholarly foundation — reference libraries and study guides — that
 
 Read before writing any study guide:
 ```
-/home/granawkins/greatbooks/data/STUDYGUIDE_SPEC.md
+.claude/skills/curator/guide/SKILL.md
 ```
 
 Structure at a glance:
@@ -202,7 +202,7 @@ Structure at a glance:
 ### Sub-agent workflow
 
 Research + writing tasks run well as sub-agents. Give the agent:
-- Path to `STUDYGUIDE_SPEC.md`
+- Path to `curator/guide/SKILL.md`
 - Output path: `data/<book-id>/STUDYGUIDE.md`
 - Instruction to do web research before writing, print source summary when done
 
@@ -234,7 +234,7 @@ Course content that goes into the app itself — before-you-read guides, chapter
 
 ## Tier Lists (Full)
 
-See `GBWW_LIST.md` for the complete Encyclopaedia Britannica 1952/1990 list and `SJC_LIST.md` for the St. John's College reading list. Both are the canonical sources for corpus expansion decisions.
+See `sources/GBWW_LIST.md` for the complete Encyclopaedia Britannica 1952/1990 list and `sources/SJC_LIST.md` for the St. John's College reading list. Both are the canonical sources for corpus expansion decisions.
 
 Quick reference for Tier 1 (both lists, public domain):
 - 52 titles total: 50 done, 2 unavailable (Hegel's Phenomenology, Marx's Capital — not on Gutenberg in English)

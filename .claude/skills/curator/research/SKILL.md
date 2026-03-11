@@ -10,9 +10,9 @@ A book is **Research-complete** when:
 
 ## Study Guide Spec
 
-Read before writing any study guide:
+Read before writing any study guide. The canonical spec is:
 ```
-/home/granawkins/greatbooks/data/STUDYGUIDE_SPEC.md
+.claude/skills/curator/guide/SKILL.md
 ```
 
 Structure at a glance:
@@ -58,47 +58,3 @@ Then the relevant excerpted or summarized content. Keep files focused — one so
 - `[book]-translation-comparison.md` — translator notes, edition differences
 - `[book]-historical-context.md` — historical/biographical background
 - `[book]-key-themes-characters.md` — character analysis, thematic vocabulary
-
----
-
-## Sub-Agent Workflow
-
-Research + writing tasks run well as sub-agents. Instructions to give:
-- Read `data/STUDYGUIDE_SPEC.md` first
-- Do web research before writing — search for university course pages, SEP articles, Wikipedia
-- Output path: `data/<book-id>/STUDYGUIDE.md`
-- Print a source summary when done (URL, paywalled or not, what was used)
-- Flag any claims that couldn't be verified
-
-Results come back to Clio for review before PR.
-
----
-
-## Priority Queue
-
-| Book | Course | Status |
-|------|--------|--------|
-| Iliad | Ancient Epics | ✓ done — STUDYGUIDE.md + 5 reference files |
-| Odyssey | Ancient Epics | ❌ next up |
-| Apology | Examined Life | ❌ short — good second target |
-| Phaedo | Examined Life | ❌ |
-| Republic | Examined Life | ❌ |
-| Meditations | How to Live | ❌ |
-| Discourses | How to Live | ❌ |
-
-Work in course order. Odyssey first — it completes the first course.
-
----
-
-## Completed Work
-
-### Iliad (homer-iliad)
-- `data/homer-iliad/STUDYGUIDE.md` — full study guide, 24 chapters, before-you-read, chat prompts
-- `data/homer-iliad/references/` — 5 verified files:
-  - `iliad-wikipedia-overview.md` — fetched and confirmed online
-  - `simone-weil-poem-of-force.md` — essay on force as the true hero
-  - `homeric-question-oral-tradition.md` — Parry, Lord, oral-formulaic theory
-  - `key-themes-characters-scholarship.md` — menis, kleos, timē, character analysis
-  - `translation-comparison.md` — Fagles vs Lattimore vs Butler
-  - `troy-archaeology-historical-context.md` — Schliemann, Troy VIIa
-- `data/STUDYGUIDE_SPEC.md` — canonical spec for all future guides
