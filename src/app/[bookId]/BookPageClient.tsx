@@ -288,6 +288,7 @@ export default function BookPageClient({
       }}
     >
       <BookHeader
+        bookId={bookId}
         bookMeta={bookMeta}
         chapters={chapters}
         activeChapterId={activeChapterId}
@@ -305,7 +306,17 @@ export default function BookPageClient({
             ref={(el) => { chapterSectionRefs.current[chapterNum] = el; }}
             data-chapter={chapterNum}
           >
-            {chapterMeta && chapters.length > 1 && <ChapterDivider title={chapterMeta.title} />}
+            {chapterMeta && chapters.length > 1 && (
+              <ChapterDivider
+                title={chapterMeta.title}
+                chapterNum={chapterNum}
+                chapters={chapters}
+                activeChapterId={activeChapterId}
+                onChapterSelect={handleChapterJump}
+                onPlayChapter={(num) => onChapterSelectRef.current?.(num, 0, true)}
+                hasAudio={!!loadedChapters[chapterNum]?.audio_file}
+              />
+            )}
 
             {blocks.length === 0 ? (
               <p className="text-sm text-center py-16" style={{ color: "var(--color-text-secondary)" }}>

@@ -44,6 +44,7 @@ export default async function BookPage({
         author: book.author,
         original_date: book.original_date,
         translator: book.translator,
+        translation_date: book.translation_date,
         source_url: book.source_url,
         layout: book.layout || "prose",
       }}

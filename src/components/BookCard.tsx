@@ -1,75 +1,101 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { BookRow } from "@/lib/db";
-import { getCoverUrl } from "@/lib/assets";
+import { getCoverSmUrl } from "@/lib/assets";
 
 type BookCardProps = {
   book: BookRow;
-  progress?: { chapter_number: number } | null;
+  progress?: { chapter_number: number; audio_position_ms: number } | null;
+  stats?: { chapter_count: number; total_duration_ms: number | null } | null;
 };
 
-export default function BookCard({ book, progress }: BookCardProps) {
+function formatDuration(ms: number): string {
+  const totalMinutes = Math.round(ms / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+}
+
+export default function BookCard({ book, progress, stats }: BookCardProps) {
+  const chapterCount = stats?.chapter_count ?? 0;
+  const totalDuration = stats?.total_duration_ms ?? null;
+
+  // Progress fraction (simple: chapter-based)
+  const progressFraction = progress && chapterCount > 0
+    ? (progress.chapter_number - 1) / chapterCount
+    : null;
+
   return (
     <Link href={`/${book.id}`} className="block group">
+      {/* Book cover with shadow */}
       <div
-        className="rounded-[var(--radius-lg)] border overflow-hidden transition-shadow hover:shadow-lg"
+        className="relative overflow-hidden transition-transform duration-200 group-hover:scale-[1.02]"
         style={{
-          borderColor: "var(--color-border)",
-          backgroundColor: "var(--color-bg)",
+          aspectRatio: "3 / 4",
+          borderRadius: "3px",
+          boxShadow:
+            "4px 6px 16px rgba(0,0,0,0.12), 1px 2px 4px rgba(0,0,0,0.08), inset -1px 0 2px rgba(0,0,0,0.04)",
+          backgroundColor: "var(--color-bg-secondary)",
         }}
       >
-        {/* Cover */}
-        <div
-          className="aspect-[3/4] flex items-center justify-center relative overflow-hidden"
-          style={{ backgroundColor: "var(--color-bg-secondary)" }}
-        >
-          {book.cover_image ? (
-            <Image
-              src={getCoverUrl(book.cover_image)}
-              alt={`${book.title} cover`}
-              fill
-              sizes="(max-width: 640px) 50vw, 25vw"
-              className="object-cover"
-            />
-          ) : (
-            <span
-              className="text-4xl font-serif opacity-30"
-              style={{ fontFamily: "var(--font-body)" }}
-            >
-              {book.title[0]}
-            </span>
-          )}
-        </div>
+        <Image
+          src={getCoverSmUrl(book.id)}
+          alt={`${book.title} cover`}
+          fill
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+          className="object-cover"
+        />
+      </div>
 
-        <div className="p-4">
-          <h2
-            className="text-lg font-semibold group-hover:underline"
-            style={{ color: "var(--color-text)", fontFamily: "var(--font-ui)" }}
-          >
-            {book.title}
-          </h2>
+      {/* Info below cover */}
+      <div style={{ paddingTop: "0.5rem" }}>
+        {progress && chapterCount > 0 ? (
+          <>
+            <p
+              style={{
+                fontSize: "0.75rem",
+                color: "var(--color-text-secondary)",
+                fontFamily: "var(--font-ui)",
+              }}
+            >
+              Ch. {progress.chapter_number} of {chapterCount}
+            </p>
+            {/* Progress bar */}
+            <div
+              style={{
+                marginTop: "4px",
+                height: "2px",
+                backgroundColor: "var(--color-border)",
+                borderRadius: "1px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${Math.max((progressFraction ?? 0) * 100, 2)}%`,
+                  backgroundColor: "var(--color-accent)",
+                  borderRadius: "1px",
+                  transition: "width 0.3s ease",
+                }}
+              />
+            </div>
+          </>
+        ) : (
           <p
-            className="text-sm mt-1"
-            style={{ color: "var(--color-text-secondary)" }}
+            style={{
+              fontSize: "0.75rem",
+              color: "var(--color-text-secondary)",
+              fontFamily: "var(--font-ui)",
+            }}
           >
-            {book.author}
+            {totalDuration
+              ? `${chapterCount} ch · ${formatDuration(totalDuration)}`
+              : `${chapterCount} chapter${chapterCount !== 1 ? "s" : ""}`}
           </p>
-          {progress ? (
-            <p
-              className="text-xs mt-2"
-              style={{ color: "var(--color-accent)" }}
-            >
-              Chapter {progress.chapter_number}
-            </p>
-          ) : (
-            <p
-              className="text-sm mt-2 line-clamp-3"
-              style={{ color: "var(--color-text-secondary)" }}
-            >
-              {book.description}
-            </p>
-          )}
-        </div>
+        )}
       </div>
     </Link>
   );

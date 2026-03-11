@@ -9,19 +9,32 @@ function formatTime(ms: number): string {
   return `${min}:${sec.toString().padStart(2, "0")}`;
 }
 
+function formatTimeRemaining(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSec / 3600);
+  const min = Math.floor((totalSec % 3600) / 60);
+  const sec = totalSec % 60;
+  if (hours > 0) {
+    return `${hours}:${min.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
+  }
+  return `${min}:${sec.toString().padStart(2, "0")}`;
+}
+
 export function Scrubber({
   duration,
   disabled,
   fillRef,
   knobRef,
-  timeRef,
+  elapsedRef,
+  remainingRef,
   onSeek,
 }: {
   duration: number;
   disabled: boolean;
   fillRef: Ref<HTMLDivElement>;
   knobRef: Ref<HTMLDivElement>;
-  timeRef: Ref<HTMLSpanElement>;
+  elapsedRef: Ref<HTMLSpanElement>;
+  remainingRef: Ref<HTMLSpanElement>;
   onSeek: (ms: number) => void;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -68,6 +81,15 @@ export function Scrubber({
 
   const knobSize = isDragging || trackHovered ? 16 : 11;
   const knobOpacity = disabled ? 0 : isDragging || trackHovered ? 1 : 0.55;
+
+  const timeStyle = {
+    fontFamily: "var(--font-ui)",
+    fontSize: 12,
+    color: "var(--color-text-secondary)",
+    letterSpacing: "0.04em",
+    fontVariantNumeric: "tabular-nums",
+    lineHeight: 1.6,
+  } as const;
 
   return (
     <>
@@ -131,24 +153,27 @@ export function Scrubber({
         />
       </div>
 
+      {/* Time row: elapsed | remaining in chapter | total */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          fontFamily: "var(--font-ui)",
-          fontSize: 12,
-          color: "var(--color-text-secondary)",
-          letterSpacing: "0.04em",
-          fontVariantNumeric: "tabular-nums",
+          alignItems: "center",
           marginTop: 3,
-          lineHeight: 1.6,
         }}
       >
-        <span ref={timeRef}>{formatTime(0)}</span>
-        <span>{duration ? formatTime(duration) : "--:--"}</span>
+        <span ref={elapsedRef} style={timeStyle}>
+          {formatTime(0)}
+        </span>
+        <span ref={remainingRef} style={timeStyle}>
+          {duration ? `${formatTimeRemaining(duration)} left in chapter` : ""}
+        </span>
+        <span style={timeStyle}>
+          {duration ? formatTime(duration) : "--:--"}
+        </span>
       </div>
     </>
   );
 }
 
-export { formatTime };
+export { formatTime, formatTimeRemaining };

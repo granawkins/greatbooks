@@ -3,8 +3,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAudioPlayer, type WordTiming } from "@/lib/AudioPlayerContext";
-import { Scrubber, formatTime } from "./Scrubber";
-import { ChapterSelector } from "./ChapterSelector";
+import { Scrubber, formatTime, formatTimeRemaining } from "./Scrubber";
 import { CtrlBtn } from "./CtrlBtn";
 import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, ChatIcon } from "./icons";
 
@@ -149,7 +148,8 @@ export default function AudioPlayer() {
 
   const fillRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
-  const timeRef = useRef<HTMLSpanElement>(null);
+  const elapsedRef = useRef<HTMLSpanElement>(null);
+  const remainingRef = useRef<HTMLSpanElement>(null);
 
   const activeWordRef = useRef<string | null>(null);
   const activeParaRef = useRef<number | null>(null);
@@ -165,7 +165,11 @@ export default function AudioPlayer() {
     const pct = dur > 0 ? (ms / dur) * 100 : 0;
     if (fillRef.current) fillRef.current.style.width = `${pct}%`;
     if (knobRef.current) knobRef.current.style.left = `${pct}%`;
-    if (timeRef.current) timeRef.current.textContent = formatTime(ms);
+    if (elapsedRef.current) elapsedRef.current.textContent = formatTime(ms);
+    if (remainingRef.current) {
+      const remaining = Math.max(0, dur - ms);
+      remainingRef.current.textContent = remaining > 0 ? `${formatTimeRemaining(remaining)} left in chapter` : "";
+    }
   }, []);
 
   const updateHighlight = useCallback((ms: number) => {
@@ -280,14 +284,13 @@ export default function AudioPlayer() {
 
   return (
     <div style={{ width: "100%", position: "relative" }}>
-      <ChapterSelector isOnBookPage={isOnBookPage} />
-
       <Scrubber
         duration={duration}
         disabled={disabled}
         fillRef={fillRef}
         knobRef={knobRef}
-        timeRef={timeRef}
+        elapsedRef={elapsedRef}
+        remainingRef={remainingRef}
         onSeek={handleSeek}
       />
 
