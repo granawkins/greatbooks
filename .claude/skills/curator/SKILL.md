@@ -56,19 +56,19 @@ Fetch public-domain text, parse into segments, insert into DB, generate cover ar
 ### Sources
 
 **MIT Internet Classics Archive** (classics.mit.edu) — Greek/Roman works.
-- Parser: `add-book/parse_html.py --source classics`
-- Batch script: `add-book/add_ica_books.py`
+- Parser: `text/parse_html.py --source classics`
+- Batch script: `text/add_ica_books.py`
 
 **Project Gutenberg** (gutenberg.org) — English literature, modern philosophy, novels.
-- Parser: `add-book/parse_html.py --source gutenberg` *(Gutenberg parser not yet implemented)*
-- Batch script: `add-book/add_gutenberg_books.py`
+- Parser: `text/parse_html.py --source gutenberg` *(Gutenberg parser not yet implemented)*
+- Batch script: `text/add_gutenberg_books.py`
 
 Safe translators: Butler (Homer), Jowett (Plato), old PG editions. **Fagles and Lattimore are NOT public domain.**
 
 ### Workflow
 
 1. Save raw HTML to `data/<book-id>/raw/source.html`
-2. Parse: `python .claude/skills/curator/add-book/parse_html.py data/<book-id>/raw/source.html`
+2. Parse: `python .claude/skills/curator/text/parse_html.py data/<book-id>/raw/source.html`
 3. Review output — check chapter breaks, paragraph structure
 4. Insert into DB (`books`, `chapters`, `segments` tables)
 5. Generate cover art (see below)
@@ -78,23 +78,23 @@ Safe translators: Butler (Homer), Jowett (Plato), old PG editions. **Fagles and 
 
 ```bash
 # ICA books
-.venv/bin/python .claude/skills/curator/add-book/add_ica_books.py
-.venv/bin/python .claude/skills/curator/add-book/add_ica_books.py --dry-run
-.venv/bin/python .claude/skills/curator/add-book/add_ica_books.py --only homer-odyssey
+.venv/bin/python .claude/skills/curator/text/add_ica_books.py
+.venv/bin/python .claude/skills/curator/text/add_ica_books.py --dry-run
+.venv/bin/python .claude/skills/curator/text/add_ica_books.py --only homer-odyssey
 
 # Gutenberg books
-.venv/bin/python .claude/skills/curator/add-book/add_gutenberg_books.py
-.venv/bin/python .claude/skills/curator/add-book/add_gutenberg_books.py --only melville-moby-dick
+.venv/bin/python .claude/skills/curator/text/add_gutenberg_books.py
+.venv/bin/python .claude/skills/curator/text/add_gutenberg_books.py --only melville-moby-dick
 ```
 
 Both scripts skip books already in DB and log every step.
 
 ### Cover art
 
-Read `add-book/cover-style.md` first (fine-art oil, single iconic object, no text). Then:
+Read `text/cover-style.md` first (fine-art oil, single iconic object, no text). Then:
 
 ```bash
-python .claude/skills/curator/add-book/img.py \
+python .claude/skills/curator/text/img.py \
   --book-id <book-id> \
   --subject "<specific object or scene description>"
 ```
@@ -114,7 +114,7 @@ Generate TTS narration with word-level timestamps for the synced reading cursor.
 ### Setup
 
 ```bash
-pip install -r .claude/skills/curator/generate-audio/requirements.txt
+pip install -r .claude/skills/curator/audio/requirements.txt
 ```
 
 Requires `.env` at project root:
@@ -126,7 +126,7 @@ GOOGLE_APPLICATION_CREDENTIALS=/path/to/google-credentials.json
 
 ```bash
 GREATBOOKS_ENTITY_ID=<book-id> \
-  .venv/bin/python .claude/skills/curator/generate-audio/generate_book.py <book-id>
+  .venv/bin/python .claude/skills/curator/audio/generate_book.py <book-id>
 
 # Options
 --batch-size 5    # chapters in parallel (default 10)
