@@ -1,176 +1,89 @@
-Source: Synthesized from: Manfred Korfmann / Troy excavation reports; Michael Wood, "In Search of the Trojan War" (1985/1998 BBC); M.I. Finley, "The World of Odysseus" (1954); Eric Cline, "The Trojan War: A Very Short Introduction" (2013); Wikipedia "Troy," "Historicity of the Iliad," "Heinrich Schliemann."
-Accessed: 2026-03-10
-Type: Historical and archaeological background
+# Troy: Archaeology and Historical Context
+
+> **Primary source verified:** Wikipedia, "Troy" —  
+> https://en.wikipedia.org/wiki/Troy  
+> *Accessed: 2026-03-11. Publicly accessible.*
+>
+> Additional sources: Wikipedia, "Heinrich Schliemann" — https://en.wikipedia.org/wiki/Heinrich_Schliemann  
+> Wikipedia, "Manfred Korfmann" — https://en.wikipedia.org/wiki/Manfred_Korfmann  
+> *Both accessed: 2026-03-11.*
 
 ---
 
-# Troy, Archaeology, and the Historical Context of the Iliad
+## The Site
 
-## Was There a Trojan War?
+**Troy** (also called *Ilion* in antiquity; Hittite: *Wilusa* / *Truwiša*) was an ancient city located in present-day **Çanakkale province, Turkey**, at a hill called **Hisarlık**. The site was settled for approximately 4,000 years and has been excavated since 1871.
 
-This is one of the most enduring questions in classical scholarship. The short answer: almost certainly something happened — but we don't know what, and Homer's version is almost certainly legendary rather than historical.
-
-The longer answer requires understanding:
-1. The archaeology of the site at Hisarlık in Turkey
-2. The historical context of the Late Bronze Age
-3. Hittite records that may mention Troy
-4. What Homer actually preserves vs. what he invented
+Troy has nine main archaeological layers (Troy I–IX), plus a pre-Bronze Age layer (Troy 0). The site was added to the UNESCO World Heritage list in 1998.
 
 ---
 
-## The Site: Hisarlık
+## Excavation History
 
-The location of ancient Troy — if it existed — was debated for centuries. The tradition pointed to a site near the Hellespont (Dardanelles strait) in northwest Turkey.
+### Heinrich Schliemann (1871 onward)
 
-### Frank Calvert
-An English archaeologist named **Frank Calvert** identified the mound of Hisarlık as the probable site of Troy in the 1850s–1860s. He owned part of the site and began preliminary excavations. Crucially, he persuaded the wealthy German businessman **Heinrich Schliemann** to fund and lead a major excavation.
+The modern archaeological investigation of Troy began when **Heinrich Schliemann** (1822–1890) — a German businessman turned archaeologist — excavated Hisarlık beginning in 1871, together with **Frank Calvert** (an American-British diplomat who had already identified the site as ancient Troy). Schliemann was a committed believer in the historicity of Homer's *Iliad* and sought to prove it through excavation.
 
-### Heinrich Schliemann (1822–1890)
-Schliemann is one of the most colorful and controversial figures in the history of archaeology. A self-made millionaire who taught himself multiple languages, he was obsessed with Homer from childhood and believed the Iliad was literally true.
+Schliemann identified Troy II (a wealthy Bronze Age layer, ~2550–2250 BC) as Homer's Troy based on its gold treasures ("Priam's Treasure"). This identification is now considered wrong — Troy II predates the likely period of the Trojan War by over a thousand years. His excavations were later criticized as destructive, since he dug through significant archaeological layers — including the layer most scholars now associate with Homeric Troy — to reach the deeper material.
 
-**Key excavations:**
-- **1870–1873**: First major dig at Hisarlık
-- **1876**: Excavation at Mycenae — discovers the "Treasury of Atreus" and shaft graves with gold masks (including the "Mask of Agamemnon," now in Athens)
-- **1882–1890**: Further work at Troy with Wilhelm Dörpfeld
+**Source:** Wikipedia, "Heinrich Schliemann" (as above). Verified.
 
-**Schliemann's discovery**: He found not one city but many, stacked on top of each other — nine major layers of occupation (Troy I through Troy IX). He identified what he believed was "Priam's Troy" — the burned layer he called Troy II — and spectacularly announced the discovery of "Priam's Treasure" (gold jewelry, weapons, vessels) in 1873.
+### Later Excavations
 
-**The problem**: Schliemann was wrong about the dating. Troy II was burned around 2300 BC — roughly a thousand years before the Trojan War is supposed to have occurred (traditionally ~1200 BC). He was digging through history too fast, literally destroying the layers he was looking for.
+After Schliemann, the site was excavated by **Wilhelm Dörpfeld** (1890s), who identified Troy VI as a more plausible candidate for Homeric Troy, and by **Carl Blegen** (University of Cincinnati, 1930s), who argued for Troy VIIa.
 
-**Schliemann's methods** were poor even by the standards of his time — he dug with large crews, destroyed stratigraphy, and famously smuggled the "Priam's Treasure" out of Turkey in violation of his permit.
+**Manfred Korfmann** (University of Tübingen) held the excavation license from 1988 until his death in 2005. His team excavated the lower city beneath the Roman-era ruins and argued that the Bronze Age city was substantially larger than previously recognized — perhaps 15 times larger than the citadel alone — with a significant lower settlement. This made Troy a more plausible regional capital and trade hub. Korfmann's conclusions were contested and generated academic controversy.
 
-### Wilhelm Dörpfeld and Carl Blegen
-After Schliemann's death, his colleague **Wilhelm Dörpfeld** established that **Troy VI** (c. 1700–1250 BC) was the most likely candidate for Homeric Troy: a large, prosperous city with massive walls and a citadel appropriate to a major Bronze Age city.
-
-American archaeologist **Carl Blegen** (1932–1938, University of Cincinnati) refined this: **Troy VIIa** (c. 1300–1180 BC) showed signs of violent destruction — burned buildings, scattered skeletons, arrowheads. This timing roughly matches the traditional date of the Trojan War (~1200 BC). Troy VIIa is now the strongest candidate.
-
-### Manfred Korfmann (1988–2005)
-The most recent major excavation, led by German archaeologist **Manfred Korfmann**, made dramatic new discoveries:
-- Troy was much larger than previously thought — not just a citadel but a substantial lower city of perhaps 10,000 inhabitants
-- A defensive ditch was found surrounding the lower city
-- The site was clearly a major Bronze Age center, not a minor settlement
-- Evidence of trade connections with Greece, the Hittites, and Egypt
-
-These findings significantly strengthened the case that Hisarlık was an important enough city to be the site of a major war — and that the Greeks would have had strategic reasons to attack it (control of Hellespont trade routes).
+**Source:** Wikipedia, "Manfred Korfmann" (as above). Verified.
 
 ---
 
-## Troy in the Archaeological Record
+## The Archaeological Layers
 
-**Troy I** (c. 3000–2550 BC): Early Bronze Age; small settlement
-**Troy II** (c. 2550–2250 BC): Destroyed by fire; Schliemann's mistaken "Priam's Troy"; "Priam's Treasure" found here
-**Troy III–V** (c. 2250–1700 BC): Smaller settlements; cultural break
-**Troy VI** (c. 1700–1250 BC): Impressive city; large walls; destroyed, probably by earthquake
-**Troy VIIa** (c. 1300–1180 BC): **Best candidate for Homeric Troy**; rebuilt quickly; destroyed by fire and human violence; Late Bronze Age
-**Troy VIIb** (c. 1180–1000 BC): Post-Bronze Age collapse settlement
-**Troy VIII** (c. 700–85 BC): Greek city of Ilion
-**Troy IX** (c. 85 BC–500 AD): Roman city; Julius Caesar and Alexander the Great both visited the site
+Troy has nine main periods of settlement:
 
----
+- **Troy I** (~3000–2550 BC): Small fortified city
+- **Troy II** (~2550–2250 BC): Wealthy city with imposing architecture; Schliemann mistakenly identified this as Homeric Troy
+- **Troy III–V** (~2250–1750 BC): Smaller, less wealthy settlements
+- **Troy VI** (~1750–1300 BC): Large, prosperous Late Bronze Age city; citadel with massive walls; vassal of the Hittite Empire under the name *Wilusa*. The city was destroyed around 1300 BC. The cause is debated: earthquake is one hypothesis; foreign attack and internal uprising have also been proposed.
+- **Troy VIIa** (~1300–1180 BC): Built by survivors of Troy VI, reusing its structures. Dense occupation of the citadel, with large storage jars (*pithoi*) buried in house floors — interpreted as preparation for siege conditions. Destroyed around 1180 BC with evidence of enemy attack including scorch marks. **Most scholars today identify Troy VIIa as the most plausible archaeological candidate for Homeric Troy.**
+- **Troy VIIb** (~1180–950 BC): Post-Bronze Age settlement; destroyed by fire c. 950 BC
+- **Troy VIII–IX**: Greek and Roman cities; later served as a tourist site precisely because of the Homeric associations
 
-## The Late Bronze Age Context
-
-The Trojan War, if historical, occurred during the **Late Bronze Age** (c. 1600–1200 BC) — one of the most cosmopolitan periods in human history. The great powers were:
-- **Egypt** (New Kingdom, Ramesses II era)
-- **The Hittite Empire** (Anatolia/Turkey)
-- **Mycenaean Greece** (the "Achaeans" of Homer)
-- **Ugarit** and other Levantine city-states
-
-These powers were deeply interconnected through trade, diplomacy, and warfare. Homer preserves memories of this Bronze Age world:
-- **Bronze weapons** (the poems still use bronze, not iron)
-- **Chariots** (used in Bronze Age warfare but differently than Homer depicts)
-- **The Catalogue of Ships** (Book 2) preserves pre-Dorian Greek geography
-- **Mycenae "rich in gold"** — Schliemann's excavations confirmed spectacular Mycenaean wealth
-
-### The Bronze Age Collapse (c. 1200–1150 BC)
-Around 1200 BC, the Bronze Age civilizations collapsed catastrophically. Within 50 years:
-- The Hittite Empire dissolved
-- Ugarit was destroyed
-- Mycenaean palace culture ended
-- Troy VIIa was destroyed
-- Egypt barely survived attacks by the "Sea Peoples"
-
-Causes debated: climate change, drought, internal rebellions, "Sea Peoples" migrations, systems collapse. This was the historical moment of the Trojan War tradition.
-
-Greece then entered its **Dark Ages** (c. 1100–750 BC): population collapse, loss of writing (Linear B script disappeared), loss of palace culture. Homer was composing 400+ years after this collapse, looking back at a dimly remembered heroic age.
+**Source:** Wikipedia, "Troy" (as above). Layer dates and descriptions verified.
 
 ---
 
-## Hittite Records and the Trojan War
+## Troy VIIa and the Trojan War
 
-Exciting discoveries in the 20th century found Hittite texts that may reference Troy and the Trojan War:
+Troy VIIa (destroyed ~1180 BC) is the layer most often associated with the legendary Trojan War because:
 
-**"Wilusa"**: Hittite texts mention a city called "Wilusa" that corresponds to the Greek "Ilios/Wilion" (Wilusa = Wilion/Ilium). This city was in northwest Anatolia in the right location. A treaty exists between the Hittite king Muwatalli II and the king of Wilusa, "Alaksandu" — a name remarkably close to Alexandros (Paris's other name).
+1. Its destruction date (~1180 BC) coincides roughly with the end of the Mycenaean palatial period and the broader Late Bronze Age collapse
+2. The destruction layer contains evidence of enemy attack (scorch marks), unlike Troy VI which may have been destroyed by earthquake
+3. The crowded conditions inside the citadel and the buried storage jars suggest the city was preparing for — or enduring — a siege
+4. The dating is consistent with Greek traditions placing the Trojan War c. 1250–1180 BC
 
-**"Ahhiyawa"**: Hittite texts mention a powerful western kingdom called "Ahhiyawa" that most scholars now identify with "Achaia" (Mycenaean Greece). The Hittites corresponded with the king of Ahhiyawa as an equal.
-
-**The Tawagalawa Letter**: A Hittite king (probably Hattusili III, c. 1265 BC) writes to the king of Ahhiyawa about troubles in western Anatolia, mentioning a figure named "Piyamaradu" who may be conducting raids with Ahhiyawan backing.
-
-What this suggests: There were real conflicts between Mycenaean Greeks and the region of Troy in the 13th century BC. Whether any single conflict was the "Trojan War" of legend is impossible to say.
-
----
-
-## What Homer Preserves vs. What He Invented
-
-### Probably historical/genuine:
-- A major city at Hisarlık in northwest Turkey
-- Mycenaean Greek military expeditions to Anatolia
-- The general geography (Troy near the Hellespont)
-- Bronze Age material culture (weapons, armor, some customs)
-- Many personal names (some are demonstrably old — "Hector" may be a pre-Greek name)
-- The principle of Greek coalition warfare
-
-### Probably legendary/mythologized:
-- The scale (1,186 ships, 100,000+ warriors — far beyond Bronze Age logistics)
-- The direct intervention of gods
-- The specific characters (Achilles, Agamemnon, etc.)
-- The ten-year siege duration
-- Most of the specific events
-
-### Uncertain:
-- Whether there was a historical Achilles, Agamemnon, or Priam
-- Whether the war was fought over a woman (Helen) or for more practical reasons (trade control of the Hellespont)
-- The sequence and nature of events
+However, the Wikipedia article explicitly notes: **"there is no definitive evidence for a Greek attack on the city."** The identification of Troy VIIa with the Homeric Troy is the scholarly consensus but remains a probability, not a proven fact.
 
 ---
 
-## Michael Wood's Thesis ("In Search of the Trojan War," 1985)
+## Hittite Records and the Name "Wilusa"
 
-Michael Wood, in his influential BBC documentary and book, argued for the historical kernel thesis:
-- A real war or wars occurred at Troy in the 13th–12th centuries BC
-- The Mycenaean Greeks had real strategic/economic reasons to attack Troy (controlling Hellespont grain trade)
-- The poetic tradition preserved genuine memories of this, amplified and transformed over centuries
-- The Trojan War tradition was kept alive through the Greek Dark Ages by oral bards
+One of the strongest pieces of external evidence supporting the historical basis of a Bronze Age city at Hisarlık is the Hittite documentary record. Hittite tablets refer to a city in northwest Anatolia called **Wilusa** (or *Truwiša*), a vassal state in treaty relations with the Hittite Empire. Scholars now generally identify Wilusa with the archaeological site of Hisarlık.
 
-Wood's work brought archaeology and the Homeric texts into productive dialogue and remains a useful introduction for general readers.
+The Greek name *Ilion* (and its Homeric variant *Wilios*) corresponds closely to *Wilusa*, providing a linguistic bridge between the historical Hittite records and the Homeric tradition.
+
+**Source:** Wikipedia, "Troy" (as above). Verified.
 
 ---
 
-## M.I. Finley: "The World of Odysseus" (1954)
+## The Historical Question
 
-**Moses I. Finley** (1912–1986) offered a different and important perspective in his classic work. Finley argued:
-- We should not try to use Homer as a historical source for the Bronze Age
-- Homer reflects the social world of his own time — the early Iron Age (8th–9th century BC), not the Bronze Age
-- The "Homeric world" of heroes, gift-exchange, competitive honor culture, basileis kings — this is early Iron Age society, not Mycenaean palace culture
-- The poems are evidence for their period of composition, not their ostensible subject matter
+The key question — did the Trojan War happen? — cannot be definitively answered. What the archaeology shows:
 
-This is a crucial corrective to naive historicism. Homer is not a Bronze Age source filtered through later poets — he is a poet of the early Iron Age who has set his story in a vaguely imagined heroic past.
+- There was a substantial Bronze Age city at Hisarlık, in roughly the right location and period
+- It was destroyed violently at roughly the right time (c. 1180 BC)
+- The name corresponds to names in both Greek tradition and Hittite records
+- There is no archaeological evidence of a specific Greek military campaign
 
----
-
-## Key Dates Summary
-
-| Date | Event |
-|------|-------|
-| c. 1600–1200 BC | Late Bronze Age; Mycenaean Greece flourishes |
-| c. 1300–1180 BC | Troy VIIa occupied and destroyed (Trojan War era) |
-| c. 1200–1150 BC | Bronze Age Collapse; Mycenaean civilization ends |
-| c. 1100–750 BC | Greek Dark Ages |
-| c. 800–750 BC | Likely period of Homeric composition |
-| c. 776 BC | First Olympic Games (traditional date) |
-| c. 630 BC | Terminus ante quem for Iliad text (art/literature reflects it) |
-| 522 BC | Traditional date of first written text (Pisistratos in Athens) |
-| c. 150 BC | Aristarchus's Alexandrian edition |
-| 1870s | Schliemann excavates Hisarlık |
-| 1932–38 | Blegen confirms Troy VIIa as Homeric Troy candidate |
-| 1988–2005 | Korfmann reveals large lower city at Troy |
+The most defensible position, per current scholarship: Homer's *Iliad* may preserve a kernel of historical memory about Bronze Age conflicts in the Troad (northwestern Anatolia), transmitted over centuries through oral tradition and transformed into myth. The poem is not a historical document but may reflect authentic memories of a world that existed.
