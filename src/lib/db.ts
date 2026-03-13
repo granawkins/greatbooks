@@ -141,7 +141,7 @@ export const db = {
 
   getProgress: (userId: string): UserProgressRow[] =>
     connection
-      .prepare("SELECT * FROM user_progress WHERE user_id = ?")
+      .prepare("SELECT * FROM user_progress WHERE user_id = ? ORDER BY updated_at DESC")
       .all(userId) as UserProgressRow[],
 
   upsertProgress: (
