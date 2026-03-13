@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS messages (
   role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
   text TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'completed',  -- user: always 'completed'; assistant: 'pending'|'streaming'|'completed'|'error'
+  model TEXT,                                  -- which model generated this (NULL for user messages)
   created_at TEXT DEFAULT (datetime('now'))
 );
 

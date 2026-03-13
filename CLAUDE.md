@@ -21,11 +21,13 @@ Combine the best of Audible + Kindle + ChatGPT voice-mode into one elegant inter
 - Chapter/section navigation
 - Combined read+listen mode with synced sliding cursor highlighting text as audio plays
 
-### 3. AI Chat (ChatGPT-like)
-- Context-aware: sees your current position and recent reading
-- Tools for searching the current book and the full corpus
-- Access to public-domain commentary, supplementary materials, and background
-- Searchable reference corpus (scholarly commentary, historical context, etc.)
+### 3. AI Chat (Text + Voice)
+- Context-aware: sees your current position, recent reading, and study guide
+- Text chat: streamed responses via WebSocket (Gemini 2.5 Flash)
+- Voice chat: real-time bidirectional audio via Gemini Live API (native audio model)
+- Chat appears as a translucent overlay on top of the reader
+- Transcripts from voice conversations are persisted alongside text messages
+- All messages stored in `messages` table with `model` column tracking which model generated each response
 
 ## Corpus (Initial)
 - Homer: *Iliad*, *Odyssey*
@@ -37,9 +39,54 @@ Combine the best of Audible + Kindle + ChatGPT voice-mode into one elegant inter
 - **Next.js 16** with App Router and TypeScript
 - **Tailwind CSS 4** for layout/utility classes
 - **CSS custom properties** in `globals.css` for themeable colors/fonts
-- **SQLite** (`greatbooks.db` at project root) via `better-sqlite3`, called directly by API routes. **WAL mode** is enabled on the DB file for concurrent access — Next.js opens readonly, Python scripts open read-write. Python writers should set `PRAGMA busy_timeout = 5000` to handle lock contention gracefully.
+- **SQLite** (`greatbooks.db` at project root) via `better-sqlite3`, called directly by API routes and the chat server. **WAL mode** is enabled on the DB file for concurrent access — Next.js opens readonly, chat server and Python scripts open read-write. Python writers should set `PRAGMA busy_timeout = 5000` to handle lock contention gracefully.
 - **Python** scripts for content ingestion (parse HTML) and audio/image generation; virtualenv at `.venv/` in project root — always run Python scripts with `.venv/bin/python`. Install deps with `.venv/bin/pip install`. Each skill has its own `requirements.txt`.
 - **Google Chirp3 HD** for TTS, **Google STT (Chirp 2)** for word-level timestamp alignment; credentials via `.env` + `google-credentials.json`
+- **Google Gemini 2.5 Flash** for text chat, **Gemini 2.5 Flash Native Audio** for voice chat
+
+## Architecture
+
+```
+Browser ←WebSocket→ Chat Server (:3002) ←SDK→ Gemini Live API (voice)
+                         ↕                ←REST SSE→ Gemini 2.5 Flash (text)
+Browser ←HTTP→      Next.js (:3000)
+                         ↕
+                    SQLite (shared, WAL mode)
+```
+
+### Dual-server setup
+- **Next.js** (:3000) — serves the frontend, REST API routes, audio streaming
+- **Chat server** (:3002) — standalone Node/TypeScript WebSocket server for all chat (text + voice)
+  - Run locally: `npm run chat-server`
+  - Production: managed by pm2, nginx proxies `/ws/chat` to `:3002`
+  - Auth: cookie in production, token query param in dev (cross-origin)
+
+### Chat WebSocket protocol
+Client → Server:
+- `{ type: "text", text }` — send a text message
+- `{ type: "voice_start" }` — begin voice session
+- `{ type: "voice_stop" }` — end voice session
+- `{ type: "audio", data }` — mic audio (base64 PCM 16kHz)
+
+Server → Client:
+- `{ type: "history", messages }` — sent on connect
+- `{ type: "message", message }` — completed message (user or assistant)
+- `{ type: "stream", messageId, text }` — text response chunk
+- `{ type: "stream_end", messageId }` — text response complete
+- `{ type: "audio", data }` — voice audio (base64 PCM 24kHz)
+- `{ type: "output_transcript", text }` — voice model transcript fragment
+- `{ type: "input_transcript", text }` — user speech transcript fragment
+- `{ type: "voice_ready" }` — voice session established
+- `{ type: "voice_stopped" }` — voice session ended
+- `{ type: "turn_complete" }` — voice turn finished
+- `{ type: "interrupted" }` — user interrupted model
+- `{ type: "error", message }` — error
+
+### Shared context
+`src/lib/chatContext.ts` builds system prompts for both text and voice chat, including:
+- Book metadata (title, author)
+- Study guide content (from `data/<bookId>/STUDYGUIDE.md`)
+- Reader position (current chapter + recent text near cursor)
 
 ## Architecture Principles
 - **CSS variables for theming** — swappable light/dark/custom via `:root` overrides
@@ -49,7 +96,9 @@ Combine the best of Audible + Kindle + ChatGPT voice-mode into one elegant inter
 - **File + DB hybrid** — structured data (text, timestamps, users) in SQLite; large artifacts (audio files, raw HTML, commentary markdown) on disk in `data/`
 
 ## Cost Tracking
-All external API calls (TTS, STT, LLM, image) are logged to `logs/api_costs.jsonl` — one JSON line per call with timestamp, api type, provider, model, input units, estimated cost, and the relevant entity (book or user). The `logs/cost_log.py` module provides `log_cost()` for writing and `summarize()` for reading. TTS and STT scripts log automatically; any new API integration should import and call `log_cost()`. Set `GREATBOOKS_ENTITY_ID` env var to tag calls with the relevant book id.
+All external API calls (TTS, STT, LLM, image, realtime voice) are logged to `logs/api_costs.jsonl` — one JSON line per call with timestamp, api type, provider, model, input units, estimated cost, and the relevant entity (book or user). The `logs/cost_log.py` module provides `log_cost()` for writing and `summarize()` for reading. The JS equivalent is `src/lib/costLog.ts`. TTS and STT scripts log automatically; any new API integration should import and call `log_cost()` / `logCost()`. Set `GREATBOOKS_ENTITY_ID` env var to tag calls with the relevant book id.
+
+Voice chat cost: calculated from audio bytes (32 tokens/sec × duration), logged on session close.
 
 ## Data Model
 
@@ -69,7 +118,9 @@ Chapter-level audio metadata (`audio_file`, `audio_duration_ms`) lives on the `c
 - `word_timestamps` (JSON) — `[{start_ms, end_ms, char_start, char_end}]` where `char_start`/`char_end` are character indices into `segments.text` (no duplicated word strings)
 
 ### Database schema
-Defined in `schema.sql`. Tables: `books`, `chapters`, `segments`. See `.claude/skills/database/SKILL.md` for full reference.
+Defined in `schema.sql`. Tables: `books`, `chapters`, `segments`, `users`, `user_progress`, `messages`. See `.claude/skills/database/SKILL.md` for full reference.
+
+The `messages` table has a `model` column (TEXT, nullable) that records which model generated each response (e.g. `gemini-2.5-flash`, `gemini-2.5-flash-native-audio-preview-12-2025`). User messages have `model = NULL`.
 
 ## Skills
 
@@ -94,14 +145,32 @@ src/
     page.tsx                  ← Home page (book grid)
     globals.css               ← CSS variables / theme
     [bookId]/
-      page.tsx                ← Book view (text reader + chat); audio managed globally
+      page.tsx                ← Book view (text reader + chat overlay); audio managed globally
     api/
       books/[bookId]/         ← Book + chapter metadata
       audio/[...path]/        ← Streams MP3 files from data/
-  components/                 ← Flat: BookCard, AudioPlayer, PersistentPlayerBar, ChatView, etc.
+      chat/                   ← Text chat REST API (legacy fallback)
+      chat/token/             ← Short-lived JWT for WS auth in dev
+  components/
+    chat/
+      ChatView.tsx            ← Translucent overlay with text input + voice controls
+      ChatMessage.tsx         ← Message bubble component
+      useChatSocket.ts        ← React hook: WS connection, text/voice, audio playback
+    reader/                   ← Reader components (ChapterBlocks, BookHeader, etc.)
+    audio/                    ← Audio player components
   lib/
-    db.ts                     ← SQLite connection (readonly) + typed query helpers
+    db.ts                     ← SQLite connection (readonly + read-write) + typed query helpers
+    chatContext.ts            ← Shared context builder (study guide + reader position)
+    costLog.ts                ← JS cost logging (mirrors logs/cost_log.py)
+    llm.ts                    ← Text chat via Gemini REST SSE (used by /api/chat fallback)
     AudioPlayerContext.tsx     ← Global audio session context (persists across navigation)
+  server/
+    chat-server.ts            ← Standalone WS server for text + voice chat (:3002)
+    chat-session.ts           ← Per-connection session: text streaming + voice proxy
+    voice-cost.ts             ← Audio byte → token → cost calculation
+
+public/
+  audio-capture.js            ← AudioWorklet processor for mic capture (16kHz PCM)
 
 data/<book-id>/
   SKILL.md                    ← Provenance, context, audio status

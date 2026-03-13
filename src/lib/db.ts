@@ -81,6 +81,7 @@ export type MessageRow = {
   role: "user" | "assistant";
   text: string;
   status: "pending" | "streaming" | "completed" | "error";
+  model: string | null;
   created_at: string;
 };
 
@@ -173,13 +174,14 @@ export const db = {
     bookId: string,
     role: "user" | "assistant",
     text: string,
-    status: "pending" | "completed" = "completed"
+    status: "pending" | "completed" = "completed",
+    model: string | null = null
   ): MessageRow => {
     const result = rwConnection
       .prepare(
-        "INSERT INTO messages (user_id, book_id, role, text, status) VALUES (?, ?, ?, ?, ?) RETURNING *"
+        "INSERT INTO messages (user_id, book_id, role, text, status, model) VALUES (?, ?, ?, ?, ?, ?) RETURNING *"
       )
-      .get(userId, bookId, role, text, status) as MessageRow;
+      .get(userId, bookId, role, text, status, model) as MessageRow;
     return result;
   },
 

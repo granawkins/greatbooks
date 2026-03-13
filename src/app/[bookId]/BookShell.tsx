@@ -161,22 +161,17 @@ export default function BookShell({
     setCurrentChapter, cacheChapter, getCachedChapter,
   };
 
-  if (chatOpen) {
-    return (
-      <BookShellContext.Provider value={ctxValue}>
+  return (
+    <BookShellContext.Provider value={ctxValue}>
+      {children}
+      {chatOpen && (
         <ChatView
           bookId={bookId}
           bookTitle={bookMeta.title}
           authorName={bookMeta.author}
           onClose={() => window.history.back()}
         />
-      </BookShellContext.Provider>
-    );
-  }
-
-  return (
-    <BookShellContext.Provider value={ctxValue}>
-      {children}
+      )}
     </BookShellContext.Provider>
   );
 }

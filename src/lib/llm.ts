@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { logCost } from "./costLog";
+import { buildSystemPrompt } from "./chatContext";
 
 const GEMINI_API_KEY = process.env.GOOGLE_API_KEY!;
 const MODEL = "gemini-2.5-flash";
@@ -26,7 +27,7 @@ export async function generateReply(
     (m) => m.status === "completed" && m.id !== assistantMessageId
   );
 
-  const systemInstruction = `You are a knowledgeable reading companion for "${book.title}" by ${book.author}. Help the reader understand the text, characters, themes, and historical context. Be concise and engaging.`;
+  const systemInstruction = buildSystemPrompt({ bookId, userId });
 
   const contents = history.map((m) => ({
     role: m.role === "assistant" ? "model" : "user",
