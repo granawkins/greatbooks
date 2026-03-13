@@ -25,7 +25,7 @@ You are nine years into the siege of Troy. The Greek fleet is beached on the sho
 
 ### Coming Up
 
-In Books I and II, you're at the Greek camp on the shore of Troy — nine years in, and the war is already fraying from the inside. A quarrel erupts between the two most powerful Greeks: a king who commands through authority, and a warrior who answers to none. When it tips toward violence, a goddess intervenes — and one man's rage hardens into something that will cost thousands of lives. Then the army nearly votes to sail home. Book II pauses the action for the Catalog of Ships — several hundred lines listing every contingent that crossed the Aegean to fight here. You don't need to follow every name. Let a few wash over you. This is what epic memory sounds like: a civilization accounting for its dead.
+In the opening chapters, you'll meet a King and a Warrior at odds. What do their actions say about each one's character? We'll also meet Ulysses — who figures heavily in the Iliad and is the star of the Odyssey. Also just be aware: the second half of Book II, called the Catalog of Ships, is a list of names several hundred lines long. Many readers choose to skip it — of course it's up to you. We'll check in next before you start Book III.
 
 ---
 
