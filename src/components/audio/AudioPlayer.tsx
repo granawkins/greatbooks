@@ -48,13 +48,12 @@ export default function AudioPlayer() {
     wordTimingsRef,
     scrollDataRef,
     viewingChapterRef,
-    navigateToChapterRef,
     onChatClickRef,
   } = useAudioPlayer();
 
   const router = useRouter();
   const pathname = usePathname();
-  const isOnBookPage = session ? pathname === `/${session.bookId}` : false;
+  const isOnBookPage = session ? pathname.startsWith(`/${session.bookId}/`) : false;
 
   // ── Local playback state ────────────────────────────────────────────────
   const [playing, setPlaying] = useState(false);
@@ -93,15 +92,13 @@ export default function AudioPlayer() {
 
     const viewing = viewingChapterRef.current;
     if (session && viewing) {
-      if (session.bookId !== viewing.bookId) {
-        router.push(`/${session.bookId}`);
-      } else if (session.chapterId !== viewing.chapterId) {
-        navigateToChapterRef.current?.(session.chapterId);
+      if (session.bookId !== viewing.bookId || session.chapterId !== viewing.chapterId) {
+        router.push(`/${session.bookId}/${session.chapterId}`);
       }
     }
 
     audio.play();
-  }, [audioRef, session, viewingChapterRef, navigateToChapterRef, router]);
+  }, [audioRef, session, viewingChapterRef, router]);
 
   const seekTo = useCallback((ms: number) => {
     const audio = audioRef.current;
