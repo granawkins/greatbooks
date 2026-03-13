@@ -1,11 +1,18 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 import AudioPlayer from "./AudioPlayer";
+import { CloseIcon } from "./icons";
 
 export default function PersistentPlayerBar() {
-  const { session } = useAudioPlayer();
+  const { session, dismiss } = useAudioPlayer();
+  const pathname = usePathname();
   if (!session) return null;
+
+  const sessionPath = `/${session.bookId}/${session.chapterId}`;
+  const isOnSessionPage = pathname === sessionPath;
 
   return (
     <div
@@ -19,6 +26,47 @@ export default function PersistentPlayerBar() {
       }}
     >
       <div className="mx-auto" style={{ maxWidth: "28rem" }}>
+        {!isOnSessionPage && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            <Link
+              href={sessionPath}
+              style={{
+                fontFamily: "var(--font-ui)",
+                fontSize: 13,
+                color: "var(--color-text-secondary)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                textDecoration: "none",
+              }}
+              className="hover:text-[var(--color-text)]"
+            >
+              {session.bookTitle}
+              <span style={{ margin: "0 6px", opacity: 0.5 }}>|</span>
+              {session.chapterTitle}
+            </Link>
+            <button
+              aria-label="Close player"
+              onClick={dismiss}
+              style={{
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 28,
+                height: 28,
+                border: "none",
+                background: "none",
+                cursor: "pointer",
+                color: "var(--color-text-secondary)",
+                borderRadius: 4,
+                marginLeft: 8,
+              }}
+            >
+              <CloseIcon />
+            </button>
+          </div>
+        )}
         <AudioPlayer />
       </div>
     </div>
