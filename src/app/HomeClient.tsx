@@ -1,22 +1,39 @@
 "use client";
 
+import Link from "next/link";
+import Image from "next/image";
 import type { BookRow } from "@/lib/db";
 import BookCard from "@/components/BookCard";
+import { getCoverSmUrl } from "@/lib/assets";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 
-type ProgressMap = Record<string, { chapter_number: number; audio_position_ms: number }>;
+type ProgressMap = Record<string, { chapter_number: number; audio_position_ms: number; updated_at: string }>;
 type StatsMap = Record<string, { chapter_count: number; total_duration_ms: number | null }>;
 
 export default function HomeClient({
   books,
   progressMap,
   statsMap,
+  recentBookIds,
 }: {
   books: BookRow[];
   progressMap: ProgressMap;
   statsMap: StatsMap;
+  recentBookIds: string[];
 }) {
   const { session } = useAudioPlayer();
+
+  const booksById = Object.fromEntries(books.map((b) => [b.id, b]));
+  const lastBookId = recentBookIds.find((id) => booksById[id]) ?? null;
+  const lastBook = lastBookId ? booksById[lastBookId] : null;
+  const lastProgress = lastBookId ? progressMap[lastBookId] : null;
+  const lastStats = lastBookId ? statsMap[lastBookId] ?? null : null;
+
+  const chapterCount = lastStats?.chapter_count ?? 0;
+  const progressFraction =
+    lastProgress && chapterCount > 0
+      ? (lastProgress.chapter_number - 1) / chapterCount
+      : 0;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)" }}>
@@ -35,6 +52,101 @@ export default function HomeClient({
       </header>
 
       <main className="max-w-5xl mx-auto px-6" style={{ paddingBottom: session ? 220 : 64 }}>
+        {/* Continue listening — last book only */}
+        {lastBook && lastProgress && (
+          <section style={{ marginBottom: "3rem" }}>
+            <h2
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "1.5rem",
+                fontWeight: 400,
+                color: "var(--color-text)",
+                marginBottom: "1rem",
+              }}
+            >
+              Continue
+            </h2>
+            <Link
+              href={`/${lastBook.id}/${lastProgress.chapter_number}`}
+              className="group"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "1.25rem",
+                textDecoration: "none",
+              }}
+            >
+              {/* Square cover */}
+              <div
+                className="transition-transform duration-200 group-hover:scale-[1.02]"
+                style={{
+                  width: "100px",
+                  height: "133px",
+                  flexShrink: 0,
+                  borderRadius: "4px",
+                  overflow: "hidden",
+                  position: "relative",
+                  boxShadow:
+                    "4px 6px 16px rgba(0,0,0,0.12), 1px 2px 4px rgba(0,0,0,0.08)",
+                }}
+              >
+                <Image
+                  src={getCoverSmUrl(lastBook.id)}
+                  alt={lastBook.title}
+                  fill
+                  sizes="100px"
+                  className="object-cover"
+                />
+              </div>
+
+              {/* Info */}
+              <div>
+                <p
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "1.1rem",
+                    fontWeight: 500,
+                    color: "var(--color-text)",
+                    margin: 0,
+                  }}
+                >
+                  {lastBook.title}
+                </p>
+                <p
+                  style={{
+                    fontFamily: "var(--font-ui)",
+                    fontSize: "0.8rem",
+                    color: "var(--color-text-secondary)",
+                    margin: "4px 0 10px",
+                  }}
+                >
+                  Ch. {lastProgress.chapter_number} of {chapterCount}
+                </p>
+                {/* Progress bar */}
+                <div
+                  style={{
+                    width: "140px",
+                    height: "3px",
+                    backgroundColor: "var(--color-border)",
+                    borderRadius: "2px",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${Math.max(progressFraction * 100, 2)}%`,
+                      backgroundColor: "var(--color-accent)",
+                      borderRadius: "2px",
+                    }}
+                  />
+                </div>
+              </div>
+            </Link>
+          </section>
+        )}
+
+        {/* All books */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-5 gap-y-8">
           {books.map((book) => (
             <BookCard
