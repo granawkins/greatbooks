@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 type Chapter = { id: number; title: string };
 
@@ -111,40 +112,43 @@ export function ChapterPicker({
         {listContent}
       </div>
 
-      {/* Mobile bottom drawer */}
-      <div className="sm:hidden" style={{ position: "fixed", inset: 0, zIndex: 200 }}>
-        {/* Backdrop */}
-        <div
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundColor: "rgba(0,0,0,0.4)",
-          }}
-        />
-        {/* Drawer */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            maxHeight: "70vh",
-            backgroundColor: "var(--color-bg)",
-            borderTopLeftRadius: "var(--radius-lg)",
-            borderTopRightRadius: "var(--radius-lg)",
-            boxShadow: "0 -4px 24px rgba(0,0,0,0.12)",
-            overflow: "auto",
-            paddingBottom: "env(safe-area-inset-bottom, 0px)",
-          }}
-        >
-          {/* Drag handle */}
-          <div style={{ display: "flex", justifyContent: "center", padding: "0.75rem 0 0.25rem" }}>
-            <div style={{ width: 32, height: 4, borderRadius: 2, backgroundColor: "var(--color-border)" }} />
+      {/* Mobile bottom drawer — portaled to body to escape header's backdropFilter containing block */}
+      {createPortal(
+        <div className="sm:hidden" style={{ position: "fixed", inset: 0, zIndex: 200 }}>
+          {/* Backdrop */}
+          <div
+            onClick={onClose}
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundColor: "rgba(0,0,0,0.4)",
+            }}
+          />
+          {/* Drawer */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              maxHeight: "70vh",
+              backgroundColor: "var(--color-bg)",
+              borderTopLeftRadius: "var(--radius-lg)",
+              borderTopRightRadius: "var(--radius-lg)",
+              boxShadow: "0 -4px 24px rgba(0,0,0,0.12)",
+              overflow: "auto",
+              paddingBottom: "env(safe-area-inset-bottom, 0px)",
+            }}
+          >
+            {/* Drag handle */}
+            <div style={{ display: "flex", justifyContent: "center", padding: "0.75rem 0 0.25rem" }}>
+              <div style={{ width: 32, height: 4, borderRadius: 2, backgroundColor: "var(--color-border)" }} />
+            </div>
+            {listContent}
           </div>
-          {listContent}
-        </div>
-      </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 }
