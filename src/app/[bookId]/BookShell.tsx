@@ -50,7 +50,6 @@ export default function BookShell({
   const {
     session,
     audioRef,
-    loadSession,
     onPauseRef,
     onChatClickRef,
     onChapterSelectRef,
@@ -137,32 +136,11 @@ export default function BookShell({
     if (!next) return;
 
     const handleEnded = () => {
-      const nextData = cache.current[next.id];
-      if (nextData?.audio_file) {
-        const src = `/api/audio/${nextData.audio_file.replace(/^data\//, "")}`;
-        const boundaries = nextData.segments
-          .filter((s) => s.audio_start_ms != null && s.audio_end_ms != null)
-          .map((s) => ({ start_ms: s.audio_start_ms!, end_ms: s.audio_end_ms! }))
-          .sort((a, b) => a.start_ms - b.start_ms);
-        loadSession(
-          {
-            bookId,
-            bookTitle: bookMeta.title,
-            chapterTitle: nextData.title,
-            chapterId: next.id,
-            src,
-            durationMs: nextData.audio_duration_ms ?? 0,
-            segmentBoundaries: boundaries,
-          },
-          0,
-          true,
-        );
-      }
-      router.push(`/${bookId}/${next.id}`);
+      router.push(`/${bookId}/${next.id}?autoplay=1`);
     };
     audio.addEventListener("ended", handleEnded);
     return () => audio.removeEventListener("ended", handleEnded);
-  }, [audioRef, session, bookId, currentChapter, chapters, router, loadSession, bookMeta.title]);
+  }, [audioRef, session, bookId, currentChapter, chapters, router]);
 
   // ── Chat ──────────────────────────────────────────────────────────────
 
