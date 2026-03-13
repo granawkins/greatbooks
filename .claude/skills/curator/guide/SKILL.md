@@ -14,17 +14,17 @@ Every study guide has two parts: a book-level introduction, and a series of disc
 
 ### Part 1: Before You Read
 
-A ~400-word introduction (target: 3 minutes read aloud). Written to excite the reader, not summarize the scholarship. Tone: pop-history leaning, but not dumbed down. Think: a historian who writes for the Atlantic.
+A ~400-word introduction (target: 3 minutes read aloud). Written to excite the reader, not summarize the scholarship. Tone: pop-history leaning, but not dumbed down.
 
 **Must include:**
 - What makes this book worth reading — the hook
-- One or two practical tips for reading this particular text (e.g. "take the gods seriously", "pay attention to the similes")
-- Translation note (Butler names for Greek/Roman figures: Jove, Minerva, Ulysses, etc.)
+- One or two practical tips specific to this text (e.g. how to approach the gods, what to pay attention to stylistically)
+- A note on the translation — what names to expect, any significant differences from other editions a reader might have encountered
 - Close on something that pulls the reader into the first pages
 
-**Must NOT include:** a summary of scholarship, a catalogue of Greek terms, plot summary. Save those for the sessions.
+**Must NOT include:** a summary of scholarship, a catalogue of terms, plot summary.
 
-Followed immediately by a **### Coming Up** section that orients the reader toward the first session — vivid, specific, no spoilers on outcomes. Names what they'll encounter. Includes any practical reading notes (e.g. the Catalog of Ships).
+Followed immediately by a **### Coming Up** section that orients the reader toward the first session — vivid, specific, no spoilers on outcomes. Names what they'll encounter. Includes any practical reading notes (e.g. sections that can be skimmed).
 
 ### Part 2: Discussion Sessions
 
@@ -41,46 +41,28 @@ Structure per session:
 [4-6 named subsections. Each is a paragraph of commentary — confident statements of fact, written to be read aloud by an AI tutor or drawn from in conversation. Name each for what it covers: a character, a theme, a key scene, a concept.]
 
 ### Coming Up
-[1 paragraph. No spoilers. Vivid anticipation — name what the reader will encounter next, without revealing outcomes. End with "We'll check in next before you start Book X."]
+[1 paragraph. No spoilers. Vivid anticipation — name what the reader will encounter next without revealing outcomes. End with "We'll check in next before you start Book X."]
 
 ### Essay
 [Exactly one essay question. Occasionally two, only if genuinely distinct and critical. Real questions with real answers worth arguing about.]
 ```
 
-**Tone throughout:** confident, direct, written to be heard. No filler. No "it's worth noting." No quiz-question flatness. The AI tutor reads this as a script or draws from it in conversation.
+---
 
-**No spoilers in Coming Up sections.** Foreshadow vividly but don't reveal outcomes. "One side will push the other back" — not "The Trojans breach the wall."
+## Translation & Language Rules
+
+**Use the names as they appear in the specific translation.** Before writing, check `data/<book-id>/SKILL.md` for the translator used. Use their character names, place names, and god names consistently throughout the study guide. Note any significant name differences in the "Before You Read" section — readers may come in with prior knowledge from a different edition.
+
+**When using original-language terms** (Greek, Latin, etc.) that carry scholarly weight, always define them in English on first use: *term* (English meaning). The relevant terms vary by work — identify them from the reference library. Use them where they add precision; don't scatter them for atmosphere.
 
 ---
 
-## Greek Terms
+## Tone
 
-Always give the English equivalent in parentheses on first use:
-- mēnis → mēnis (rage, or wrath)
-- timē → timē (honor)
-- kleos → kleos (glory, or fame)
-- nostos → nostos (homecoming)
-- xenia → xenia (guest-friendship, or hospitality)
-- aristeia → aristeia (a hero's supreme moment on the battlefield)
-
----
-
-## Translation Names (Butler)
-
-Use Butler's names throughout — not the Greek forms:
-
-| Greek | Butler |
-|-------|--------|
-| Zeus | Jove |
-| Athena | Minerva |
-| Hera | Juno |
-| Poseidon | Neptune |
-| Aphrodite | Venus |
-| Ares | Mars |
-| Hephaestus | Vulcan |
-| Hermes | Mercury |
-| Diomedes | Diomed |
-| Odysseus | Ulysses |
+- Confident, direct, written to be heard
+- No filler ("it's worth noting", "one might argue")
+- No quiz-question flatness — these are statements the AI tutor reads as a script or draws from in conversation
+- **No spoilers in Coming Up sections** — foreshadow vividly but don't reveal outcomes
 
 ---
 
@@ -99,6 +81,6 @@ Three launch courses:
 - Plus ($1/mo): unlimited audio, 25 chat messages
 - Pro ($7/mo): unlimited everything
 
-CTA modal appears at limits. The study guide "Before You Read" is served before the first ~2 minutes of audio — designed so a free user hears the intro, gets excited, and hits the paywall.
+The "Before You Read" section is served before the first ~2 minutes of audio. A free user hears the intro, gets excited, and hits the paywall. Keep it tight and compelling.
 
 App UI (not yet built): course enrollment page, chapter context cards, post-session chat panel, subscription CTA modal.
