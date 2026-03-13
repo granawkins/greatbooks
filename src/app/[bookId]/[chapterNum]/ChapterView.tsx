@@ -96,8 +96,9 @@ export default function ChapterView({
   const { bookId, bookMeta, chapters, setCurrentChapter, cacheChapter } = useBookShell();
   const searchParams = useSearchParams();
   const scrollToBottom = searchParams.get("scroll") === "bottom";
+  const autoplay = searchParams.get("autoplay") === "1";
 
-  const { session, loadSession, audioRef, wordTimingsRef, scrollDataRef } = useAudioPlayer();
+  const { session, loadSession, wordTimingsRef, scrollDataRef } = useAudioPlayer();
   const { saveProgressNow } = useProgress(bookId);
   const { setScrolled } = useTopBar();
 
@@ -203,9 +204,10 @@ export default function ChapterView({
     ? `/api/audio/${chapterData.audio_file.replace(/^data\//, "")}`
     : null;
 
-  // Load audio session only if nothing is playing yet
+  // Load audio session on mount (skip if this chapter's audio is already loaded)
   useEffect(() => {
-    if (!chapterData.audio_file || !audioSrc || session) return;
+    if (!chapterData.audio_file || !audioSrc) return;
+    if (session?.bookId === bookId && session?.chapterId === chapterNum) return;
     loadSession(
       {
         bookId,
@@ -216,9 +218,10 @@ export default function ChapterView({
         durationMs: chapterData.audio_duration_ms ?? 0,
         segmentBoundaries,
       },
-      initialAudioPositionMs
+      initialAudioPositionMs,
+      autoplay,
     );
-  }, [chapterData, audioSrc, bookMeta, bookId, chapterNum, session, segmentBoundaries, loadSession, initialAudioPositionMs]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Save reading progress on mount
   useEffect(() => {
