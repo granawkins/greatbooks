@@ -1,17 +1,92 @@
 # Guide
 
-The guide stage gets content into the product — wiring the study guide material (from Research) into the app's course enrollment flow, chapter reading experience, and AI chat layer.
+The guide stage builds the study guide for each book — the content that wraps the reading experience with scholarly context, discussion sessions, and essay prompts.
 
-A book is **Guide-complete** when:
-1. Its before-you-read text is served from the course enrollment/book intro page
-2. Each chapter shows a 2-3 sentence context card before the text begins
-3. AI chat is enabled post-chapter with seeded opening prompts
+A book is **Guide-complete** when `data/<book-id>/STUDYGUIDE.md` exists and follows the format below.
+
+**Canonical template:** `data/homer-iliad/STUDYGUIDE.md` — read this before writing any new study guide.
 
 ---
 
-## Course Structure
+## Study Guide Format
 
-Three courses, each with a fixed book sequence:
+Every study guide has two parts: a book-level introduction, and a series of discussion sessions (typically 4–6) covering chunks of chapters.
+
+### Part 1: Before You Read
+
+A ~400-word introduction (target: 3 minutes read aloud). Written to excite the reader, not summarize the scholarship. Tone: pop-history leaning, but not dumbed down. Think: a historian who writes for the Atlantic.
+
+**Must include:**
+- What makes this book worth reading — the hook
+- One or two practical tips for reading this particular text (e.g. "take the gods seriously", "pay attention to the similes")
+- Translation note (Butler names for Greek/Roman figures: Jove, Minerva, Ulysses, etc.)
+- Close on something that pulls the reader into the first pages
+
+**Must NOT include:** a summary of scholarship, a catalogue of Greek terms, plot summary. Save those for the sessions.
+
+Followed immediately by a **### Coming Up** section that orients the reader toward the first session — vivid, specific, no spoilers on outcomes. Names what they'll encounter. Includes any practical reading notes (e.g. the Catalog of Ships).
+
+### Part 2: Discussion Sessions
+
+Structure per session:
+
+```markdown
+## Session N: [Name] (Books X–Y)
+
+### Summaries
+- **Book X — [title]:** [1-2 sentence summary. Spoilers fine — this is a reference.]
+- **Book Y — [title]:** [1-2 sentence summary.]
+
+### Scenes, Themes & Characters
+[4-6 named subsections. Each is a paragraph of commentary — confident statements of fact, written to be read aloud by an AI tutor or drawn from in conversation. Name each for what it covers: a character, a theme, a key scene, a concept.]
+
+### Coming Up
+[1 paragraph. No spoilers. Vivid anticipation — name what the reader will encounter next, without revealing outcomes. End with "We'll check in next before you start Book X."]
+
+### Essay
+[Exactly one essay question. Occasionally two, only if genuinely distinct and critical. Real questions with real answers worth arguing about.]
+```
+
+**Tone throughout:** confident, direct, written to be heard. No filler. No "it's worth noting." No quiz-question flatness. The AI tutor reads this as a script or draws from it in conversation.
+
+**No spoilers in Coming Up sections.** Foreshadow vividly but don't reveal outcomes. "One side will push the other back" — not "The Trojans breach the wall."
+
+---
+
+## Greek Terms
+
+Always give the English equivalent in parentheses on first use:
+- mēnis → mēnis (rage, or wrath)
+- timē → timē (honor)
+- kleos → kleos (glory, or fame)
+- nostos → nostos (homecoming)
+- xenia → xenia (guest-friendship, or hospitality)
+- aristeia → aristeia (a hero's supreme moment on the battlefield)
+
+---
+
+## Translation Names (Butler)
+
+Use Butler's names throughout — not the Greek forms:
+
+| Greek | Butler |
+|-------|--------|
+| Zeus | Jove |
+| Athena | Minerva |
+| Hera | Juno |
+| Poseidon | Neptune |
+| Aphrodite | Venus |
+| Ares | Mars |
+| Hephaestus | Vulcan |
+| Hermes | Mercury |
+| Diomedes | Diomed |
+| Odysseus | Ulysses |
+
+---
+
+## Course Structure & App Integration
+
+Three launch courses:
 
 | Course | Sequence |
 |--------|---------|
@@ -19,76 +94,11 @@ Three courses, each with a fixed book sequence:
 | The Examined Life | Apology → Phaedo → Republic |
 | How to Live | Meditations → Discourses → Apology |
 
-A student enrolls in a course. Their reading queue fills with books in order. They move through each book chapter by chapter, then into the next book.
+**Subscription gates:**
+- Free: read text (unlimited), 5 min audio, 10 chat messages
+- Plus ($1/mo): unlimited audio, 25 chat messages
+- Pro ($7/mo): unlimited everything
 
----
+CTA modal appears at limits. The study guide "Before You Read" is served before the first ~2 minutes of audio — designed so a free user hears the intro, gets excited, and hits the paywall.
 
-## The Four Moments
-
-Each book in a course delivers four moments of guided experience:
-
-### 1. Before You Read (book-level)
-A professor-voiced introduction shown when a student begins a new book in their queue. Sourced from `data/<book-id>/STUDYGUIDE.md` → `## Before You Read`.
-
-**What it does:** tells the student who wrote this, when, what we know and don't know, who the key figures are, what to pay attention to. Not hype — initiation. Sets the student up to read with purpose.
-
-**Tone:** Yale/Oxford professor. Written to be heard (students may listen, not just read). Short sentences. No filler.
-
-### 2. Chapter Context (chapter-level, before reading)
-2-3 sentences shown before each chapter begins. Sourced from `data/<book-id>/STUDYGUIDE.md` → each chapter's `Before You Read`.
-
-**Rules:**
-- Orient, don't summarize
-- No spoilers — describe the terrain, not what happens
-- Tell them what to watch for: a character's mood, a structural shift, a key argument
-
-### 3. The Reading / Listening Experience
-The chapter itself — read on screen or listened to via generated audio. The cursor syncs word-by-word to the audio playback.
-
-**Guide stage is not responsible for this** (that's Text + Audio stages). Guide only needs to ensure the surrounding context is in place.
-
-### 4. AI Chat (chapter-level, after reading)
-Opens after the student finishes a chapter. Sourced from `data/<book-id>/STUDYGUIDE.md` → each chapter's `Chat Prompts`.
-
-**Opening message** (always first): "So what happened in this chapter?"
-Then the AI uses the seeded probing questions to push deeper:
-- Comprehension questions: did they actually follow it?
-- Interpretive questions: what does this moment mean?
-- Broader questions: connecting to themes, other books, their own life
-
-The AI corrects misreadings, surfaces details students missed, and asks genuine dilemmas — not just flatters engagement.
-
----
-
-## Subscription Gates
-
-| Feature | Free | Plus ($1/mo) | Pro ($7/mo) |
-|---------|------|-------------|------------|
-| Read text | ✓ unlimited | ✓ unlimited | ✓ unlimited |
-| Audio | 5 min/session | ✓ unlimited | ✓ unlimited |
-| AI chat | 10 messages | 25 messages | ✓ unlimited |
-| Courses | ✓ | ✓ | ✓ |
-
-CTA modal appears when a user hits their limit. Shows the table above. Pushes to signup/upgrade.
-
----
-
-## App Integration (Technical Notes)
-
-Content source: `data/<book-id>/STUDYGUIDE.md` parsed into the DB or served at runtime.
-
-Key UI surfaces to build:
-- Course enrollment page (before-you-read + enroll CTA)
-- Chapter start overlay (chapter context card)
-- Post-chapter chat panel (seeded with opening prompt + probing questions)
-- Subscription CTA modal (at audio/chat limits)
-
-Status: **not yet built**. The study guide content exists for Iliad; the app UI for courses is the next major engineering milestone.
-
----
-
-## What "Guide-Complete" Unlocks
-
-When all three courses are Guide-complete, greatbooks.fm is ready for launch to Grant's Twitter audience. The pitch: "Read the Iliad in 24 chapters, listen on your commute, talk about it with an AI professor." The whole loop — enroll, read, listen, discuss — needs to work end-to-end for at least one course before launch.
-
-Ancient Epics is closest: Iliad has full audio + research; Odyssey needs research only. That course could be Guide-complete with one engineering sprint once Odyssey's STUDYGUIDE is written.
+App UI (not yet built): course enrollment page, chapter context cards, post-session chat panel, subscription CTA modal.
