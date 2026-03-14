@@ -7,6 +7,7 @@ export type WordTs = {
 
 export type Segment = {
   id: number;
+  sequence: number;
   text: string;
   segment_type: "heading" | "text" | "paragraph_break";
   audio_start_ms: number | null;
