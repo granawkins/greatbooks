@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useLayoutEffect } from "react";
+import { useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { type SegmentBoundary, useAudioPlayer, type WordTiming } from "@/lib/AudioPlayerContext";
@@ -15,6 +15,7 @@ import {
   paraTimeRange,
   type ChapterData,
 } from "@/components/reader";
+import type { Annotation } from "@/components/reader/types";
 import { ChapterNav } from "@/components/reader/ChapterNav";
 
 // ── Cover image (chapter 1 only) ────────────────────────────────────────
@@ -106,6 +107,27 @@ export default function ChapterView({
   const heroRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialScrollDone = useRef(false);
+
+  // ── Annotations ───────────────────────────────────────────────────────
+
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+
+  const fetchAnnotations = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/annotations?bookId=${encodeURIComponent(bookId)}&chapterNum=${chapterNum}`,
+        { credentials: "include" }
+      );
+      if (res.ok) setAnnotations(await res.json());
+    } catch { /* ignore */ }
+  }, [bookId, chapterNum]);
+
+  useEffect(() => { fetchAnnotations(); }, [fetchAnnotations]);
+
+  const handleBookmark = useCallback(
+    (audioPositionMs: number) => { saveProgressNow(chapterNum, audioPositionMs); },
+    [saveProgressNow, chapterNum]
+  );
 
   const isFirstChapter = chapterNum === chapters[0]?.id;
   const layout = bookMeta.layout || "prose";
@@ -294,7 +316,16 @@ export default function ChapterView({
           No text available for this chapter.
         </p>
       ) : (
-        <ChapterBlocks blocks={blocks} chapterNum={chapterNum} paraRefsMap={paraRefsMap} verse={layout === "verse"} />
+        <ChapterBlocks
+            blocks={blocks}
+            chapterNum={chapterNum}
+            paraRefsMap={paraRefsMap}
+            verse={layout === "verse"}
+            annotations={annotations}
+            bookId={bookId}
+            onBookmark={handleBookmark}
+            onAnnotationSaved={fetchAnnotations}
+          />
       )}
 
       <div ref={bottomRef} />

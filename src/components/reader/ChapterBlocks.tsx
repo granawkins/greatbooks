@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import type { Block, NavChapter } from "./types";
+import type { Annotation, Block, NavChapter } from "./types";
 import { HighlightedParagraph } from "./HighlightedParagraph";
 import { ChapterListIcon } from "@/components/audio/icons";
 import { ChapterPicker } from "@/components/ChapterPicker";
@@ -114,11 +114,19 @@ export function ChapterBlocks({
   chapterNum,
   paraRefsMap,
   verse,
+  annotations,
+  bookId,
+  onBookmark,
+  onAnnotationSaved,
 }: {
   blocks: Block[];
   chapterNum: number;
   paraRefsMap: React.RefObject<Record<number, (HTMLParagraphElement | null)[]>>;
   verse?: boolean;
+  annotations: Annotation[];
+  bookId: string;
+  onBookmark: (audioPositionMs: number) => void;
+  onAnnotationSaved: () => void;
 }) {
   return (
     <div className="space-y-5">
@@ -158,7 +166,15 @@ export function ChapterBlocks({
               ...(verse ? { whiteSpace: "pre-line" as const } : {}),
             }}
           >
-            <HighlightedParagraph para={block} idPrefix={`${chapterNum}-${i}`} chapterNum={chapterNum} />
+            <HighlightedParagraph
+              para={block}
+              idPrefix={`${chapterNum}-${i}`}
+              chapterNum={chapterNum}
+              annotations={annotations}
+              bookId={bookId}
+              onBookmark={onBookmark}
+              onAnnotationSaved={onAnnotationSaved}
+            />
           </p>
         )
       )}
