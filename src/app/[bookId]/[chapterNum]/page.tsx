@@ -18,6 +18,7 @@ export default async function ChapterPage({
   const rawSegments = db.getSegments(chapter.id);
   const segments: Segment[] = rawSegments.map((seg) => ({
     id: seg.id,
+    sequence: seg.sequence,
     text: seg.text,
     segment_type: seg.segment_type,
     audio_start_ms: seg.audio_start_ms,
