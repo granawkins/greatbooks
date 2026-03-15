@@ -66,7 +66,24 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- User annotations (highlights and comments)
+CREATE TABLE IF NOT EXISTS annotations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  book_id TEXT NOT NULL,
+  chapter_number INTEGER NOT NULL,
+  start_segment_seq INTEGER NOT NULL,
+  start_char INTEGER NOT NULL,
+  end_segment_seq INTEGER NOT NULL,
+  end_char INTEGER NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('highlight', 'comment')),
+  color TEXT DEFAULT 'yellow',
+  comment_text TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_chapters_book ON chapters(book_id);
 CREATE INDEX IF NOT EXISTS idx_segments_chapter ON segments(chapter_id);
 CREATE INDEX IF NOT EXISTS idx_messages_user_book ON messages(user_id, book_id);
+CREATE INDEX IF NOT EXISTS idx_annotations_user_book ON annotations(user_id, book_id, chapter_number);

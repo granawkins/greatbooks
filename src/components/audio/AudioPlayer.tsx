@@ -12,8 +12,8 @@ import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, ChatIcon } from "./
 function highlightWord(el: HTMLElement | null) {
   if (!el) return;
   el.style.textDecorationLine = "underline";
-  el.style.textDecorationColor = "#2563eb";
-  el.style.textDecorationThickness = "2px";
+  el.style.textDecorationColor = "#dc2626";
+  el.style.textDecorationThickness = "3px";
   el.style.textUnderlineOffset = "3px";
 }
 

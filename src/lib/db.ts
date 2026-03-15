@@ -17,6 +17,25 @@ const rwConnection = new Database(DB_PATH);
 rwConnection.pragma("foreign_keys = ON");
 rwConnection.pragma("busy_timeout = 5000");
 
+// -- Migrations --
+rwConnection.exec(`
+  CREATE TABLE IF NOT EXISTS annotations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    book_id TEXT NOT NULL,
+    chapter_number INTEGER NOT NULL,
+    start_segment_seq INTEGER NOT NULL,
+    start_char INTEGER NOT NULL,
+    end_segment_seq INTEGER NOT NULL,
+    end_char INTEGER NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('highlight', 'comment')),
+    color TEXT DEFAULT 'yellow',
+    comment_text TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_annotations_user_book ON annotations(user_id, book_id, chapter_number);
+`);
+
 // -- Types matching the database schema --
 
 export type BookRow = {
@@ -82,6 +101,21 @@ export type MessageRow = {
   text: string;
   status: "pending" | "streaming" | "completed" | "error";
   model: string | null;
+  created_at: string;
+};
+
+export type AnnotationRow = {
+  id: number;
+  user_id: string;
+  book_id: string;
+  chapter_number: number;
+  start_segment_seq: number;
+  start_char: number;
+  end_segment_seq: number;
+  end_char: number;
+  type: "highlight" | "comment";
+  color: string;
+  comment_text: string | null;
   created_at: string;
 };
 
@@ -200,5 +234,49 @@ export const db = {
     rwConnection
       .prepare("UPDATE messages SET text = ?, status = ? WHERE id = ?")
       .run(text, status, id);
+  },
+
+  // -- Annotations (read-write) --
+
+  getAnnotations: (userId: string, bookId: string, chapterNumber: number): AnnotationRow[] =>
+    rwConnection
+      .prepare(
+        "SELECT * FROM annotations WHERE user_id = ? AND book_id = ? AND chapter_number = ? ORDER BY id"
+      )
+      .all(userId, bookId, chapterNumber) as AnnotationRow[],
+
+  insertAnnotation: (
+    userId: string,
+    bookId: string,
+    chapterNumber: number,
+    startSegmentSeq: number,
+    startChar: number,
+    endSegmentSeq: number,
+    endChar: number,
+    type: "highlight" | "comment",
+    color: string = "yellow",
+    commentText: string | null = null
+  ): AnnotationRow => {
+    return rwConnection
+      .prepare(
+        `INSERT INTO annotations
+          (user_id, book_id, chapter_number, start_segment_seq, start_char, end_segment_seq, end_char, type, color, comment_text)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
+      )
+      .get(userId, bookId, chapterNumber, startSegmentSeq, startChar, endSegmentSeq, endChar, type, color, commentText) as AnnotationRow;
+  },
+
+  updateAnnotationComment: (id: number, userId: string, commentText: string): boolean => {
+    const result = rwConnection
+      .prepare("UPDATE annotations SET comment_text = ? WHERE id = ? AND user_id = ?")
+      .run(commentText, id, userId);
+    return result.changes > 0;
+  },
+
+  deleteAnnotation: (id: number, userId: string): boolean => {
+    const result = rwConnection
+      .prepare("DELETE FROM annotations WHERE id = ? AND user_id = ?")
+      .run(id, userId);
+    return result.changes > 0;
   },
 };

@@ -7,6 +7,7 @@ export type WordTs = {
 
 export type Segment = {
   id: number;
+  sequence: number;
   text: string;
   segment_type: "heading" | "text" | "paragraph_break";
   audio_start_ms: number | null;
@@ -40,6 +41,21 @@ export type WordSpan = {
   end_ms: number;
   charStart: number;
   charEnd: number;
+  segmentSeq: number;
+  segCharStart: number;
+  segCharEnd: number;
+};
+
+export type Annotation = {
+  id: number;
+  start_segment_seq: number;
+  start_char: number;
+  end_segment_seq: number;
+  end_char: number;
+  type: "highlight" | "comment";
+  color: string;
+  comment_text: string | null;
+  created_at: string;
 };
 
 export type NavChapter = { id: number; title: string };
