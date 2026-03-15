@@ -124,11 +124,6 @@ export default function ChapterView({
 
   useEffect(() => { fetchAnnotations(); }, [fetchAnnotations]);
 
-  const handleBookmark = useCallback(
-    (audioPositionMs: number) => { saveProgressNow(chapterNum, audioPositionMs); },
-    [saveProgressNow, chapterNum]
-  );
-
   const isFirstChapter = chapterNum === chapters[0]?.id;
   const layout = bookMeta.layout || "prose";
 
@@ -265,71 +260,70 @@ export default function ChapterView({
 
   // ── Render ────────────────────────────────────────────────────────────
 
+  const [marginEl, setMarginEl] = useState<HTMLDivElement | null>(null);
+
   return (
-    <article
-      className="mx-auto"
-      style={{
-        maxWidth: "68ch",
-        paddingLeft: "1.5rem",
-        paddingRight: "1.5rem",
-        paddingBottom: "200px",
-        position: "relative",
-      }}
+    <div
+      className="chapter-layout"
+      style={{ paddingBottom: "200px" }}
     >
-      {isFirstChapter && (
-        <div ref={heroRef} style={{ minHeight: 1 }}>
-          <CoverImage bookId={bookId} title={bookMeta.title} />
-          <div style={{ textAlign: "center", paddingBottom: "1.5rem" }}>
-            {bookMeta.author && <p style={metaLineStyle}>by {bookMeta.author}</p>}
-            {bookMeta.original_date && <p style={metaLineStyle}>{bookMeta.original_date}</p>}
-            {bookMeta.translator && (
-              <p style={metaLineStyle}>
-                Translated by {bookMeta.translator}
-                {bookMeta.translation_date ? ` in ${bookMeta.translation_date}` : ""}
-              </p>
-            )}
-            {bookMeta.source_url && (
-              <p style={metaLineStyle}>
-                <a href={bookMeta.source_url} target="_blank" rel="noopener noreferrer"
-                  style={{ color: "var(--color-text-secondary)" }} className="hover:underline">
-                  Source: {sourceName(bookMeta.source_url)}
-                </a>
-              </p>
-            )}
+      <article className="chapter-text">
+        {isFirstChapter && (
+          <div ref={heroRef} style={{ minHeight: 1 }}>
+            <CoverImage bookId={bookId} title={bookMeta.title} />
+            <div style={{ textAlign: "center", paddingBottom: "1.5rem" }}>
+              {bookMeta.author && <p style={metaLineStyle}>by {bookMeta.author}</p>}
+              {bookMeta.original_date && <p style={metaLineStyle}>{bookMeta.original_date}</p>}
+              {bookMeta.translator && (
+                <p style={metaLineStyle}>
+                  Translated by {bookMeta.translator}
+                  {bookMeta.translation_date ? ` in ${bookMeta.translation_date}` : ""}
+                </p>
+              )}
+              {bookMeta.source_url && (
+                <p style={metaLineStyle}>
+                  <a href={bookMeta.source_url} target="_blank" rel="noopener noreferrer"
+                    style={{ color: "var(--color-text-secondary)" }} className="hover:underline">
+                    Source: {sourceName(bookMeta.source_url)}
+                  </a>
+                </p>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <ChapterNav bookId={bookId} prevChapter={prevChapter} nextChapter={nextChapter} />
+        <ChapterNav bookId={bookId} prevChapter={prevChapter} nextChapter={nextChapter} />
 
-      {chapters.length > 1 && (
-        <h2 style={{
-          color: "var(--color-text-secondary)", fontFamily: "var(--font-body)",
-          fontSize: "1.25rem", fontWeight: 400, textAlign: "center", margin: "2rem 0",
-        }}>
-          {chapterData.title}
-        </h2>
-      )}
+        {chapters.length > 1 && (
+          <h2 style={{
+            color: "var(--color-text-secondary)", fontFamily: "var(--font-body)",
+            fontSize: "1.25rem", fontWeight: 400, textAlign: "center", margin: "2rem 0",
+          }}>
+            {chapterData.title}
+          </h2>
+        )}
 
-      {blocks.length === 0 ? (
-        <p className="text-sm text-center py-16" style={{ color: "var(--color-text-secondary)" }}>
-          No text available for this chapter.
-        </p>
-      ) : (
-        <ChapterBlocks
+        {blocks.length === 0 ? (
+          <p className="text-sm text-center py-16" style={{ color: "var(--color-text-secondary)" }}>
+            No text available for this chapter.
+          </p>
+        ) : (
+          <ChapterBlocks
             blocks={blocks}
             chapterNum={chapterNum}
             paraRefsMap={paraRefsMap}
             verse={layout === "verse"}
             annotations={annotations}
             bookId={bookId}
-            onBookmark={handleBookmark}
             onAnnotationSaved={fetchAnnotations}
+            marginEl={marginEl}
           />
-      )}
+        )}
 
-      <div ref={bottomRef} />
-      <ChapterNav bookId={bookId} prevChapter={prevChapter} nextChapter={nextChapter} />
-    </article>
+        <div ref={bottomRef} />
+        <ChapterNav bookId={bookId} prevChapter={prevChapter} nextChapter={nextChapter} />
+        <div ref={setMarginEl} className="chapter-margin" />
+      </article>
+    </div>
   );
 }

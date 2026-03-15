@@ -2,6 +2,35 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAuthUserId } from "@/lib/auth";
 
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const userId = await getAuthUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const annotationId = Number(id);
+  if (isNaN(annotationId)) {
+    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  }
+
+  const body = await req.json();
+  const { commentText } = body;
+  if (typeof commentText !== "string" || !commentText.trim()) {
+    return NextResponse.json({ error: "commentText required" }, { status: 400 });
+  }
+
+  const updated = db.updateAnnotationComment(annotationId, userId, commentText.trim());
+  if (!updated) {
+    return NextResponse.json({ error: "Not found or not authorized" }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

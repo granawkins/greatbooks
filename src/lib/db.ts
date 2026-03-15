@@ -266,6 +266,13 @@ export const db = {
       .get(userId, bookId, chapterNumber, startSegmentSeq, startChar, endSegmentSeq, endChar, type, color, commentText) as AnnotationRow;
   },
 
+  updateAnnotationComment: (id: number, userId: string, commentText: string): boolean => {
+    const result = rwConnection
+      .prepare("UPDATE annotations SET comment_text = ? WHERE id = ? AND user_id = ?")
+      .run(commentText, id, userId);
+    return result.changes > 0;
+  },
+
   deleteAnnotation: (id: number, userId: string): boolean => {
     const result = rwConnection
       .prepare("DELETE FROM annotations WHERE id = ? AND user_id = ?")
