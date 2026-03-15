@@ -439,20 +439,23 @@ export function HighlightedParagraph({
             // First click → set anchor
             setAnchor({ spanIdx: i, charStart: span.charStart, startMs: span.start_ms, element: e.currentTarget });
             setSelEnd(null);
-          } else if (inSelection) {
-            // Click on already-selected word → deselect
+          } else if (i === anchor.spanIdx && !selEnd) {
+            // Re-clicking the anchor with no range → deselect
+            clearSelection();
+          } else if (inSelection && selEnd) {
+            // Click within an established range → deselect
             clearSelection();
           } else {
-            // Second click on unselected word → extend selection
+            // Click on any other word → extend/move the end of selection
             setSelEnd({ spanIdx: i, charEnd: span.charEnd, element: e.currentTarget });
           }
         }}
         style={{
           cursor: "pointer",
           backgroundColor: bg,
-          borderRadius: inSelection || hasHighlight ? "2px" : undefined,
-          padding: hasHighlight ? "1px 2px" : inSelection ? "1px 0" : undefined,
-          margin: hasHighlight ? "0 -2px" : undefined,
+          borderRadius: inSelection || hasHighlight ? "3px" : undefined,
+          padding: hasHighlight ? "2px 4px" : inSelection ? "2px 1px" : undefined,
+          margin: hasHighlight ? "0 -4px" : undefined,
           borderBottom: hasComment && !inSelection ? "2px solid rgba(100, 160, 255, 0.7)" : undefined,
         }}
       >
