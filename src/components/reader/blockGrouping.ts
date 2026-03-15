@@ -51,6 +51,9 @@ export function buildWordSpans(para: ParagraphBlock): WordSpan[] {
         end_ms: w.end_ms,
         charStart: offset + w.char_start,
         charEnd: offset + w.char_end,
+        segmentSeq: seg.sequence,
+        segCharStart: w.char_start,
+        segCharEnd: w.char_end,
       });
     }
   }
@@ -76,6 +79,9 @@ export function buildWordSpans(para: ParagraphBlock): WordSpan[] {
         end_ms: tStart + Math.round((duration * (j + 1)) / count),
         charStart: raw[idx].charStart,
         charEnd: raw[idx].charEnd,
+        segmentSeq: raw[idx].segmentSeq,
+        segCharStart: raw[idx].segCharStart,
+        segCharEnd: raw[idx].segCharEnd,
       };
     }
   }
