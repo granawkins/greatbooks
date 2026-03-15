@@ -105,10 +105,10 @@ export default function TopBar() {
             }}
           >
             <Image
-              src="/logo.png"
+              src="/logo-v2.png"
               alt="Great Books"
-              width={showBookNav ? 22 : 28}
-              height={showBookNav ? 22 : 28}
+              width={showBookNav ? 32 : 40}
+              height={showBookNav ? 32 : 40}
               style={{ display: "block", flexShrink: 0 }}
             />
             {!showBookNav && (
