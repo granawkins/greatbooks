@@ -27,10 +27,10 @@ export const metadata: Metadata = {
     "Classic literature — read, listen, and explore with AI.",
   icons: {
     icon: [
-      { url: "/logo-32.png", sizes: "32x32", type: "image/png" },
-      { url: "/logo-64.png", sizes: "64x64", type: "image/png" },
+      { url: "/logo-v2-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/logo-v2-64.png", sizes: "64x64", type: "image/png" },
     ],
-    apple: "/logo-180.png",
+    apple: "/logo-v2-180.png",
   },
 };
 
