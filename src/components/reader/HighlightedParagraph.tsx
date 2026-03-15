@@ -101,6 +101,12 @@ function CommentPopoverUI({
 
 // ── Comment input portal ─────────────────────────────────────────────────
 
+// Breakpoint for mobile vs desktop layout
+const DESKTOP_MIN_WIDTH = 768;
+// Extra width needed beyond reader column to show margin panel
+// Reader is 68ch ≈ ~680px + padding; panel is 260px + 16px gap
+const MARGIN_MIN_VIEWPORT = 1000;
+
 function CommentInputUI({
   anchorEl,
   anchorEl2,
@@ -114,70 +120,123 @@ function CommentInputUI({
 }) {
   const [text, setText] = useState("");
 
+  const vw = typeof window !== "undefined" ? window.innerWidth : 0;
+  const isMobile = vw < DESKTOP_MIN_WIDTH;
+  const hasMarginSpace = vw >= MARGIN_MIN_VIEWPORT;
+
   const rect1 = anchorEl.getBoundingClientRect();
   const rect2 = anchorEl2?.getBoundingClientRect();
-  const top = rect2 ? Math.max(rect1.bottom, rect2.bottom) + 8 : rect1.bottom + 8;
-  const left = rect2
-    ? (rect1.left + rect1.width / 2 + rect2.left + rect2.width / 2) / 2
-    : rect1.left + rect1.width / 2;
 
-  return createPortal(
-    <div
-      onMouseDown={(e) => e.stopPropagation()}
+  // For desktop margin mode: anchor to the right of the selection
+  const anchorTop = rect2
+    ? (rect1.top + rect2.bottom) / 2 - 40
+    : rect1.top;
+  // Right edge of the reader column (take anchorEl's parent or just the rect right edge)
+  // We position relative to viewport: after the rightmost of anchor rects
+  const anchorRight = Math.max(rect1.right, rect2?.right ?? 0);
+
+  const cardStyle: React.CSSProperties = {
+    background: "var(--color-bg)",
+    border: "1px solid var(--color-border)",
+    borderRadius: "var(--radius)",
+    boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+    padding: "12px",
+    width: 260,
+  };
+
+  const textarea = (
+    <textarea
+      autoFocus
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      placeholder="Add a comment…"
       style={{
-        position: "fixed",
-        top,
-        left,
-        transform: "translateX(-50%)",
-        background: "var(--color-bg)",
+        width: "100%",
+        minHeight: 80,
+        resize: "vertical",
+        fontFamily: "var(--font-body)",
+        fontSize: "0.9rem",
         border: "1px solid var(--color-border)",
         borderRadius: "var(--radius)",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-        padding: "10px",
-        width: 260,
+        padding: "6px 8px",
+        background: "var(--color-bg)",
+        color: "var(--color-text)",
+        boxSizing: "border-box",
+      }}
+    />
+  );
+
+  const buttons = (
+    <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: 8 }}>
+      <button
+        onClick={onCancel}
+        style={{ fontSize: "0.85rem", border: "none", background: "none", cursor: "pointer", color: "var(--color-text-secondary)" }}
+      >
+        Cancel
+      </button>
+      <button
+        onClick={() => text.trim() && onSave(text.trim())}
+        style={{
+          fontSize: "0.85rem",
+          border: "none",
+          background: "var(--color-text)",
+          color: "var(--color-bg)",
+          cursor: "pointer",
+          borderRadius: "var(--radius)",
+          padding: "4px 10px",
+        }}
+      >
+        Save
+      </button>
+    </div>
+  );
+
+  if (!isMobile && hasMarginSpace) {
+    // Desktop: position in right margin next to the text
+    return createPortal(
+      <div
+        onMouseDown={(e) => e.stopPropagation()}
+        style={{
+          position: "fixed",
+          top: Math.max(anchorTop, 8),
+          left: anchorRight + 16,
+          zIndex: 1001,
+          ...cardStyle,
+        }}
+      >
+        {textarea}
+        {buttons}
+      </div>,
+      document.body
+    );
+  }
+
+  // Mobile (or narrow desktop): full modal overlay
+  return createPortal(
+    <div
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         zIndex: 1001,
+        padding: "1rem",
       }}
     >
-      <textarea
-        autoFocus
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Add a comment…"
-        style={{
-          width: "100%",
-          minHeight: 72,
-          resize: "vertical",
-          fontFamily: "var(--font-body)",
-          fontSize: "0.9rem",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius)",
-          padding: "6px 8px",
-          background: "var(--color-bg)",
-          color: "var(--color-text)",
-          boxSizing: "border-box",
-        }}
-      />
-      <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: 6 }}>
-        <button
-          onClick={onCancel}
-          style={{ fontSize: "0.85rem", border: "none", background: "none", cursor: "pointer", color: "var(--color-text-secondary)" }}
-        >
-          Cancel
-        </button>
-        <button
-          onClick={() => text.trim() && onSave(text.trim())}
-          style={{
-            fontSize: "0.85rem",
-            border: "none",
-            background: "var(--color-text)",
-            color: "var(--color-bg)",
-            cursor: "pointer",
-            borderRadius: "var(--radius)",
-            padding: "4px 10px",
-          }}
-        >
-          Save
-        </button>
+      <div
+        onMouseDown={(e) => e.stopPropagation()}
+        style={{ ...cardStyle, width: "min(320px, 100%)" }}
+      >
+        <p style={{ margin: "0 0 8px", fontSize: "0.85rem", fontWeight: 600, color: "var(--color-text-secondary)", fontFamily: "var(--font-ui)" }}>
+          Add a comment
+        </p>
+        {textarea}
+        {buttons}
       </div>
     </div>,
     document.body
@@ -350,9 +409,9 @@ export function HighlightedParagraph({
 
     let bg: string | undefined;
     if (inSelection) {
-      bg = "var(--color-highlight)";
+      bg = "var(--color-selection)";
     } else if (hasHighlight) {
-      bg = "rgba(255, 220, 60, 0.35)";
+      bg = "var(--color-highlight)";
     }
 
     const commentAnns = spanAnns.filter((a) => a.type === "comment");
@@ -377,14 +436,14 @@ export function HighlightedParagraph({
 
           // Selection logic
           if (!anchor) {
-            // First click
+            // First click → set anchor
             setAnchor({ spanIdx: i, charStart: span.charStart, startMs: span.start_ms, element: e.currentTarget });
             setSelEnd(null);
-          } else if (i === anchor.spanIdx) {
-            // Click same word → deselect
+          } else if (inSelection) {
+            // Click on already-selected word → deselect
             clearSelection();
           } else {
-            // Extend selection
+            // Second click on unselected word → extend selection
             setSelEnd({ spanIdx: i, charEnd: span.charEnd, element: e.currentTarget });
           }
         }}
@@ -392,6 +451,8 @@ export function HighlightedParagraph({
           cursor: "pointer",
           backgroundColor: bg,
           borderRadius: inSelection || hasHighlight ? "2px" : undefined,
+          padding: hasHighlight ? "1px 2px" : inSelection ? "1px 0" : undefined,
+          margin: hasHighlight ? "0 -2px" : undefined,
           borderBottom: hasComment && !inSelection ? "2px solid rgba(100, 160, 255, 0.7)" : undefined,
         }}
       >
