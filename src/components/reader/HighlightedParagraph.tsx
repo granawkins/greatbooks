@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { ParagraphBlock, Annotation, WordSpan } from "./types";
 import { buildWordSpans } from "./blockGrouping";
 import { WordPopup } from "./WordPopup";
+import { setCommentHover } from "./commentHover";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -22,12 +23,6 @@ type SelectionEnd = {
   element: HTMLElement;
 };
 
-type CommentPopover = {
-  annotationId: number;
-  commentText: string;
-  element: HTMLElement;
-};
-
 // ── Annotation range helper ──────────────────────────────────────────────
 
 function toParaRange(ann: Annotation, para: ParagraphBlock): { start: number; end: number } | null {
@@ -42,56 +37,134 @@ function toParaRange(ann: Annotation, para: ParagraphBlock): { start: number; en
   return { start, end };
 }
 
-// ── Comment popover portal ───────────────────────────────────────────────
+// ── Shared mobile modal backdrop ──────────────────────────────────────────
 
-function CommentPopoverUI({
-  popover,
+const modalBackdropStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.5)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 1001,
+  padding: "1rem",
+};
+
+const modalCardStyle: React.CSSProperties = {
+  background: "var(--color-bg-secondary)",
+  border: "1px solid rgba(50, 100, 200, 0.7)",
+  borderRadius: "var(--radius)",
+  boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+  padding: "12px 14px",
+  width: "min(320px, 100%)",
+  position: "relative",
+  minHeight: 48,
+  fontFamily: "var(--font-body)",
+  fontSize: "0.9rem",
+  lineHeight: 1.6,
+  color: "var(--color-text)",
+};
+
+const modalXBtn: React.CSSProperties = {
+  position: "absolute",
+  top: 6,
+  right: 6,
+  width: 22,
+  height: 22,
+  border: "none",
+  background: "var(--color-bg-tertiary)",
+  color: "var(--color-text-secondary)",
+  cursor: "pointer",
+  borderRadius: "50%",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
+};
+
+function XIcon({ size = 10 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.5" fill="none">
+      <line x1="2" y1="2" x2="8" y2="8" />
+      <line x1="8" y1="2" x2="2" y2="8" />
+    </svg>
+  );
+}
+
+// ── Mobile comment modal (view/edit existing) ───────────────────────────
+
+function CommentModal({
+  annotation,
   onDelete,
+  onEdit,
   onClose,
 }: {
-  popover: CommentPopover;
+  annotation: Annotation;
   onDelete: (id: number) => void;
+  onEdit: (id: number, text: string) => void;
   onClose: () => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(annotation.comment_text ?? "");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const rect = popover.element.getBoundingClientRect();
-  const top = rect.bottom + 8;
-  const left = rect.left + rect.width / 2;
+  useEffect(() => {
+    if (editing && textareaRef.current) {
+      const el = textareaRef.current;
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+      el.focus();
+      el.selectionStart = el.selectionEnd = el.value.length;
+    }
+  }, [editing]);
+
+  const handleSave = () => {
+    const trimmed = text.trim();
+    if (trimmed && trimmed !== annotation.comment_text) {
+      onEdit(annotation.id, trimmed);
+    }
+    setEditing(false);
+  };
 
   return createPortal(
-    <div
-      ref={ref}
-      onMouseDown={(e) => e.stopPropagation()}
-      style={{
-        position: "fixed",
-        top,
-        left,
-        transform: "translateX(-50%)",
-        background: "var(--color-bg)",
-        border: "1px solid var(--color-border)",
-        borderRadius: "var(--radius)",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-        padding: "10px 12px",
-        maxWidth: 280,
-        zIndex: 1001,
-      }}
-    >
-      <p style={{ margin: "0 0 8px", fontFamily: "var(--font-body)", fontSize: "0.9rem", lineHeight: 1.5, color: "var(--color-text)" }}>
-        {popover.commentText}
-      </p>
-      <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+    <div onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={modalBackdropStyle}>
+      {editing && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{ position: "fixed", inset: 0, zIndex: 0 }}
+        />
+      )}
+      <div onClick={(e) => { e.stopPropagation(); if (!editing) setEditing(true); }} style={{ ...modalCardStyle, cursor: editing ? undefined : "pointer", zIndex: 1 }}>
+        {editing ? (
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = e.target.scrollHeight + "px";
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSave(); }
+              else if (e.key === "Escape") { setText(annotation.comment_text ?? ""); setEditing(false); }
+            }}
+            onBlur={handleSave}
+            style={{
+              width: "100%", minHeight: 24, resize: "none",
+              fontFamily: "inherit", fontSize: "inherit", lineHeight: "inherit",
+              border: "none", outline: "none", padding: 0, margin: 0,
+              background: "transparent", color: "var(--color-text)", boxSizing: "border-box",
+            }}
+          />
+        ) : (
+          <p style={{ margin: 0, paddingRight: 24 }}>{annotation.comment_text}</p>
+        )}
         <button
-          onClick={onClose}
-          style={{ fontSize: "0.8rem", border: "none", background: "none", cursor: "pointer", color: "var(--color-text-secondary)" }}
+          onClick={(e) => { e.stopPropagation(); if (editing) { setText(annotation.comment_text ?? ""); setEditing(false); } else { onDelete(annotation.id); onClose(); } }}
+          style={modalXBtn}
+          aria-label={editing ? "Cancel" : "Delete comment"}
         >
-          Close
-        </button>
-        <button
-          onClick={() => { onDelete(popover.annotationId); onClose(); }}
-          style={{ fontSize: "0.8rem", border: "none", background: "none", cursor: "pointer", color: "var(--color-danger, #c0392b)" }}
-        >
-          Delete
+          <XIcon />
         </button>
       </div>
     </div>,
@@ -99,144 +172,52 @@ function CommentPopoverUI({
   );
 }
 
-// ── Comment input portal ─────────────────────────────────────────────────
+// ── Mobile comment input modal ──────────────────────────────────────────
 
-// Breakpoint for mobile vs desktop layout
-const DESKTOP_MIN_WIDTH = 768;
-// Extra width needed beyond reader column to show margin panel
-// Reader is 68ch ≈ ~680px + padding; panel is 260px + 16px gap
-const MARGIN_MIN_VIEWPORT = 1000;
-
-function CommentInputUI({
-  anchorEl,
-  anchorEl2,
+function CommentInputModal({
   onSave,
   onCancel,
 }: {
-  anchorEl: HTMLElement;
-  anchorEl2?: HTMLElement;
   onSave: (text: string) => void;
   onCancel: () => void;
 }) {
   const [text, setText] = useState("");
 
-  const vw = typeof window !== "undefined" ? window.innerWidth : 0;
-  const isMobile = vw < DESKTOP_MIN_WIDTH;
-  const hasMarginSpace = vw >= MARGIN_MIN_VIEWPORT;
-
-  const rect1 = anchorEl.getBoundingClientRect();
-  const rect2 = anchorEl2?.getBoundingClientRect();
-
-  // For desktop margin mode: anchor to the right of the selection
-  const anchorTop = rect2
-    ? (rect1.top + rect2.bottom) / 2 - 40
-    : rect1.top;
-  // Right edge of the reader column (take anchorEl's parent or just the rect right edge)
-  // We position relative to viewport: after the rightmost of anchor rects
-  const anchorRight = Math.max(rect1.right, rect2?.right ?? 0);
-
-  const cardStyle: React.CSSProperties = {
-    background: "var(--color-bg)",
-    border: "1px solid var(--color-border)",
-    borderRadius: "var(--radius)",
-    boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
-    padding: "12px",
-    width: 260,
-  };
-
-  const textarea = (
-    <textarea
-      autoFocus
-      value={text}
-      onChange={(e) => setText(e.target.value)}
-      placeholder="Add a comment…"
-      style={{
-        width: "100%",
-        minHeight: 80,
-        resize: "vertical",
-        fontFamily: "var(--font-body)",
-        fontSize: "0.9rem",
-        border: "1px solid var(--color-border)",
-        borderRadius: "var(--radius)",
-        padding: "6px 8px",
-        background: "var(--color-bg)",
-        color: "var(--color-text)",
-        boxSizing: "border-box",
-      }}
-    />
-  );
-
-  const buttons = (
-    <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: 8 }}>
-      <button
-        onClick={onCancel}
-        style={{ fontSize: "0.85rem", border: "none", background: "none", cursor: "pointer", color: "var(--color-text-secondary)" }}
-      >
-        Cancel
-      </button>
-      <button
-        onClick={() => text.trim() && onSave(text.trim())}
-        style={{
-          fontSize: "0.85rem",
-          border: "none",
-          background: "var(--color-text)",
-          color: "var(--color-bg)",
-          cursor: "pointer",
-          borderRadius: "var(--radius)",
-          padding: "4px 10px",
-        }}
-      >
-        Save
-      </button>
-    </div>
-  );
-
-  if (!isMobile && hasMarginSpace) {
-    // Desktop: position in right margin next to the text
-    return createPortal(
-      <div
-        onMouseDown={(e) => e.stopPropagation()}
-        style={{
-          position: "fixed",
-          top: Math.max(anchorTop, 8),
-          left: anchorRight + 16,
-          zIndex: 1001,
-          ...cardStyle,
-        }}
-      >
-        {textarea}
-        {buttons}
-      </div>,
-      document.body
-    );
-  }
-
-  // Mobile (or narrow desktop): full modal overlay
   return createPortal(
-    <div
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onCancel();
-      }}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1001,
-        padding: "1rem",
-      }}
-    >
-      <div
-        onMouseDown={(e) => e.stopPropagation()}
-        style={{ ...cardStyle, width: "min(320px, 100%)" }}
-      >
-        <p style={{ margin: "0 0 8px", fontSize: "0.85rem", fontWeight: 600, color: "var(--color-text-secondary)", fontFamily: "var(--font-ui)" }}>
-          Add a comment
-        </p>
-        {textarea}
-        {buttons}
+    <div onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }} style={modalBackdropStyle}>
+      <div onClick={(e) => e.stopPropagation()} style={modalCardStyle}>
+        <textarea
+          autoFocus
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              if (text.trim()) onSave(text.trim());
+            } else if (e.key === "Escape") {
+              onCancel();
+            }
+          }}
+          placeholder="Add a comment…"
+          style={{
+            width: "100%",
+            minHeight: 60,
+            resize: "none",
+            fontFamily: "inherit",
+            fontSize: "inherit",
+            lineHeight: "inherit",
+            border: "none",
+            outline: "none",
+            padding: 0,
+            margin: 0,
+            background: "transparent",
+            color: "var(--color-text)",
+            boxSizing: "border-box",
+          }}
+        />
+        <button onClick={onCancel} style={modalXBtn} aria-label="Cancel">
+          <XIcon />
+        </button>
       </div>
     </div>,
     document.body
@@ -245,22 +226,32 @@ function CommentInputUI({
 
 // ── Main component ───────────────────────────────────────────────────────
 
+const MOBILE_BREAKPOINT = 768;
+
+export type CommentIntent = {
+  startSegmentSeq: number;
+  startChar: number;
+  endSegmentSeq: number;
+  endChar: number;
+  anchorElement: HTMLElement;
+};
+
 export function HighlightedParagraph({
   para,
   idPrefix,
   chapterNum,
   annotations,
   bookId,
-  onBookmark,
   onAnnotationSaved,
+  onStartComment,
 }: {
   para: ParagraphBlock;
   idPrefix: string;
   chapterNum: number;
   annotations: Annotation[];
   bookId: string;
-  onBookmark: (audioPositionMs: number) => void;
   onAnnotationSaved: () => void;
+  onStartComment?: (intent: CommentIntent) => void;
 }) {
   const spans = useMemo(() => buildWordSpans(para), [para]);
   const text = para.text;
@@ -269,14 +260,13 @@ export function HighlightedParagraph({
   // ── Selection state ───────────────────────────────────────────────────
   const [anchor, setAnchor] = useState<SelectionAnchor | null>(null);
   const [selEnd, setSelEnd] = useState<SelectionEnd | null>(null);
-  const [showCommentInput, setShowCommentInput] = useState(false);
-  const [commentPopover, setCommentPopover] = useState<CommentPopover | null>(null);
+  const [showMobileCommentInput, setShowMobileCommentInput] = useState(false);
+  const [mobileCommentAnn, setMobileCommentAnn] = useState<Annotation | null>(null);
 
   const clearSelection = useCallback(() => {
     setAnchor(null);
     setSelEnd(null);
-    setShowCommentInput(false);
-    setCommentPopover(null);
+    setShowMobileCommentInput(false);
   }, []);
 
   // ── Annotation ranges mapped to para-absolute chars ───────────────────
@@ -320,41 +310,83 @@ export function HighlightedParagraph({
     clearSelection();
   }, [anchor, session, chapterNum, audioRef, onChapterSelectRef, clearSelection]);
 
-  // ── Bookmark ──────────────────────────────────────────────────────────
-  const handleBookmark = useCallback(() => {
-    if (!anchor) return;
-    onBookmark(anchor.startMs);
-    clearSelection();
-  }, [anchor, onBookmark, clearSelection]);
+  // ── Highlights overlapping current selection ────────────────────────
+  const selectionHighlightIds = useMemo(() => {
+    if (!selectionRange) return [];
+    const ids = new Set<number>();
+    for (let i = selectionRange.lo; i <= selectionRange.hi; i++) {
+      const anns = getSpanAnnotations(spans[i]);
+      for (const a of anns) {
+        if (a.type === "highlight") ids.add(a.id);
+      }
+    }
+    return Array.from(ids);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectionRange, annotationRanges]);
 
-  // ── Highlight ─────────────────────────────────────────────────────────
+  const selectionHasHighlight = selectionHighlightIds.length > 0;
+
+  // ── Highlight (toggle) ────────────────────────────────────────────────
   const handleHighlight = useCallback(async () => {
     if (!anchor) return;
+
+    if (selectionHasHighlight) {
+      await Promise.all(
+        selectionHighlightIds.map((id) =>
+          fetch(`/api/annotations/${id}`, { method: "DELETE", credentials: "include" })
+        )
+      );
+    } else {
+      const anchorSpan = spans[anchor.spanIdx];
+      const endSpan = selEnd ? spans[selEnd.spanIdx] : anchorSpan;
+      const lo = anchor.spanIdx <= (selEnd?.spanIdx ?? anchor.spanIdx) ? anchorSpan : endSpan;
+      const hi = anchor.spanIdx <= (selEnd?.spanIdx ?? anchor.spanIdx) ? endSpan : anchorSpan;
+
+      await fetch("/api/annotations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          bookId,
+          chapterNumber: chapterNum,
+          startSegmentSeq: lo.segmentSeq,
+          startChar: lo.segCharStart,
+          endSegmentSeq: hi.segmentSeq,
+          endChar: hi.segCharEnd,
+          type: "highlight",
+        }),
+      });
+    }
+    clearSelection();
+    onAnnotationSaved();
+  }, [anchor, selEnd, spans, bookId, chapterNum, clearSelection, onAnnotationSaved, selectionHasHighlight, selectionHighlightIds]);
+
+  // ── Comment ──────────────────────────────────────────────────────────
+  const handleComment = useCallback(() => {
+    if (!anchor) return;
+    const isMobile = window.innerWidth < MOBILE_BREAKPOINT;
+    if (isMobile || !onStartComment) {
+      setShowMobileCommentInput(true);
+      return;
+    }
+    // Desktop: emit intent upward to ChapterBlocks
     const anchorSpan = spans[anchor.spanIdx];
     const endSpan = selEnd ? spans[selEnd.spanIdx] : anchorSpan;
     const lo = anchor.spanIdx <= (selEnd?.spanIdx ?? anchor.spanIdx) ? anchorSpan : endSpan;
     const hi = anchor.spanIdx <= (selEnd?.spanIdx ?? anchor.spanIdx) ? endSpan : anchorSpan;
-
-    await fetch("/api/annotations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        bookId,
-        chapterNumber: chapterNum,
-        startSegmentSeq: lo.segmentSeq,
-        startChar: lo.segCharStart,
-        endSegmentSeq: hi.segmentSeq,
-        endChar: hi.segCharEnd,
-        type: "highlight",
-      }),
+    onStartComment({
+      startSegmentSeq: lo.segmentSeq,
+      startChar: lo.segCharStart,
+      endSegmentSeq: hi.segmentSeq,
+      endChar: hi.segCharEnd,
+      anchorElement: anchor.element,
     });
-    clearSelection();
-    onAnnotationSaved();
-  }, [anchor, selEnd, spans, bookId, chapterNum, clearSelection, onAnnotationSaved]);
+    // Don't clear selection — keep underline visible while editing
+    setAnchor(null);
+    setSelEnd(null);
+  }, [anchor, selEnd, spans, onStartComment]);
 
-  // ── Comment save ──────────────────────────────────────────────────────
-  const handleCommentSave = useCallback(async (commentText: string) => {
+  const handleMobileCommentSave = useCallback(async (commentText: string) => {
     if (!anchor) return;
     const anchorSpan = spans[anchor.spanIdx];
     const endSpan = selEnd ? spans[selEnd.spanIdx] : anchorSpan;
@@ -389,23 +421,71 @@ export function HighlightedParagraph({
     onAnnotationSaved();
   }, [onAnnotationSaved]);
 
+  const handleEditAnnotation = useCallback(async (id: number, commentText: string) => {
+    await fetch(`/api/annotations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ commentText }),
+    });
+    onAnnotationSaved();
+  }, [onAnnotationSaved]);
+
+  // Ref for the paragraph container — used to allow clicks on sibling words
+  const paraRef = useRef<HTMLSpanElement>(null);
+
   // ── No spans → plain text ─────────────────────────────────────────────
   if (!spans.length) return <>{text}</>;
+
+  // ── Per-span state (precompute) ─────────────────────────────────────
+  const spanStates = spans.map((span, i) => {
+    const inSelection = selectionRange !== null && i >= selectionRange.lo && i <= selectionRange.hi;
+    const anns = getSpanAnnotations(span);
+    const hasHighlight = anns.some((a) => a.type === "highlight");
+    const hasComment = anns.some((a) => a.type === "comment");
+    const commentIds = anns.filter((a) => a.type === "comment").map((a) => a.id);
+    return { inSelection, anns, hasHighlight, hasComment, commentIds };
+  });
 
   // ── Render ────────────────────────────────────────────────────────────
   const elements: React.ReactNode[] = [];
   let lastEnd = 0;
+  const taggedCommentIds = new Set<number>();
 
   for (let i = 0; i < spans.length; i++) {
     const span = spans[i];
-    if (span.charStart > lastEnd) {
-      elements.push(text.slice(lastEnd, span.charStart));
-    }
+    const { inSelection, anns: spanAnns, hasHighlight, hasComment, commentIds } = spanStates[i];
 
-    const inSelection = selectionRange !== null && i >= selectionRange.lo && i <= selectionRange.hi;
-    const spanAnns = getSpanAnnotations(span);
-    const hasHighlight = spanAnns.some((a) => a.type === "highlight");
-    const hasComment = spanAnns.some((a) => a.type === "comment");
+    // Gap text before this span
+    if (span.charStart > lastEnd) {
+      const gapText = text.slice(lastEnd, span.charStart);
+      const prev = i > 0 ? spanStates[i - 1] : null;
+      const gapHighlight = prev && prev.hasHighlight && hasHighlight;
+      const gapComment = prev && prev.hasComment && hasComment;
+      const gapSelection = prev && prev.inSelection && inSelection;
+      // Shared comment IDs between prev and current for gap hover
+      const gapCommentIds = prev && gapComment
+        ? prev.commentIds.filter((id) => commentIds.includes(id))
+        : [];
+
+      if (gapSelection || gapHighlight || gapComment) {
+        const gapBg = gapSelection ? "var(--color-selection)" : gapHighlight ? "var(--color-highlight)" : undefined;
+        elements.push(
+          <span key={`gap-${lastEnd}`}
+            className={hasComment ? "comment-underline" : undefined}
+            data-comment-ids={gapCommentIds.length > 0 ? gapCommentIds.join(" ") : undefined}
+            style={{
+              backgroundColor: gapBg,
+              padding: gapBg ? "3px 0" : undefined,
+              margin: gapBg ? "-3px 0" : undefined,
+              borderBottom: gapComment && !gapSelection ? "2px solid rgba(50, 100, 200, 0.7)" : undefined,
+            }}
+          >{gapText}</span>
+        );
+      } else {
+        elements.push(gapText);
+      }
+    }
 
     let bg: string | undefined;
     if (inSelection) {
@@ -414,49 +494,60 @@ export function HighlightedParagraph({
       bg = "var(--color-highlight)";
     }
 
-    const commentAnns = spanAnns.filter((a) => a.type === "comment");
+    // Tag the first span of each comment annotation for DOM positioning
+    const firstCommentAnn = spanAnns.find((a) => a.type === "comment" && !taggedCommentIds.has(a.id));
+    if (firstCommentAnn) taggedCommentIds.add(firstCommentAnn.id);
 
     elements.push(
       <span
         key={span.charStart}
         id={`w-${idPrefix}-${span.charStart}`}
+        className={hasComment ? "comment-underline" : undefined}
+        data-comment-id={firstCommentAnn?.id}
+        data-comment-ids={commentIds.length > 0 ? commentIds.join(" ") : undefined}
+        onMouseEnter={() => {
+          if (commentIds.length > 0) {
+            commentIds.forEach((id) => setCommentHover(id, true));
+          }
+        }}
+        onMouseLeave={() => {
+          if (commentIds.length > 0) {
+            commentIds.forEach((id) => setCommentHover(id, false));
+          }
+        }}
         onClick={(e) => {
           e.stopPropagation();
 
-          // If span has a comment annotation and we're not mid-selection, show popover
-          if (commentAnns.length > 0 && !anchor) {
-            const ann = commentAnns[0];
-            setCommentPopover({
-              annotationId: ann.id,
-              commentText: ann.comment_text ?? "",
-              element: e.currentTarget,
-            });
-            return;
+          // On mobile, clicking a commented span shows the comment modal
+          if (!anchor && hasComment) {
+            const isMobile = window.innerWidth < MOBILE_BREAKPOINT;
+            if (isMobile) {
+              const commentAnn = spanAnns.find((a) => a.type === "comment");
+              if (commentAnn) {
+                setMobileCommentAnn(commentAnn);
+                return;
+              }
+            }
           }
 
           // Selection logic
           if (!anchor) {
-            // First click → set anchor
             setAnchor({ spanIdx: i, charStart: span.charStart, startMs: span.start_ms, element: e.currentTarget });
             setSelEnd(null);
           } else if (i === anchor.spanIdx && !selEnd) {
-            // Re-clicking the anchor with no range → deselect
             clearSelection();
           } else if (inSelection && selEnd) {
-            // Click within an established range → deselect
             clearSelection();
           } else {
-            // Click on any other word → extend/move the end of selection
             setSelEnd({ spanIdx: i, charEnd: span.charEnd, element: e.currentTarget });
           }
         }}
         style={{
           cursor: "pointer",
           backgroundColor: bg,
-          borderRadius: inSelection || hasHighlight ? "3px" : undefined,
-          padding: hasHighlight ? "2px 4px" : inSelection ? "2px 1px" : undefined,
-          margin: hasHighlight ? "0 -4px" : undefined,
-          borderBottom: hasComment && !inSelection ? "2px solid rgba(100, 160, 255, 0.7)" : undefined,
+          padding: bg ? "3px 0" : undefined,
+          margin: bg ? "-3px 0" : undefined,
+          borderBottom: hasComment && !inSelection ? "2px solid rgba(50, 100, 200, 0.7)" : undefined,
         }}
       >
         {text.slice(span.charStart, span.charEnd)}
@@ -469,40 +560,40 @@ export function HighlightedParagraph({
   if (lastEnd < text.length) elements.push(text.slice(lastEnd));
 
   return (
-    <>
+    <span ref={paraRef}>
       {elements}
 
       {/* Word popup */}
-      {anchor && !showCommentInput && (
+      {anchor && !showMobileCommentInput && (
         <WordPopup
           anchorEl={anchor.element}
           anchorEl2={selEnd?.element}
+          containerEl={paraRef.current}
+          isHighlighted={selectionHasHighlight}
           onPlay={handlePlay}
-          onBookmark={handleBookmark}
           onHighlight={handleHighlight}
-          onComment={() => setShowCommentInput(true)}
+          onComment={handleComment}
           onClose={clearSelection}
         />
       )}
 
-      {/* Comment input */}
-      {anchor && showCommentInput && (
-        <CommentInputUI
-          anchorEl={anchor.element}
-          anchorEl2={selEnd?.element}
-          onSave={handleCommentSave}
+      {/* Comment input (mobile modal) */}
+      {anchor && showMobileCommentInput && (
+        <CommentInputModal
+          onSave={handleMobileCommentSave}
           onCancel={clearSelection}
         />
       )}
 
-      {/* Comment popover for existing annotations */}
-      {commentPopover && (
-        <CommentPopoverUI
-          popover={commentPopover}
+      {/* Mobile comment view modal */}
+      {mobileCommentAnn && (
+        <CommentModal
+          annotation={mobileCommentAnn}
           onDelete={handleDeleteAnnotation}
-          onClose={() => setCommentPopover(null)}
+          onEdit={handleEditAnnotation}
+          onClose={() => setMobileCommentAnn(null)}
         />
       )}
-    </>
+    </span>
   );
 }

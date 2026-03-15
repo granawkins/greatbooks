@@ -38,8 +38,8 @@
   --color-accent: #C4A97D;
   --color-accent-hover: #D4BC94;
   --color-border: #302C25;
-  --color-highlight: rgba(0, 230, 200, 0.75);
-  --color-selection: rgba(0, 230, 200, 0.3);
+  --color-highlight: rgba(220, 170, 50, 0.65);
+  --color-selection: rgba(220, 170, 50, 0.2);
   --color-surface: rgba(20, 19, 17, 0.7);
 }
 
@@ -71,4 +71,52 @@ body::before {
 
 :root.dark body::before {
   opacity: 0.03;
+}
+
+/* ── Chapter layout: text + optional margin column ──────────────── */
+
+.chapter-layout {
+  padding: 0 1.5rem;
+}
+
+.chapter-text {
+  max-width: 68ch;
+  margin: 0 auto;
+  position: relative;
+}
+
+.chapter-margin {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  width: 220px;
+  margin-left: 1rem;
+}
+
+/* No margin column on mobile */
+@media (max-width: 767px) {
+  .chapter-margin {
+    display: none;
+  }
+}
+
+/* ── Comment hover coordination (DOM-driven, no React re-render) ── */
+
+.comment-hover.comment-underline {
+  background-color: var(--color-selection);
+  padding: 3px 0;
+  margin: -3px 0;
+}
+
+.margin-comment-card.comment-hover {
+  background: var(--color-bg-secondary) !important;
+}
+
+.margin-comment-card:hover {
+  background: var(--color-bg-secondary) !important;
+}
+
+.margin-comment-card:hover .margin-comment-x,
+.margin-comment-card.comment-hover .margin-comment-x {
+  visibility: visible !important;
 }
