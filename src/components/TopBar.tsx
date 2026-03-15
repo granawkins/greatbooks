@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTopBar } from "@/lib/TopBarContext";
 import { ChapterListIcon } from "@/components/audio/icons";
@@ -96,15 +97,30 @@ export default function TopBar() {
           <Link
             href="/"
             style={{
-              fontFamily: "var(--font-ui)",
-              fontSize: showBookNav ? "0.9375rem" : "1.125rem",
-              fontWeight: 500,
-              color: "var(--color-text-secondary)",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
               textDecoration: "none",
               flexShrink: 0,
             }}
           >
-            {showBookNav ? "GB" : "Great Books"}
+            <Image
+              src="/logo.png"
+              alt="Great Books"
+              width={showBookNav ? 22 : 28}
+              height={showBookNav ? 22 : 28}
+              style={{ display: "block", flexShrink: 0 }}
+            />
+            {!showBookNav && (
+              <span style={{
+                fontFamily: "var(--font-ui)",
+                fontSize: "1.125rem",
+                fontWeight: 500,
+                color: "var(--color-text-secondary)",
+              }}>
+                Great Books
+              </span>
+            )}
           </Link>
 
           {/* Book nav — appears when scrolled on a book page */}

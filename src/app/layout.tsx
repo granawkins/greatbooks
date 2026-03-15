@@ -25,6 +25,13 @@ export const metadata: Metadata = {
   title: "Great Books",
   description:
     "Classic literature — read, listen, and explore with AI.",
+  icons: {
+    icon: [
+      { url: "/logo-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/logo-64.png", sizes: "64x64", type: "image/png" },
+    ],
+    apple: "/logo-180.png",
+  },
 };
 
 // Inline script to set dark class before first paint (prevents flash)
