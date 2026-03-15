@@ -10,7 +10,8 @@
   --color-accent: #8B7355;
   --color-accent-hover: #72603F;
   --color-border: #DCD6CB;
-  --color-highlight: #FDE68A;
+  --color-highlight: rgba(255, 200, 50, 0.45);
+  --color-selection: rgba(139, 115, 85, 0.2);
   --color-surface: rgba(255, 255, 255, 0.6);
 
   /* Fonts */
@@ -37,7 +38,8 @@
   --color-accent: #C4A97D;
   --color-accent-hover: #D4BC94;
   --color-border: #302C25;
-  --color-highlight: #92400E;
+  --color-highlight: rgba(100, 200, 180, 0.3);
+  --color-selection: rgba(100, 200, 180, 0.15);
   --color-surface: rgba(20, 19, 17, 0.7);
 }
 
