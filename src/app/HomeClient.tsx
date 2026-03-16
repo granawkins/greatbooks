@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { BookRow } from "@/lib/db";
 import BookCard from "@/components/BookCard";
+import ProgressLine from "@/components/ProgressLine";
 import { getCoverSmUrl, getCoverLgUrl } from "@/lib/assets";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 
@@ -11,25 +12,6 @@ type ProgressMap = Record<string, { chapter_number: number; audio_position_ms: n
 type StatsMap = Record<string, { chapter_count: number; total_duration_ms: number | null; total_chars: number; discussion_count: number }>;
 
 type CourseForBook = Record<string, { courseId: string; courseTitle: string }>;
-
-function fmtDur(ms: number): string {
-  const totalMinutes = Math.round(ms / 60000);
-  const h = Math.floor(totalMinutes / 60);
-  const m = totalMinutes % 60;
-  if (h === 0) return `${m}m`;
-  if (m === 0) return `${h}h`;
-  return `${h}h ${m}m`;
-}
-
-function HeadphonesIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-block", verticalAlign: "-1px", flexShrink: 0 }}>
-      <path d="M2 10V8a6 6 0 1 1 12 0v2" />
-      <rect x="1" y="10" width="3" height="4" rx="1" fill="currentColor" stroke="none" />
-      <rect x="12" y="10" width="3" height="4" rx="1" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
 
 export default function HomeClient({
   books,
@@ -67,21 +49,7 @@ export default function HomeClient({
   const continueProgress = continueBook ? progressMap[continueBook.id] : null;
   const continueStats = continueBook ? statsMap[continueBook.id] ?? null : null;
   const continueChapterCount = continueStats?.chapter_count ?? 0;
-  const continueProgressFraction =
-    continueProgress && continueChapterCount > 0
-      ? (continueProgress.chapter_number - 1) / continueChapterCount
-      : 0;
   const bookCourseInfo = !lastIsCourse && lastBookId ? courseForBook[lastBookId] : null;
-
-  // Stats for continue section
-  const continueRemaining = (() => {
-    if (!continueStats || !continueProgress || continueChapterCount === 0) return null;
-    const totalPages = Math.max(1, Math.round(continueStats.total_chars / 1500));
-    const remainFrac = 1 - (continueProgress.chapter_number - 1) / continueChapterCount;
-    const remPages = Math.max(1, Math.round(totalPages * remainFrac));
-    const remDurationMs = continueStats.total_duration_ms ? Math.round(continueStats.total_duration_ms * remainFrac) : null;
-    return { pages: remPages, durationMs: remDurationMs };
-  })();
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)" }}>
@@ -190,45 +158,13 @@ export default function HomeClient({
                     In: {bookCourseInfo.courseTitle}
                   </p>
                 )}
-                {continueRemaining && (
-                  <p
-                    style={{
-                      fontFamily: "var(--font-ui)",
-                      fontSize: "0.8rem",
-                      color: "var(--color-text-secondary)",
-                      margin: "4px 0 10px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.375rem",
-                    }}
-                  >
-                    <span style={{ fontStyle: "italic", opacity: 0.7 }}>Remaining</span>
-                    <span>{continueRemaining.pages} pages</span>
-                    {continueRemaining.durationMs != null && continueRemaining.durationMs > 0 && (
-                      <>
-                        <HeadphonesIcon />
-                        <span>{fmtDur(continueRemaining.durationMs)}</span>
-                      </>
-                    )}
-                  </p>
-                )}
-                {/* Progress bar */}
-                <div
-                  style={{
-                    width: "140px",
-                    height: "3px",
-                    backgroundColor: "var(--color-border)",
-                    borderRadius: "2px",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${Math.max(continueProgressFraction * 100, 2)}%`,
-                      backgroundColor: "var(--color-accent)",
-                      borderRadius: "2px",
-                    }}
+                <div style={{ color: "var(--color-text-secondary)", margin: "4px 0 0" }}>
+                  <ProgressLine
+                    totalChars={continueStats?.total_chars ?? 0}
+                    totalDurationMs={continueStats?.total_duration_ms ?? null}
+                    chapterCount={continueChapterCount}
+                    progressChapter={continueProgress?.chapter_number}
+                    barWidth="140px"
                   />
                 </div>
               </div>
@@ -243,10 +179,6 @@ export default function HomeClient({
           const courseProgress = progressMap[course.id];
           const bookIds = courseBooks[course.id] ?? [];
           const courseChapterCount = courseStats?.chapter_count ?? 0;
-          const courseProgressFraction =
-            enrolled && courseProgress && courseChapterCount > 0
-              ? (courseProgress.chapter_number - 1) / courseChapterCount
-              : 0;
           return (
             <section key={course.id} style={{ marginBottom: "3rem" }}>
               <Link
@@ -373,89 +305,20 @@ export default function HomeClient({
                     </span>
 
                     {/* Progress info */}
-                    {enrolled && courseProgress ? (
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "4px" }}>
-                        <span
-                          style={{
-                            fontFamily: "var(--font-ui)",
-                            fontSize: "0.75rem",
-                            color: "rgba(255,255,255,0.8)",
-                            textShadow: "0 1px 4px rgba(0,0,0,0.5)",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.375rem",
-                          }}
-                        >
-                          {(() => {
-                            const cs = courseStats;
-                            if (!cs) return null;
-                            const totalPages = Math.max(1, Math.round(cs.total_chars / 1500));
-                            const remFrac = 1 - (courseProgress.chapter_number - 1) / courseChapterCount;
-                            const remPages = Math.max(1, Math.round(totalPages * remFrac));
-                            const remDur = cs.total_duration_ms ? Math.round(cs.total_duration_ms * remFrac) : null;
-                            return (
-                              <>
-                                <span style={{ fontStyle: "italic", opacity: 0.7 }}>Remaining</span>
-                                <span>{remPages} pages</span>
-                                {remDur != null && remDur > 0 && (
-                                  <>
-                                    <HeadphonesIcon />
-                                    <span>{fmtDur(remDur)}</span>
-                                  </>
-                                )}
-                              </>
-                            );
-                          })()}
-                        </span>
-                        <div
-                          style={{
-                            width: "120px",
-                            height: "3px",
-                            backgroundColor: "rgba(255,255,255,0.3)",
-                            borderRadius: "2px",
-                            overflow: "hidden",
-                          }}
-                        >
-                          <div
-                            style={{
-                              height: "100%",
-                              width: `${Math.max(courseProgressFraction * 100, 2)}%`,
-                              backgroundColor: "rgba(255,255,255,0.9)",
-                              borderRadius: "2px",
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <span
-                        style={{
-                          fontFamily: "var(--font-ui)",
-                          fontSize: "0.75rem",
-                          color: "rgba(255,255,255,0.8)",
-                          textShadow: "0 1px 4px rgba(0,0,0,0.5)",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.375rem",
-                        }}
-                      >
-                        {(() => {
-                          const cs = courseStats;
-                          if (!cs) return `${courseChapterCount} chapters`;
-                          const totalPages = Math.max(1, Math.round(cs.total_chars / 1500));
-                          return (
-                            <>
-                              <span>{totalPages} pages</span>
-                              {cs.total_duration_ms != null && cs.total_duration_ms > 0 && (
-                                <>
-                                  <HeadphonesIcon />
-                                  <span>{fmtDur(cs.total_duration_ms)}</span>
-                                </>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </span>
-                    )}
+                    <div style={{
+                      color: "rgba(255,255,255,0.8)",
+                      textShadow: "0 1px 4px rgba(0,0,0,0.5)",
+                    }}>
+                      <ProgressLine
+                        totalChars={courseStats?.total_chars ?? 0}
+                        totalDurationMs={courseStats?.total_duration_ms ?? null}
+                        chapterCount={courseChapterCount}
+                        progressChapter={enrolled && courseProgress ? courseProgress.chapter_number : undefined}
+                        barTrackColor="rgba(255,255,255,0.3)"
+                        barFillColor="rgba(255,255,255,0.9)"
+                        barWidth="120px"
+                      />
+                    </div>
                   </div>
                 </div>
               </Link>
