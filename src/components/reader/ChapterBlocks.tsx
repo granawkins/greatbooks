@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useLayoutEffect, useEffect, useMemo } fr
 import { createPortal } from "react-dom";
 import type { Annotation, Block, NavChapter } from "./types";
 import { HighlightedParagraph, type CommentIntent } from "./HighlightedParagraph";
+import { renderInlineMarkdown } from "./InlineMarkdown";
 import { setCommentHover } from "./commentHover";
 import { ChapterListIcon } from "@/components/audio/icons";
 import { ChapterPicker } from "@/components/ChapterPicker";
@@ -293,10 +294,11 @@ export function ChapterBlocks({
                 lineHeight: "1.85",
                 paddingLeft: "1.5em",
                 margin: 0,
+                listStyleType: "disc",
               }}
             >
               {block.items.map((item, j) => (
-                <li key={j} style={{ marginBottom: "0.25em" }}>{item}</li>
+                <li key={j} style={{ marginBottom: "0.5em" }}>{renderInlineMarkdown(item)}</li>
               ))}
             </ul>
           ) : (
@@ -314,15 +316,20 @@ export function ChapterBlocks({
                 ...(verse ? { whiteSpace: "pre-line" as const } : {}),
               }}
             >
-              <HighlightedParagraph
-                para={block}
-                idPrefix={`${chapterNum}-${i}`}
-                chapterNum={chapterNum}
-                annotations={annotations}
-                bookId={bookId}
-                onAnnotationSaved={onAnnotationSaved}
-                onStartComment={handleStartComment}
-              />
+              {/* Use inline markdown for paragraphs without audio (discussion content) */}
+              {block.segments.every((s) => s.word_timestamps == null) && block.text.includes("*") ? (
+                renderInlineMarkdown(block.text)
+              ) : (
+                <HighlightedParagraph
+                  para={block}
+                  idPrefix={`${chapterNum}-${i}`}
+                  chapterNum={chapterNum}
+                  annotations={annotations}
+                  bookId={bookId}
+                  onAnnotationSaved={onAnnotationSaved}
+                  onStartComment={handleStartComment}
+                />
+              )}
             </p>
           )
         )}

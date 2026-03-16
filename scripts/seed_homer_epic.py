@@ -25,9 +25,7 @@ COURSE_DESCRIPTION = (
 
 def strip_markdown(text: str) -> str:
     """Remove markdown bold and italic markers from text."""
-    # Bold: **text** → text
     text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
-    # Italic: *text* → text
     text = re.sub(r'\*(.+?)\*', r'\1', text)
     return text
 
@@ -81,7 +79,7 @@ def parse_session_to_segments(text: str, reorder_essay: bool = True) -> list[dic
             while i + 1 < len(lines) and lines[i + 1].strip() and not lines[i + 1].startswith("- ") and not lines[i + 1].startswith("#") and not lines[i + 1].strip() == "---":
                 i += 1
                 item_text += " " + lines[i].strip()
-            segments.append({"type": "list_item", "text": strip_markdown(item_text)})
+            segments.append({"type": "list_item", "text": item_text})
             i += 1
             continue
 
@@ -97,7 +95,7 @@ def parse_session_to_segments(text: str, reorder_essay: bool = True) -> list[dic
             i += 1
 
         # Split paragraph into sentences for segments
-        full_text = strip_markdown(" ".join(para_lines))
+        full_text = " ".join(para_lines)
         sentences = re.split(r'(?<=[.!?])\s+(?=[A-Z"])', full_text)
         for sent in sentences:
             sent = sent.strip()
@@ -109,6 +107,16 @@ def parse_session_to_segments(text: str, reorder_essay: bool = True) -> list[dic
     # Clean up trailing paragraph breaks
     while segments and segments[-1]["type"] == "paragraph_break":
         segments.pop()
+
+    # Remove the Catalog of Ships footnote paragraph (redundant with intro)
+    segments = [
+        seg for seg in segments
+        if not (seg["type"] == "text" and "Catalog runs for several hundred lines" in seg.get("text", ""))
+        and not (seg["type"] == "text" and seg.get("text", "").startswith("You don't need to follow every name"))
+        and not (seg["type"] == "text" and seg.get("text", "").startswith("Let a few wash over you"))
+        and not (seg["type"] == "text" and "Homer is honoring the dead" in seg.get("text", ""))
+        and not (seg["type"] == "text" and "Epic memory sounds like this" in seg.get("text", ""))
+    ]
 
     return segments
 
@@ -213,36 +221,36 @@ def main():
 
     # Iliad sessions and chapters
     iliad_session_map = [
-        ("Session 1: The Quarrel (Books I\u2013II)", range(1, 3)),
-        ("Session 2: The World Opens (Books III\u2013IX)", range(3, 10)),
-        ("Session 3: The Trojans Press (Books X\u2013XV)", range(10, 16)),
-        ("Session 4: The Pivot (Books XVI\u2013XVIII)", range(16, 19)),
-        ("Session 5: The Return (Books XIX\u2013XXII)", range(19, 23)),
-        ("Session 6: The Ending (Books XXIII\u2013XXIV)", range(23, 25)),
+        (1, "The Iliad I\u2013II", range(1, 3)),
+        (2, "The Iliad III\u2013IX", range(3, 10)),
+        (3, "The Iliad X\u2013XV", range(10, 16)),
+        (4, "The Iliad XVI\u2013XVIII", range(16, 19)),
+        (5, "The Iliad XIX\u2013XXII", range(19, 23)),
+        (6, "The Iliad XXIII\u2013XXIV", range(23, 25)),
     ]
 
-    for session_title, chapter_range in iliad_session_map:
+    for session_num, session_label, chapter_range in iliad_session_map:
         for ch_num in chapter_range:
             course_items.append(("text", f"Iliad: Book {ch_num_to_roman(ch_num)}", "homer-iliad", ch_num, None))
-        course_items.append(("discussion", f"Iliad \u2014 {session_title}", "homer-iliad", None, session_title))
+        course_items.append(("discussion", f"Study Guide {session_num}: {session_label}", "homer-iliad", None, f"Session {session_num}"))
 
     # Odyssey introduction (Before You Read) — separate chapter between Iliad and Odyssey
     course_items.append(("discussion", "Introduction to the Odyssey", "homer-odyssey", None, "intro_odyssey"))
 
     # Odyssey sessions and chapters
     odyssey_session_map = [
-        ("Session 1: The Son Sets Out (Books I\u2013IV)", range(1, 5)),
-        ("Session 2: The Wanderings Begin (Books V\u2013VIII)", range(5, 9)),
-        ("Session 3: Monsters and the Underworld (Books IX\u2013XII)", range(9, 13)),
-        ("Session 4: The Return (Books XIII\u2013XVI)", range(13, 17)),
-        ("Session 5: The Disguise Holds (Books XVII\u2013XX)", range(17, 21)),
-        ("Session 6: The Reckoning (Books XXI\u2013XXIV)", range(21, 25)),
+        (7, "The Odyssey I\u2013IV", range(1, 5)),
+        (8, "The Odyssey V\u2013VIII", range(5, 9)),
+        (9, "The Odyssey IX\u2013XII", range(9, 13)),
+        (10, "The Odyssey XIII\u2013XVI", range(13, 17)),
+        (11, "The Odyssey XVII\u2013XX", range(17, 21)),
+        (12, "The Odyssey XXI\u2013XXIV", range(21, 25)),
     ]
 
-    for session_title, chapter_range in odyssey_session_map:
+    for session_num, session_label, chapter_range in odyssey_session_map:
         for ch_num in chapter_range:
             course_items.append(("text", f"Odyssey: Book {ch_num_to_roman(ch_num)}", "homer-odyssey", ch_num, None))
-        course_items.append(("discussion", f"Odyssey \u2014 {session_title}", "homer-odyssey", None, session_title))
+        course_items.append(("discussion", f"Study Guide {session_num}: {session_label}", "homer-odyssey", None, f"Session {session_num - 6}"))
 
     # Insert chapters and segments
     chapter_num = 0
@@ -273,13 +281,16 @@ def main():
             elif session_key == "intro_odyssey":
                 segments = generate_book_intro_segments("The Odyssey", odyssey_sessions)
             else:
-                # Find matching session content
+                # Find matching session content (session_key is e.g. "Session 1")
                 session_content = None
                 sessions = iliad_sessions if source_book == "homer-iliad" else odyssey_sessions
                 for key, content in sessions.items():
-                    if key.startswith("Session") and session_key.startswith("Session") and key.split(":")[0] == session_key.split(":")[0]:
-                        session_content = content
-                        break
+                    if key.startswith("Session") and session_key.startswith("Session"):
+                        # Match "Session N" prefix
+                        key_num = key.split(":")[0].strip()
+                        if key_num == session_key:
+                            session_content = content
+                            break
 
                 if session_content:
                     segments = parse_session_to_segments(session_content)
