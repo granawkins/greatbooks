@@ -21,37 +21,20 @@ function formatDuration(ms: number): string {
   return `${hours}h ${minutes}m`;
 }
 
-function buildStatsLine(
-  totalPages: number,
-  totalDuration: number | null,
-  discussionCount: number,
-  isCourse: boolean,
-  remaining: boolean,
-): string {
-  const parts: string[] = [];
-
-  // Pages with optional duration in parens
-  if (totalDuration) {
-    parts.push(`${totalPages} pages (${formatDuration(totalDuration)})`);
-  } else {
-    parts.push(`${totalPages} pages`);
-  }
-
-  // Discussion sessions for courses
-  if (isCourse && discussionCount > 0) {
-    parts.push(`${discussionCount} session${discussionCount !== 1 ? "s" : ""}`);
-  }
-
-  const line = parts.join(", ");
-  return remaining ? `Remaining: ${line}` : line;
+function HeadphonesIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-block", verticalAlign: "-1px" }}>
+      <path d="M2 10V8a6 6 0 1 1 12 0v2" />
+      <rect x="1" y="10" width="3" height="4" rx="1" fill="currentColor" stroke="none" />
+      <rect x="12" y="10" width="3" height="4" rx="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
 }
 
 export default function BookCard({ book, progress, stats, courseInfo }: BookCardProps) {
   const chapterCount = stats?.chapter_count ?? 0;
   const totalDuration = stats?.total_duration_ms ?? null;
   const totalChars = stats?.total_chars ?? 0;
-  const discussionCount = stats?.discussion_count ?? 0;
-  const isCourse = book.type === "course";
 
   const totalPages = Math.max(1, Math.round(totalChars / CHARS_PER_PAGE));
 
@@ -63,13 +46,10 @@ export default function BookCard({ book, progress, stats, courseInfo }: BookCard
   const inProgress = progress && chapterCount > 0;
   const remainingFraction = inProgress ? 1 - (progress.chapter_number - 1) / chapterCount : 1;
 
-  const remainingPages = Math.max(1, Math.round(totalPages * remainingFraction));
-  const remainingDuration = totalDuration ? Math.round(totalDuration * remainingFraction) : null;
-  const remainingDiscussions = isCourse ? Math.max(0, Math.round(discussionCount * remainingFraction)) : 0;
-
-  const statsLine = inProgress
-    ? buildStatsLine(remainingPages, remainingDuration, remainingDiscussions, isCourse, true)
-    : buildStatsLine(totalPages, totalDuration, discussionCount, isCourse, false);
+  const displayPages = inProgress ? Math.max(1, Math.round(totalPages * remainingFraction)) : totalPages;
+  const displayDuration = totalDuration
+    ? (inProgress ? Math.round(totalDuration * remainingFraction) : totalDuration)
+    : null;
 
   return (
     <Link href={`/${book.id}`} className="block group">
@@ -100,9 +80,23 @@ export default function BookCard({ book, progress, stats, courseInfo }: BookCard
             fontSize: "0.75rem",
             color: "var(--color-text-secondary)",
             fontFamily: "var(--font-ui)",
+            margin: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: "0.375rem",
+            flexWrap: "wrap",
           }}
         >
-          {statsLine}
+          {inProgress && (
+            <span style={{ fontStyle: "italic", opacity: 0.7 }}>Remaining</span>
+          )}
+          <span>{displayPages} pages</span>
+          {displayDuration != null && displayDuration > 0 && (
+            <>
+              <HeadphonesIcon />
+              <span>{formatDuration(displayDuration)}</span>
+            </>
+          )}
         </p>
         {inProgress && (
           <div
