@@ -212,182 +212,167 @@ export default function HomeClient({
                   overflow: "hidden",
                   position: "relative",
                   transition: "transform 0.15s",
+                  backgroundImage: `url(${getCoverLgUrl(course.id)})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
                 }}
                 className="group hover:scale-[1.005]"
               >
-                {/* Cover image with overlay */}
-                <div style={{ position: "relative", width: "100%" }}>
-                  {/* Desktop: fixed aspect ratio. Mobile: auto height cropped */}
-                  <div
-                    className="course-hero-img"
-                    style={{ position: "relative", width: "100%", aspectRatio: "3 / 2" }}
-                  >
-                    <Image
-                      src={getCoverLgUrl(course.id)}
-                      alt={course.title}
-                      fill
-                      sizes="68ch"
-                      className="object-cover"
-                      priority
-                    />
-                    {/* Gradient overlay */}
-                    <div
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        background: "linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0.1) 100%)",
-                      }}
-                    />
-                  </div>
+                {/* Gradient overlay */}
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: "linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0.1) 100%)",
+                  }}
+                />
 
-                  {/* Content overlay */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      padding: "1.5rem",
-                    }}
-                  >
-                    {/* Text — left side */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                {/* Content */}
+                <div
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "1.5rem",
+                    minHeight: "200px",
+                  }}
+                >
+                  {/* Text — left side */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p
+                      style={{
+                        fontFamily: "var(--font-ui)",
+                        fontSize: "0.7rem",
+                        fontWeight: 500,
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                        color: "rgba(255,255,255,0.7)",
+                        margin: "0 0 0.25rem",
+                      }}
+                    >
+                      Course
+                    </p>
+                    <h2
+                      style={{
+                        fontFamily: "var(--font-display)",
+                        fontSize: "1.5rem",
+                        fontWeight: 400,
+                        color: "#fff",
+                        margin: "0 0 0.25rem",
+                      }}
+                    >
+                      {course.title}
+                    </h2>
+                    {course.description && (
                       <p
                         style={{
-                          fontFamily: "var(--font-ui)",
-                          fontSize: "0.7rem",
-                          fontWeight: 500,
-                          letterSpacing: "0.06em",
-                          textTransform: "uppercase",
-                          color: "rgba(255,255,255,0.7)",
-                          margin: "0 0 0.25rem",
-                        }}
-                      >
-                        Course
-                      </p>
-                      <h2
-                        style={{
-                          fontFamily: "var(--font-display)",
-                          fontSize: "1.5rem",
-                          fontWeight: 400,
-                          color: "#fff",
-                          margin: "0 0 0.25rem",
-                        }}
-                      >
-                        {course.title}
-                      </h2>
-                      {course.description && (
-                        <p
-                          style={{
-                            fontFamily: "var(--font-body)",
-                            fontSize: "0.875rem",
-                            color: "rgba(255,255,255,0.75)",
-                            margin: "0 0 1rem",
-                            lineHeight: 1.5,
-                          }}
-                        >
-                          {course.description}
-                        </p>
-                      )}
-
-                      {/* Mobile: book covers inline */}
-                      {bookIds.length > 0 && (
-                        <div
-                          className="sm:hidden"
-                          style={{
-                            display: "flex",
-                            gap: "0.5rem",
-                            marginBottom: "1rem",
-                          }}
-                        >
-                          {bookIds.map((bid) => (
-                            <div
-                              key={bid}
-                              style={{
-                                width: 48,
-                                height: 64,
-                                borderRadius: "3px",
-                                overflow: "hidden",
-                                position: "relative",
-                                flexShrink: 0,
-                                boxShadow: "2px 3px 8px rgba(0,0,0,0.3)",
-                              }}
-                            >
-                              <Image
-                                src={getCoverSmUrl(bid)}
-                                alt=""
-                                fill
-                                sizes="48px"
-                                className="object-cover"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "0.5rem 1.25rem",
-                          backgroundColor: "rgba(255,255,255,0.9)",
-                          color: "var(--color-text)",
-                          borderRadius: "var(--radius)",
-                          fontFamily: "var(--font-ui)",
+                          fontFamily: "var(--font-body)",
                           fontSize: "0.875rem",
-                          fontWeight: 500,
+                          color: "rgba(255,255,255,0.75)",
+                          margin: "0 0 1rem",
+                          lineHeight: 1.5,
                         }}
                       >
-                        {enrolled ? "Continue" : "Start Course"}
-                      </span>
-                      {enrolled && courseStats && courseProgress && (
-                        <span
-                          style={{
-                            marginLeft: "1rem",
-                            fontFamily: "var(--font-ui)",
-                            fontSize: "0.75rem",
-                            color: "rgba(255,255,255,0.7)",
-                          }}
-                        >
-                          Chapter {courseProgress.chapter_number} of {courseStats.chapter_count}
-                        </span>
-                      )}
-                    </div>
+                        {course.description}
+                      </p>
+                    )}
 
-                    {/* Desktop: book covers stacked on right */}
+                    {/* Mobile: book covers inline */}
                     {bookIds.length > 0 && (
                       <div
-                        className="hidden sm:flex"
+                        className="sm:hidden"
                         style={{
-                          flexDirection: "column",
-                          gap: "0.625rem",
-                          marginLeft: "1.5rem",
-                          flexShrink: 0,
+                          display: "flex",
+                          gap: "0.5rem",
+                          marginBottom: "1rem",
                         }}
                       >
                         {bookIds.map((bid) => (
                           <div
                             key={bid}
                             style={{
-                              width: 80,
-                              height: 107,
+                              width: 64,
+                              height: 85,
                               borderRadius: "3px",
                               overflow: "hidden",
                               position: "relative",
-                              boxShadow: "4px 6px 16px rgba(0,0,0,0.3)",
+                              flexShrink: 0,
+                              boxShadow: "2px 3px 8px rgba(0,0,0,0.3)",
                             }}
                           >
                             <Image
                               src={getCoverSmUrl(bid)}
                               alt=""
                               fill
-                              sizes="80px"
+                              sizes="64px"
                               className="object-cover"
                             />
                           </div>
                         ))}
                       </div>
                     )}
+
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "0.5rem 1.25rem",
+                        backgroundColor: "rgba(255,255,255,0.9)",
+                        color: "var(--color-text)",
+                        borderRadius: "var(--radius)",
+                        fontFamily: "var(--font-ui)",
+                        fontSize: "0.875rem",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {enrolled ? "Continue" : "Start Course"}
+                    </span>
+                    {enrolled && courseStats && courseProgress && (
+                      <span
+                        style={{
+                          marginLeft: "1rem",
+                          fontFamily: "var(--font-ui)",
+                          fontSize: "0.75rem",
+                          color: "rgba(255,255,255,0.7)",
+                        }}
+                      >
+                        Chapter {courseProgress.chapter_number} of {courseStats.chapter_count}
+                      </span>
+                    )}
                   </div>
+
+                  {/* Desktop: book covers stacked on right */}
+                  {bookIds.length > 0 && (
+                    <div
+                      className="hidden sm:flex"
+                      style={{
+                        flexDirection: "column",
+                        gap: "0.5rem",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {bookIds.map((bid) => (
+                        <div
+                          key={bid}
+                          style={{
+                            width: 100,
+                            height: 133,
+                            borderRadius: "3px",
+                            overflow: "hidden",
+                            position: "relative",
+                            boxShadow: "4px 6px 16px rgba(0,0,0,0.3)",
+                          }}
+                        >
+                          <Image
+                            src={getCoverSmUrl(bid)}
+                            alt=""
+                            fill
+                            sizes="100px"
+                            className="object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </Link>
             </section>
