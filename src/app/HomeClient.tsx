@@ -327,13 +327,38 @@ export default function HomeClient({
         })}
 
         {/* All books */}
-        <BooksGrid books={books} />
+        <BooksGrid books={books} statsMap={statsMap} />
       </main>
     </div>
   );
 }
 
-function BooksGrid({ books }: { books: BookRow[] }) {
+function PagesIcon() {
+  return (
+    <svg width="0.85em" height="0.85em" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" style={{ display: "inline", verticalAlign: "-0.05em" }}>
+      <rect x="4" y="1" width="9" height="12" rx="1" />
+      <rect x="3" y="3" width="9" height="12" rx="1" fill="var(--color-bg, #fff)" />
+      <rect x="3" y="3" width="9" height="12" rx="1" />
+    </svg>
+  );
+}
+
+function HeadphonesIcon() {
+  return (
+    <svg width="0.85em" height="0.85em" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline", verticalAlign: "-0.05em" }}>
+      <path d="M2 10V8a6 6 0 1 1 12 0v2" />
+      <rect x="1" y="10" width="3" height="4" rx="1" fill="currentColor" stroke="none" />
+      <rect x="12" y="10" width="3" height="4" rx="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function formatHours(ms: number): string {
+  const hours = Math.round(ms / 3600000);
+  return hours < 1 ? "<1h" : `${hours}h`;
+}
+
+function BooksGrid({ books, statsMap }: { books: BookRow[]; statsMap: StatsMap }) {
   const [search, setSearch] = useState("");
   const query = search.toLowerCase().trim();
   const filtered = query
@@ -365,28 +390,46 @@ function BooksGrid({ books }: { books: BookRow[] }) {
         }}
       />
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-5 gap-y-6">
-        {filtered.map((book) => (
-          <Link key={book.id} href={`/${book.id}`} className="block group">
-            <div
-              className="relative overflow-hidden transition-transform duration-200 group-hover:scale-[1.02]"
-              style={{
-                aspectRatio: "3 / 4",
-                borderRadius: "3px",
-                boxShadow:
-                  "4px 6px 16px rgba(0,0,0,0.12), 1px 2px 4px rgba(0,0,0,0.08), inset -1px 0 2px rgba(0,0,0,0.04)",
-                backgroundColor: "var(--color-bg-secondary)",
-              }}
-            >
-              <Image
-                src={getCoverSmUrl(book.id)}
-                alt={`${book.title} cover`}
-                fill
-                sizes="(max-width: 640px) 50vw, 33vw"
-                className="object-cover"
-              />
-            </div>
-          </Link>
-        ))}
+        {filtered.map((book) => {
+          const stats = statsMap[book.id];
+          const totalPages = stats ? Math.max(1, Math.round(stats.total_chars / 1500)) : 0;
+          const hasDuration = stats?.total_duration_ms != null && stats.total_duration_ms > 0;
+          return (
+            <Link key={book.id} href={`/${book.id}`} className="block group">
+              <div
+                className="relative overflow-hidden transition-transform duration-200 group-hover:scale-[1.02]"
+                style={{
+                  aspectRatio: "3 / 4",
+                  borderRadius: "3px",
+                  boxShadow:
+                    "4px 6px 16px rgba(0,0,0,0.12), 1px 2px 4px rgba(0,0,0,0.08), inset -1px 0 2px rgba(0,0,0,0.04)",
+                  backgroundColor: "var(--color-bg-secondary)",
+                }}
+              >
+                <Image
+                  src={getCoverSmUrl(book.id)}
+                  alt={`${book.title} cover`}
+                  fill
+                  sizes="(max-width: 640px) 50vw, 33vw"
+                  className="object-cover"
+                />
+              </div>
+              {totalPages > 0 && (
+                <p
+                  style={{
+                    textAlign: "center",
+                    fontSize: "0.75rem",
+                    color: "var(--color-text-secondary)",
+                    fontFamily: "var(--font-ui)",
+                    marginTop: "0.375rem",
+                  }}
+                >
+                  <PagesIcon />{totalPages}{hasDuration && <>{" \u00a0 "}<HeadphonesIcon />{formatHours(stats!.total_duration_ms!)}</>}
+                </p>
+              )}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
