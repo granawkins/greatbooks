@@ -13,6 +13,14 @@ type StatsMap = Record<string, { chapter_count: number; total_duration_ms: numbe
 
 type CourseForBook = Record<string, { courseId: string; courseTitle: string }>;
 
+const sectionHeadingStyle = {
+  fontFamily: "var(--font-display)",
+  fontSize: "1.5rem",
+  fontWeight: 400,
+  color: "var(--color-text)",
+  marginBottom: "1rem",
+} as const;
+
 export default function HomeClient({
   books,
   courses,
@@ -68,20 +76,11 @@ export default function HomeClient({
       </header>
 
       <main style={{ maxWidth: "var(--content-max-width)", margin: "0 auto", padding: "0 1.5rem", paddingBottom: session ? 220 : 64 }}>
-        {/* Continue — most recently read item (book or course) */}
+
+        {/* ── Continue ── */}
         {continueBook && continueProgress && (
           <section style={{ marginBottom: "3rem" }}>
-            <h2
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: "1.5rem",
-                fontWeight: 400,
-                color: "var(--color-text)",
-                marginBottom: "1rem",
-              }}
-            >
-              Continue
-            </h2>
+            <h2 style={sectionHeadingStyle}>Continue</h2>
             <Link
               href={bookCourseInfo
                 ? `/${bookCourseInfo.courseId}`
@@ -95,7 +94,6 @@ export default function HomeClient({
                 textDecoration: "none",
               }}
             >
-              {/* Cover */}
               <div
                 className="transition-transform duration-200 group-hover:scale-[1.02]"
                 style={{
@@ -105,8 +103,7 @@ export default function HomeClient({
                   borderRadius: "4px",
                   overflow: "hidden",
                   position: "relative",
-                  boxShadow:
-                    "4px 6px 16px rgba(0,0,0,0.12), 1px 2px 4px rgba(0,0,0,0.08)",
+                  boxShadow: "4px 6px 16px rgba(0,0,0,0.12), 1px 2px 4px rgba(0,0,0,0.08)",
                 }}
               >
                 <Image
@@ -117,24 +114,7 @@ export default function HomeClient({
                   className="object-cover"
                 />
               </div>
-
-              {/* Info */}
               <div>
-                {lastIsCourse && (
-                  <p
-                    style={{
-                      fontFamily: "var(--font-ui)",
-                      fontSize: "0.7rem",
-                      fontWeight: 500,
-                      letterSpacing: "0.06em",
-                      textTransform: "uppercase",
-                      color: "var(--color-accent)",
-                      margin: "0 0 0.25rem",
-                    }}
-                  >
-                    Course
-                  </p>
-                )}
                 <p
                   style={{
                     fontFamily: "var(--font-display)",
@@ -172,162 +152,161 @@ export default function HomeClient({
           </section>
         )}
 
-        {/* Courses */}
-        {courses.map((course) => {
-          const enrolled = !!progressMap[course.id];
-          const courseStats = statsMap[course.id];
-          const courseProgress = progressMap[course.id];
-          const bookIds = courseBooks[course.id] ?? [];
-          const courseChapterCount = courseStats?.chapter_count ?? 0;
-          return (
-            <section key={course.id} style={{ marginBottom: "3rem" }}>
-              <Link
-                href={enrolled ? `/${course.id}` : `/${course.id}/contents`}
-                style={{
-                  display: "block",
-                  textDecoration: "none",
-                  borderRadius: "var(--radius-lg)",
-                  overflow: "hidden",
-                  position: "relative",
-                  backgroundImage: `url(${getCoverLgUrl(course.id)})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}
-                className="group hover:scale-[1.005]"
-              >
-                {/* Subtle overlay */}
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    background: "rgba(0,0,0,0.25)",
-                  }}
-                />
-
-                {/* Content — centered */}
-                <div
-                  style={{
-                    position: "relative",
-                    textAlign: "center",
-                    padding: "2rem 1.5rem",
-                  }}
-                >
-                  {/* Course label */}
-                  <p
+        {/* ── Courses ── */}
+        {courses.length > 0 && (
+          <section style={{ marginBottom: "3rem" }}>
+            <h2 style={sectionHeadingStyle}>Courses</h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              {courses.map((course) => {
+                const enrolled = !!progressMap[course.id];
+                const courseStats = statsMap[course.id];
+                const courseProgress = progressMap[course.id];
+                const bookIds = courseBooks[course.id] ?? [];
+                const courseChapterCount = courseStats?.chapter_count ?? 0;
+                return (
+                  <Link
+                    key={course.id}
+                    href={enrolled ? `/${course.id}` : `/${course.id}/contents`}
                     style={{
-                      fontFamily: "var(--font-ui)",
-                      fontSize: "0.7rem",
-                      fontWeight: 500,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                      color: "var(--color-accent)",
-                      margin: "0 0 0.25rem",
-                      textShadow: "0 1px 4px rgba(0,0,0,0.5)",
+                      display: "block",
+                      textDecoration: "none",
+                      borderRadius: "var(--radius-lg)",
+                      overflow: "hidden",
+                      position: "relative",
+                      backgroundImage: `url(${getCoverLgUrl(course.id)})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
                     }}
+                    className="group hover:scale-[1.005]"
                   >
-                    Course
-                  </p>
-
-                  {/* Title */}
-                  <h2
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: "1.5rem",
-                      fontWeight: 400,
-                      color: "#fff",
-                      margin: "0 0 1.25rem",
-                      textShadow: "0 1px 6px rgba(0,0,0,0.6)",
-                    }}
-                  >
-                    {course.title}
-                  </h2>
-
-                  {/* Book covers — side by side, centered, shrink on mobile */}
-                  {bookIds.length > 0 && (
                     <div
                       style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        gap: "1rem",
-                        marginBottom: "1.25rem",
+                        position: "absolute",
+                        inset: 0,
+                        background: "rgba(0,0,0,0.25)",
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: "relative",
+                        textAlign: "center",
+                        padding: "2rem 1.5rem",
                       }}
                     >
-                      {bookIds.map((bid) => (
-                        <div
-                          key={bid}
-                          className="transition-transform duration-200 group-hover:scale-[1.02]"
+                      <h3
+                        style={{
+                          fontFamily: "var(--font-display)",
+                          fontSize: "1.5rem",
+                          fontWeight: 400,
+                          color: "#fff",
+                          margin: 0,
+                          textShadow: "0 1px 6px rgba(0,0,0,0.6)",
+                        }}
+                      >
+                        {course.title}
+                      </h3>
+
+                      {course.description && (
+                        <p
                           style={{
-                            width: "min(140px, calc((100% - " + (bookIds.length - 1) + "rem) / " + bookIds.length + "))",
-                            aspectRatio: "3 / 4",
-                            borderRadius: "3px",
-                            overflow: "hidden",
-                            position: "relative",
-                            flexShrink: 1,
-                            boxShadow: "4px 6px 16px rgba(0,0,0,0.3)",
+                            fontFamily: "var(--font-body)",
+                            fontSize: "0.875rem",
+                            color: "rgba(255,255,255,0.85)",
+                            margin: "0.5rem 0 1.25rem",
+                            textShadow: "0 1px 4px rgba(0,0,0,0.5)",
+                            lineHeight: 1.5,
                           }}
                         >
-                          <Image
-                            src={getCoverSmUrl(bid)}
-                            alt=""
-                            fill
-                            sizes="140px"
-                            className="object-cover"
+                          {course.description}
+                        </p>
+                      )}
+
+                      {bookIds.length > 0 && (
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "center",
+                            gap: "1rem",
+                            marginBottom: "1.25rem",
+                          }}
+                        >
+                          {bookIds.map((bid) => (
+                            <div
+                              key={bid}
+                              className="transition-transform duration-200 group-hover:scale-[1.02]"
+                              style={{
+                                width: "min(140px, calc((100% - " + (bookIds.length - 1) + "rem) / " + bookIds.length + "))",
+                                aspectRatio: "3 / 4",
+                                borderRadius: "3px",
+                                overflow: "hidden",
+                                position: "relative",
+                                flexShrink: 1,
+                                boxShadow: "4px 6px 16px rgba(0,0,0,0.3)",
+                              }}
+                            >
+                              <Image
+                                src={getCoverSmUrl(bid)}
+                                alt=""
+                                fill
+                                sizes="140px"
+                                className="object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "1rem",
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "0.5rem 1.25rem",
+                            backgroundColor: "rgba(255,255,255,0.9)",
+                            color: "#1a1a1a",
+                            borderRadius: "var(--radius)",
+                            fontFamily: "var(--font-ui)",
+                            fontSize: "0.875rem",
+                            fontWeight: 500,
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                          }}
+                        >
+                          {enrolled ? "Continue" : "Join"}
+                        </span>
+                        <div style={{
+                          color: "rgba(255,255,255,0.8)",
+                          textShadow: "0 1px 4px rgba(0,0,0,0.5)",
+                        }}>
+                          <ProgressLine
+                            totalChars={courseStats?.total_chars ?? 0}
+                            totalDurationMs={courseStats?.total_duration_ms ?? null}
+                            chapterCount={courseChapterCount}
+                            progressChapter={enrolled && courseProgress ? courseProgress.chapter_number : undefined}
+                            barTrackColor="rgba(255,255,255,0.3)"
+                            barFillColor="rgba(255,255,255,0.9)"
+                            barWidth="120px"
                           />
                         </div>
-                      ))}
+                      </div>
                     </div>
-                  )}
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
-                  {/* Bottom row: CTA button left, progress right */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "1rem",
-                    }}
-                  >
-                    {/* CTA button */}
-                    <span
-                      style={{
-                        display: "inline-block",
-                        padding: "0.5rem 1.25rem",
-                        backgroundColor: "rgba(255,255,255,0.9)",
-                        color: "#1a1a1a",
-                        borderRadius: "var(--radius)",
-                        fontFamily: "var(--font-ui)",
-                        fontSize: "0.875rem",
-                        fontWeight: 500,
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-                      }}
-                    >
-                      {enrolled ? "Continue" : "Join"}
-                    </span>
-
-                    {/* Progress info */}
-                    <div style={{
-                      color: "rgba(255,255,255,0.8)",
-                      textShadow: "0 1px 4px rgba(0,0,0,0.5)",
-                    }}>
-                      <ProgressLine
-                        totalChars={courseStats?.total_chars ?? 0}
-                        totalDurationMs={courseStats?.total_duration_ms ?? null}
-                        chapterCount={courseChapterCount}
-                        progressChapter={enrolled && courseProgress ? courseProgress.chapter_number : undefined}
-                        barTrackColor="rgba(255,255,255,0.3)"
-                        barFillColor="rgba(255,255,255,0.9)"
-                        barWidth="120px"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            </section>
-          );
-        })}
-
-        {/* All books */}
-        <BooksGrid books={books} statsMap={statsMap} />
+        {/* ── Library ── */}
+        <section>
+          <h2 style={sectionHeadingStyle}>Library</h2>
+          <BooksGrid books={books} statsMap={statsMap} />
+        </section>
       </main>
     </div>
   );
