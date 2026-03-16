@@ -1,9 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { BookRow } from "@/lib/db";
-import BookCard from "@/components/BookCard";
 import ProgressLine from "@/components/ProgressLine";
 import { getCoverSmUrl, getCoverLgUrl } from "@/lib/assets";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
@@ -327,18 +327,67 @@ export default function HomeClient({
         })}
 
         {/* All books */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-5 gap-y-8">
-          {books.map((book) => (
-            <BookCard
-              key={book.id}
-              book={book}
-              progress={progressMap[book.id] ?? null}
-              stats={statsMap[book.id] ?? null}
-              courseInfo={courseForBook[book.id] ?? null}
-            />
-          ))}
-        </div>
+        <BooksGrid books={books} />
       </main>
+    </div>
+  );
+}
+
+function BooksGrid({ books }: { books: BookRow[] }) {
+  const [search, setSearch] = useState("");
+  const query = search.toLowerCase().trim();
+  const filtered = query
+    ? books.filter(
+        (b) =>
+          b.title.toLowerCase().includes(query) ||
+          b.author.toLowerCase().includes(query)
+      )
+    : books;
+
+  return (
+    <div>
+      <input
+        type="text"
+        placeholder="Search by title or author..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        style={{
+          width: "100%",
+          padding: "0.5rem 0.75rem",
+          marginBottom: "1.25rem",
+          fontFamily: "var(--font-ui)",
+          fontSize: "0.875rem",
+          color: "var(--color-text)",
+          backgroundColor: "var(--color-bg-secondary)",
+          border: "1px solid var(--color-border)",
+          borderRadius: "var(--radius)",
+          outline: "none",
+        }}
+      />
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-5 gap-y-6">
+        {filtered.map((book) => (
+          <Link key={book.id} href={`/${book.id}`} className="block group">
+            <div
+              className="relative overflow-hidden transition-transform duration-200 group-hover:scale-[1.02]"
+              style={{
+                aspectRatio: "3 / 4",
+                borderRadius: "3px",
+                boxShadow:
+                  "4px 6px 16px rgba(0,0,0,0.12), 1px 2px 4px rgba(0,0,0,0.08), inset -1px 0 2px rgba(0,0,0,0.04)",
+                backgroundColor: "var(--color-bg-secondary)",
+              }}
+            >
+              <Image
+                src={getCoverSmUrl(book.id)}
+                alt={`${book.title} cover`}
+                fill
+                sizes="(max-width: 640px) 50vw, 33vw"
+                className="object-cover"
+              />
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
