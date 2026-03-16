@@ -84,7 +84,10 @@ export default function HomeClient({
               Continue
             </h2>
             <Link
-              href={`/${continueBook.id}/${continueProgress.chapter_number}`}
+              href={bookCourseInfo
+                ? `/${bookCourseInfo.courseId}`
+                : `/${continueBook.id}/${continueProgress.chapter_number}`
+              }
               className="group"
               style={{
                 display: "flex",
