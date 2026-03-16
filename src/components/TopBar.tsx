@@ -87,7 +87,7 @@ export default function TopBar() {
                 fontWeight: 500,
                 color: "var(--color-text-secondary)",
               }}>
-                Great Books
+                Greatbooks
               </span>
             )}
           </Link>
