@@ -3,7 +3,7 @@ export default function BookLoading() {
     <article
       className="mx-auto animate-pulse"
       style={{
-        maxWidth: "68ch",
+        maxWidth: "var(--content-max-width)",
         paddingLeft: "1.5rem",
         paddingRight: "1.5rem",
       }}

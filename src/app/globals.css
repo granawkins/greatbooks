@@ -24,6 +24,7 @@
   --radius-lg: 10px;
 
   /* Layout */
+  --content-max-width: 68ch;
   --topbar-height: 52px;
   --player-height: 172px;
 }
@@ -80,7 +81,7 @@ body::before {
 }
 
 .chapter-text {
-  max-width: 68ch;
+  max-width: var(--content-max-width);
   margin: 0 auto;
   position: relative;
 }
