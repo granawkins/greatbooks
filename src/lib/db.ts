@@ -341,17 +341,18 @@ export const db = {
 
   // -- Course helpers --
 
-  /** Get distinct source book IDs for a course */
+  /** Get distinct source book IDs for a course, ordered by first appearance */
   getCourseBookIds: (courseId: string): string[] => {
     const rows = connection
       .prepare(`
-        SELECT DISTINCT sc.book_id
+        SELECT sc.book_id, MIN(cc.number) as first_appearance
         FROM chapters cc
         JOIN chapters sc ON cc.source_chapter_id = sc.id
         WHERE cc.book_id = ?
-        ORDER BY MIN(cc.number)
+        GROUP BY sc.book_id
+        ORDER BY first_appearance
       `)
-      .all(courseId) as { book_id: string }[];
+      .all(courseId) as { book_id: string; first_appearance: number }[];
     return rows.map((r) => r.book_id);
   },
 
