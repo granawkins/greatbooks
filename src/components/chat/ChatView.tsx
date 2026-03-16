@@ -94,7 +94,7 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
         style={{
           flex: 1,
           overflowY: "auto",
-          maxWidth: "68ch",
+          maxWidth: "var(--content-max-width)",
           width: "100%",
           margin: "0 auto",
           boxSizing: "border-box",
@@ -147,7 +147,7 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
       {/* Input area */}
       <div
         style={{
-          maxWidth: "68ch",
+          maxWidth: "var(--content-max-width)",
           width: "100%",
           margin: "0 auto",
           padding: "0.75rem 1.5rem 2rem",

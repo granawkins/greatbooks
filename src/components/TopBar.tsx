@@ -51,7 +51,7 @@ export default function TopBar() {
     >
       <div
         style={{
-          maxWidth: "64rem",
+          maxWidth: "var(--content-max-width)",
           margin: "0 auto",
           padding: "0 1.5rem",
           height: "100%",

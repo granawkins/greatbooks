@@ -53,7 +53,7 @@ export default function HomeClient({
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)" }}>
-      <header style={{ maxWidth: "68ch", margin: "0 auto", padding: "2.5rem 1.5rem 1.5rem" }}>
+      <header style={{ maxWidth: "var(--content-max-width)", margin: "0 auto", padding: "2.5rem 1.5rem 1.5rem" }}>
         <p
           style={{
             fontFamily: "var(--font-display)",
@@ -67,7 +67,7 @@ export default function HomeClient({
         </p>
       </header>
 
-      <main style={{ maxWidth: "68ch", margin: "0 auto", padding: "0 1.5rem", paddingBottom: session ? 220 : 64 }}>
+      <main style={{ maxWidth: "var(--content-max-width)", margin: "0 auto", padding: "0 1.5rem", paddingBottom: session ? 220 : 64 }}>
         {/* Continue — most recently read item (book or course) */}
         {continueBook && continueProgress && (
           <section style={{ marginBottom: "3rem" }}>
