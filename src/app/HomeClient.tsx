@@ -12,6 +12,25 @@ type StatsMap = Record<string, { chapter_count: number; total_duration_ms: numbe
 
 type CourseForBook = Record<string, { courseId: string; courseTitle: string }>;
 
+function fmtDur(ms: number): string {
+  const totalMinutes = Math.round(ms / 60000);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+function HeadphonesIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-block", verticalAlign: "-1px", flexShrink: 0 }}>
+      <path d="M2 10V8a6 6 0 1 1 12 0v2" />
+      <rect x="1" y="10" width="3" height="4" rx="1" fill="currentColor" stroke="none" />
+      <rect x="12" y="10" width="3" height="4" rx="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export default function HomeClient({
   books,
   courses,
@@ -54,30 +73,14 @@ export default function HomeClient({
       : 0;
   const bookCourseInfo = !lastIsCourse && lastBookId ? courseForBook[lastBookId] : null;
 
-  // Stats line for continue section
-  const continueStatsLine = (() => {
-    if (!continueStats || !continueProgress || continueChapterCount === 0) return "";
+  // Stats for continue section
+  const continueRemaining = (() => {
+    if (!continueStats || !continueProgress || continueChapterCount === 0) return null;
     const totalPages = Math.max(1, Math.round(continueStats.total_chars / 1500));
     const remainFrac = 1 - (continueProgress.chapter_number - 1) / continueChapterCount;
     const remPages = Math.max(1, Math.round(totalPages * remainFrac));
-    const remDuration = continueStats.total_duration_ms ? Math.round(continueStats.total_duration_ms * remainFrac) : null;
-    const isCourse = continueBook?.type === "course";
-    const remDiscussions = isCourse ? Math.max(0, Math.round(continueStats.discussion_count * remainFrac)) : 0;
-
-    const parts: string[] = [];
-    if (remDuration) {
-      const totalMin = Math.round(remDuration / 60000);
-      const h = Math.floor(totalMin / 60);
-      const m = totalMin % 60;
-      const dur = h === 0 ? `${m}m` : m === 0 ? `${h}h` : `${h}h ${m}m`;
-      parts.push(`${remPages} pages (${dur})`);
-    } else {
-      parts.push(`${remPages} pages`);
-    }
-    if (isCourse && remDiscussions > 0) {
-      parts.push(`${remDiscussions} session${remDiscussions !== 1 ? "s" : ""}`);
-    }
-    return `Remaining: ${parts.join(", ")}`;
+    const remDurationMs = continueStats.total_duration_ms ? Math.round(continueStats.total_duration_ms * remainFrac) : null;
+    return { pages: remPages, durationMs: remDurationMs };
   })();
 
   return (
@@ -187,16 +190,28 @@ export default function HomeClient({
                     In: {bookCourseInfo.courseTitle}
                   </p>
                 )}
-                <p
-                  style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: "0.8rem",
-                    color: "var(--color-text-secondary)",
-                    margin: "4px 0 10px",
-                  }}
-                >
-                  {continueStatsLine}
-                </p>
+                {continueRemaining && (
+                  <p
+                    style={{
+                      fontFamily: "var(--font-ui)",
+                      fontSize: "0.8rem",
+                      color: "var(--color-text-secondary)",
+                      margin: "4px 0 10px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.375rem",
+                    }}
+                  >
+                    <span style={{ fontStyle: "italic", opacity: 0.7 }}>Remaining</span>
+                    <span>{continueRemaining.pages} pages</span>
+                    {continueRemaining.durationMs != null && continueRemaining.durationMs > 0 && (
+                      <>
+                        <HeadphonesIcon />
+                        <span>{fmtDur(continueRemaining.durationMs)}</span>
+                      </>
+                    )}
+                  </p>
+                )}
                 {/* Progress bar */}
                 <div
                   style={{
@@ -366,27 +381,30 @@ export default function HomeClient({
                             fontSize: "0.75rem",
                             color: "rgba(255,255,255,0.8)",
                             textShadow: "0 1px 4px rgba(0,0,0,0.5)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.375rem",
                           }}
                         >
                           {(() => {
                             const cs = courseStats;
-                            if (!cs) return "";
+                            if (!cs) return null;
                             const totalPages = Math.max(1, Math.round(cs.total_chars / 1500));
                             const remFrac = 1 - (courseProgress.chapter_number - 1) / courseChapterCount;
                             const remPages = Math.max(1, Math.round(totalPages * remFrac));
                             const remDur = cs.total_duration_ms ? Math.round(cs.total_duration_ms * remFrac) : null;
-                            const remDisc = Math.max(0, Math.round((cs.discussion_count ?? 0) * remFrac));
-                            const parts: string[] = [];
-                            if (remDur) {
-                              const tMin = Math.round(remDur / 60000);
-                              const h = Math.floor(tMin / 60); const m = tMin % 60;
-                              const dur = h === 0 ? `${m}m` : m === 0 ? `${h}h` : `${h}h ${m}m`;
-                              parts.push(`${remPages} pages (${dur})`);
-                            } else {
-                              parts.push(`${remPages} pages`);
-                            }
-                            if (remDisc > 0) parts.push(`${remDisc} session${remDisc !== 1 ? "s" : ""}`);
-                            return `Remaining: ${parts.join(", ")}`;
+                            return (
+                              <>
+                                <span style={{ fontStyle: "italic", opacity: 0.7 }}>Remaining</span>
+                                <span>{remPages} pages</span>
+                                {remDur != null && remDur > 0 && (
+                                  <>
+                                    <HeadphonesIcon />
+                                    <span>{fmtDur(remDur)}</span>
+                                  </>
+                                )}
+                              </>
+                            );
                           })()}
                         </span>
                         <div
@@ -415,23 +433,26 @@ export default function HomeClient({
                           fontSize: "0.75rem",
                           color: "rgba(255,255,255,0.8)",
                           textShadow: "0 1px 4px rgba(0,0,0,0.5)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.375rem",
                         }}
                       >
                         {(() => {
                           const cs = courseStats;
                           if (!cs) return `${courseChapterCount} chapters`;
                           const totalPages = Math.max(1, Math.round(cs.total_chars / 1500));
-                          const parts: string[] = [];
-                          if (cs.total_duration_ms) {
-                            const tMin = Math.round(cs.total_duration_ms / 60000);
-                            const h = Math.floor(tMin / 60); const m = tMin % 60;
-                            const dur = h === 0 ? `${m}m` : m === 0 ? `${h}h` : `${h}h ${m}m`;
-                            parts.push(`${totalPages} pages (${dur})`);
-                          } else {
-                            parts.push(`${totalPages} pages`);
-                          }
-                          if ((cs.discussion_count ?? 0) > 0) parts.push(`${cs.discussion_count} session${cs.discussion_count !== 1 ? "s" : ""}`);
-                          return parts.join(", ");
+                          return (
+                            <>
+                              <span>{totalPages} pages</span>
+                              {cs.total_duration_ms != null && cs.total_duration_ms > 0 && (
+                                <>
+                                  <HeadphonesIcon />
+                                  <span>{fmtDur(cs.total_duration_ms)}</span>
+                                </>
+                              )}
+                            </>
+                          );
                         })()}
                       </span>
                     )}
