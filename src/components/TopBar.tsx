@@ -10,27 +10,16 @@ import { ChapterPicker } from "@/components/ChapterPicker";
 
 function ProfileIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
       <circle cx="10" cy="7" r="3.5" />
-      <path d="M3.5 17.5c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5" />
-    </svg>
-  );
-}
-
-function BackChevron() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 4L6 9l5 5" />
+      <path d="M3.5 17.5c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5z" />
     </svg>
   );
 }
 
 export default function TopBar() {
   const pathname = usePathname();
-  const isHome = pathname === "/";
   const isProfile = pathname === "/profile";
-  const showBack = !isHome;
-
   const { bookNav, scrolled } = useTopBar();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const chapterBtnRef = useRef<HTMLDivElement | null>(null);
@@ -74,26 +63,6 @@ export default function TopBar() {
       >
         {/* Left side */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.125rem", minWidth: 0, flex: 1 }}>
-          {showBack && (
-            <Link
-              href="/"
-              aria-label="Back to library"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 28,
-                height: 28,
-                color: "var(--color-text-secondary)",
-                borderRadius: "var(--radius)",
-                transition: "color 0.15s",
-                flexShrink: 0,
-              }}
-              className="hover:text-[var(--color-text)]"
-            >
-              <BackChevron />
-            </Link>
-          )}
           <Link
             href="/"
             style={{
@@ -107,8 +76,8 @@ export default function TopBar() {
             <Image
               src="/logo-v2.png"
               alt="Great Books"
-              width={showBookNav ? 32 : 40}
-              height={showBookNav ? 32 : 40}
+              width={showBookNav ? 26 : 32}
+              height={showBookNav ? 26 : 32}
               style={{ display: "block", flexShrink: 0 }}
             />
             {!showBookNav && (
@@ -199,13 +168,11 @@ export default function TopBar() {
               width: 36,
               height: 36,
               color: "var(--color-text-secondary)",
-              borderRadius: "50%",
-              border: "1px solid var(--color-border)",
-              transition: "border-color 0.15s, color 0.15s",
+              transition: "color 0.15s",
               flexShrink: 0,
               marginLeft: "0.75rem",
             }}
-            className="hover:text-[var(--color-text)] hover:border-[var(--color-text-secondary)]"
+            className="hover:text-[var(--color-text)]"
           >
             <ProfileIcon />
           </Link>
