@@ -338,4 +338,46 @@ export const db = {
       .run(id, userId);
     return result.changes > 0;
   },
+
+  // -- Course helpers --
+
+  /** Find courses that contain chapters from the given book */
+  getCoursesForBook: (bookId: string): { course_id: string; course_title: string }[] => {
+    return connection
+      .prepare(`
+        SELECT DISTINCT b.id as course_id, b.title as course_title
+        FROM books b
+        JOIN chapters cc ON cc.book_id = b.id
+        JOIN chapters sc ON cc.source_chapter_id = sc.id
+        WHERE b.type = 'course' AND sc.book_id = ?
+      `)
+      .all(bookId) as { course_id: string; course_title: string }[];
+  },
+
+  /** Find a course the user is enrolled in (has progress) that contains the given book.
+   *  Returns the course info + which course chapter corresponds to the user's book progress. */
+  getEnrolledCourseForBook: (userId: string, bookId: string): {
+    courseId: string;
+    courseTitle: string;
+    currentCourseChapter: number;
+  } | null => {
+    // Find courses containing this book where user has progress
+    const row = connection
+      .prepare(`
+        SELECT b.id as course_id, b.title as course_title, up.chapter_number
+        FROM books b
+        JOIN chapters cc ON cc.book_id = b.id
+        JOIN chapters sc ON cc.source_chapter_id = sc.id
+        JOIN user_progress up ON up.book_id = b.id AND up.user_id = ?
+        WHERE b.type = 'course' AND sc.book_id = ?
+        LIMIT 1
+      `)
+      .get(userId, bookId) as { course_id: string; course_title: string; chapter_number: number } | undefined;
+    if (!row) return null;
+    return {
+      courseId: row.course_id,
+      courseTitle: row.course_title,
+      currentCourseChapter: row.chapter_number,
+    };
+  },
 };
