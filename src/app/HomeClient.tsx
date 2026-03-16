@@ -96,30 +96,28 @@ export default function HomeClient({
                 textDecoration: "none",
               }}
             >
-              {/* Cover (only for non-course items) */}
-              {!lastIsCourse && (
-                <div
-                  className="transition-transform duration-200 group-hover:scale-[1.02]"
-                  style={{
-                    width: "100px",
-                    height: "133px",
-                    flexShrink: 0,
-                    borderRadius: "4px",
-                    overflow: "hidden",
-                    position: "relative",
-                    boxShadow:
-                      "4px 6px 16px rgba(0,0,0,0.12), 1px 2px 4px rgba(0,0,0,0.08)",
-                  }}
-                >
-                  <Image
-                    src={getCoverSmUrl(continueBook.id)}
-                    alt={continueBook.title}
-                    fill
-                    sizes="100px"
-                    className="object-cover"
-                  />
-                </div>
-              )}
+              {/* Cover */}
+              <div
+                className="transition-transform duration-200 group-hover:scale-[1.02]"
+                style={{
+                  width: lastIsCourse ? "160px" : "100px",
+                  height: lastIsCourse ? "107px" : "133px",
+                  flexShrink: 0,
+                  borderRadius: "4px",
+                  overflow: "hidden",
+                  position: "relative",
+                  boxShadow:
+                    "4px 6px 16px rgba(0,0,0,0.12), 1px 2px 4px rgba(0,0,0,0.08)",
+                }}
+              >
+                <Image
+                  src={getCoverSmUrl(continueBook.id)}
+                  alt={continueBook.title}
+                  fill
+                  sizes={lastIsCourse ? "160px" : "100px"}
+                  className="object-cover"
+                />
+              </div>
 
               {/* Info */}
               <div>
@@ -209,77 +207,105 @@ export default function HomeClient({
                   textDecoration: "none",
                   borderRadius: "var(--radius-lg)",
                   overflow: "hidden",
-                  border: "1px solid var(--color-border)",
-                  padding: "2rem",
-                  transition: "border-color 0.15s",
-                  background: "var(--color-bg-secondary)",
+                  position: "relative",
+                  transition: "transform 0.15s",
                 }}
-                className="group hover:border-[var(--color-text-secondary)]"
+                className="group hover:scale-[1.005]"
               >
-                <p
-                  style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: "0.75rem",
-                    fontWeight: 500,
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                    color: "var(--color-accent)",
-                    margin: "0 0 0.5rem",
-                  }}
-                >
-                  Course
-                </p>
-                <h2
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: "1.75rem",
-                    fontWeight: 400,
-                    color: "var(--color-text)",
-                    margin: "0 0 0.5rem",
-                  }}
-                >
-                  {course.title}
-                </h2>
-                {course.description && (
-                  <p
+                {/* Background cover image */}
+                <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2" }}>
+                  <Image
+                    src={getCoverSmUrl(course.id)}
+                    alt={course.title}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 64rem"
+                    className="object-cover"
+                    priority
+                  />
+                  {/* Gradient overlay for text readability */}
+                  <div
                     style={{
-                      fontFamily: "var(--font-body)",
-                      fontSize: "1rem",
-                      color: "var(--color-text-secondary)",
-                      margin: "0 0 1.25rem",
-                      lineHeight: 1.6,
-                      maxWidth: "40em",
+                      position: "absolute",
+                      inset: 0,
+                      background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)",
+                    }}
+                  />
+                  {/* Text overlay */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      padding: "1.5rem",
                     }}
                   >
-                    {course.description}
-                  </p>
-                )}
-                <span
-                  style={{
-                    display: "inline-block",
-                    padding: "0.5rem 1.25rem",
-                    backgroundColor: "var(--color-accent)",
-                    color: "var(--color-bg)",
-                    borderRadius: "var(--radius)",
-                    fontFamily: "var(--font-ui)",
-                    fontSize: "0.875rem",
-                    fontWeight: 500,
-                  }}
-                >
-                  {enrolled ? "Continue" : "Start Course"}
-                </span>
-                {enrolled && courseStats && courseProgress && (
-                  <span
-                    style={{
-                      marginLeft: "1rem",
-                      fontFamily: "var(--font-ui)",
-                      fontSize: "0.8rem",
-                      color: "var(--color-text-secondary)",
-                    }}
-                  >
-                    Chapter {courseProgress.chapter_number} of {courseStats.chapter_count}
-                  </span>
-                )}
+                    <p
+                      style={{
+                        fontFamily: "var(--font-ui)",
+                        fontSize: "0.7rem",
+                        fontWeight: 500,
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                        color: "rgba(255,255,255,0.7)",
+                        margin: "0 0 0.25rem",
+                      }}
+                    >
+                      Course
+                    </p>
+                    <h2
+                      style={{
+                        fontFamily: "var(--font-display)",
+                        fontSize: "1.5rem",
+                        fontWeight: 400,
+                        color: "#fff",
+                        margin: "0 0 0.25rem",
+                      }}
+                    >
+                      {course.title}
+                    </h2>
+                    {course.description && (
+                      <p
+                        style={{
+                          fontFamily: "var(--font-body)",
+                          fontSize: "0.875rem",
+                          color: "rgba(255,255,255,0.75)",
+                          margin: "0 0 1rem",
+                          lineHeight: 1.5,
+                          maxWidth: "36em",
+                        }}
+                      >
+                        {course.description}
+                      </p>
+                    )}
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "0.5rem 1.25rem",
+                        backgroundColor: "rgba(255,255,255,0.9)",
+                        color: "var(--color-text)",
+                        borderRadius: "var(--radius)",
+                        fontFamily: "var(--font-ui)",
+                        fontSize: "0.875rem",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {enrolled ? "Continue" : "Start Course"}
+                    </span>
+                    {enrolled && courseStats && courseProgress && (
+                      <span
+                        style={{
+                          marginLeft: "1rem",
+                          fontFamily: "var(--font-ui)",
+                          fontSize: "0.75rem",
+                          color: "rgba(255,255,255,0.7)",
+                        }}
+                      >
+                        Chapter {courseProgress.chapter_number} of {courseStats.chapter_count}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </Link>
             </section>
           );
