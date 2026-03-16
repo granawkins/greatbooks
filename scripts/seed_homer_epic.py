@@ -23,47 +23,69 @@ COURSE_DESCRIPTION = (
 )
 
 
-def parse_session_to_segments(text: str) -> list[dict]:
-    """Parse a study guide session into segments (heading, text, list_item, paragraph_break)."""
+def strip_markdown(text: str) -> str:
+    """Remove markdown bold and italic markers from text."""
+    # Bold: **text** → text
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    # Italic: *text* → text
+    text = re.sub(r'\*(.+?)\*', r'\1', text)
+    return text
+
+
+def parse_session_to_segments(text: str, reorder_essay: bool = True) -> list[dict]:
+    """Parse a study guide session into segments (heading, text, list_item, paragraph_break).
+
+    If reorder_essay is True, moves the Essay section (renamed 'Discussion') above Coming Up.
+    """
+    # First, optionally reorder Essay above Coming Up
+    if reorder_essay:
+        text = _reorder_essay_and_coming_up(text)
+
     segments = []
     lines = text.strip().split("\n")
     i = 0
+    prev_was_list = False
 
     while i < len(lines):
         line = lines[i].rstrip()
 
-        # Skip empty lines (they create paragraph breaks between text blocks)
+        # Skip empty lines
         if not line:
-            if segments and segments[-1]["type"] != "paragraph_break":
+            if not prev_was_list and segments and segments[-1]["type"] != "paragraph_break":
                 segments.append({"type": "paragraph_break", "text": ""})
             i += 1
             continue
 
         # Headings (### or ##)
         if line.startswith("#"):
+            prev_was_list = False
             heading_text = re.sub(r"^#+\s*", "", line).strip()
             if heading_text:
-                segments.append({"type": "heading", "text": heading_text})
+                segments.append({"type": "heading", "text": strip_markdown(heading_text)})
             i += 1
             continue
 
         # Horizontal rules
         if line.strip() == "---":
+            prev_was_list = False
             if segments and segments[-1]["type"] != "paragraph_break":
                 segments.append({"type": "paragraph_break", "text": ""})
             i += 1
             continue
 
-        # List items (- **bold:** text pattern or plain - text)
+        # List items (- text)
         if line.startswith("- "):
+            prev_was_list = True
             item_text = line[2:].strip()
-            # Collect continuation lines (indented or next line without - prefix)
+            # Collect continuation lines
             while i + 1 < len(lines) and lines[i + 1].strip() and not lines[i + 1].startswith("- ") and not lines[i + 1].startswith("#") and not lines[i + 1].strip() == "---":
                 i += 1
                 item_text += " " + lines[i].strip()
-            segments.append({"type": "list_item", "text": item_text})
+            segments.append({"type": "list_item", "text": strip_markdown(item_text)})
             i += 1
             continue
+
+        prev_was_list = False
 
         # Regular text — collect into a paragraph
         para_lines = [line]
@@ -75,9 +97,8 @@ def parse_session_to_segments(text: str) -> list[dict]:
             i += 1
 
         # Split paragraph into sentences for segments
-        full_text = " ".join(para_lines)
-        # Simple sentence splitting
-        sentences = re.split(r'(?<=[.!?])\s+(?=[A-Z*"])', full_text)
+        full_text = strip_markdown(" ".join(para_lines))
+        sentences = re.split(r'(?<=[.!?])\s+(?=[A-Z"])', full_text)
         for sent in sentences:
             sent = sent.strip()
             if sent:
@@ -92,6 +113,39 @@ def parse_session_to_segments(text: str) -> list[dict]:
     return segments
 
 
+def _reorder_essay_and_coming_up(text: str) -> str:
+    """Move ### Essay (renamed ### Discussion) above ### Coming Up in session text."""
+    # Find Essay section
+    essay_match = re.search(r'(### Essay\n.*?)(?=\n### |\n---\n|\Z)', text, re.DOTALL)
+    coming_match = re.search(r'(### Coming Up\n.*?)(?=\n### |\n---\n|\Z)', text, re.DOTALL)
+
+    if not essay_match:
+        return text
+
+    # Remove essay from original position
+    essay_content = essay_match.group(1).strip()
+    text_without_essay = text[:essay_match.start()] + text[essay_match.end():]
+
+    # Rename Essay → Discussion
+    essay_content = essay_content.replace("### Essay", "### Discussion", 1)
+
+    if coming_match:
+        # Find Coming Up in the modified text
+        coming_match2 = re.search(r'(### Coming Up\n)', text_without_essay)
+        if coming_match2:
+            # Insert Discussion before Coming Up
+            insert_pos = coming_match2.start()
+            text_without_essay = (
+                text_without_essay[:insert_pos]
+                + essay_content + "\n\n---\n\n"
+                + text_without_essay[insert_pos:]
+            )
+            return text_without_essay
+
+    # No Coming Up found — just append Discussion at the end
+    return text_without_essay.rstrip() + "\n\n---\n\n" + essay_content
+
+
 def extract_sessions(studyguide_path: str) -> dict[str, str]:
     """Extract session content from a study guide file."""
     with open(studyguide_path, "r") as f:
@@ -99,7 +153,7 @@ def extract_sessions(studyguide_path: str) -> dict[str, str]:
 
     sessions = {}
 
-    # Also extract "Before You Read" as intro content
+    # Extract "Before You Read" as intro content
     before_match = re.search(r"## Before You Read\n(.*?)(?=\n---\n|\n## Session)", content, re.DOTALL)
     if before_match:
         sessions["intro"] = before_match.group(1).strip()
@@ -152,43 +206,43 @@ def main():
     odyssey_sessions = extract_sessions(os.path.join(DATA_DIR, "homer-odyssey", "STUDYGUIDE.md"))
 
     # Define course structure
-    # Format: (type, title, source_book, source_chapters, session_key)
     course_items = []
 
-    # Course introduction (combined from both "Before You Read" sections)
-    course_items.append(("discussion", "Introduction", None, None, "intro_combined"))
+    # Iliad introduction (Before You Read)
+    course_items.append(("discussion", "Introduction to the Iliad", "homer-iliad", None, "intro_iliad"))
 
     # Iliad sessions and chapters
     iliad_session_map = [
-        ("Session 1: The Quarrel (Books 1–2)", range(1, 3)),          # Books 1-2
-        ("Session 2: The World Opens (Books 3–9)", range(3, 10)),     # Books 3-9
-        ("Session 3: The Trojans Press (Books 10–15)", range(10, 16)), # Books 10-15
-        ("Session 4: The Pivot (Books 16–18)", range(16, 19)),        # Books 16-18
-        ("Session 5: The Return (Books 19–22)", range(19, 23)),       # Books 19-22
-        ("Session 6: The Ending (Books 23–24)", range(23, 25)),       # Books 23-24
+        ("Session 1: The Quarrel (Books I\u2013II)", range(1, 3)),
+        ("Session 2: The World Opens (Books III\u2013IX)", range(3, 10)),
+        ("Session 3: The Trojans Press (Books X\u2013XV)", range(10, 16)),
+        ("Session 4: The Pivot (Books XVI\u2013XVIII)", range(16, 19)),
+        ("Session 5: The Return (Books XIX\u2013XXII)", range(19, 23)),
+        ("Session 6: The Ending (Books XXIII\u2013XXIV)", range(23, 25)),
     ]
 
     for session_title, chapter_range in iliad_session_map:
-        # Add the chapters first
         for ch_num in chapter_range:
             course_items.append(("text", f"Iliad: Book {ch_num_to_roman(ch_num)}", "homer-iliad", ch_num, None))
-        # Then the discussion
-        course_items.append(("discussion", f"Iliad — {session_title}", "homer-iliad", None, session_title))
+        course_items.append(("discussion", f"Iliad \u2014 {session_title}", "homer-iliad", None, session_title))
+
+    # Odyssey introduction (Before You Read) — separate chapter between Iliad and Odyssey
+    course_items.append(("discussion", "Introduction to the Odyssey", "homer-odyssey", None, "intro_odyssey"))
 
     # Odyssey sessions and chapters
     odyssey_session_map = [
-        ("Session 1: The Son Sets Out (Books I–IV)", range(1, 5)),
-        ("Session 2: The Wanderings Begin (Books V–VIII)", range(5, 9)),
-        ("Session 3: Monsters and the Underworld (Books IX–XII)", range(9, 13)),
-        ("Session 4: The Return (Books XIII–XVI)", range(13, 17)),
-        ("Session 5: The Disguise Holds (Books XVII–XX)", range(17, 21)),
-        ("Session 6: The Reckoning (Books XXI–XXIV)", range(21, 25)),
+        ("Session 1: The Son Sets Out (Books I\u2013IV)", range(1, 5)),
+        ("Session 2: The Wanderings Begin (Books V\u2013VIII)", range(5, 9)),
+        ("Session 3: Monsters and the Underworld (Books IX\u2013XII)", range(9, 13)),
+        ("Session 4: The Return (Books XIII\u2013XVI)", range(13, 17)),
+        ("Session 5: The Disguise Holds (Books XVII\u2013XX)", range(17, 21)),
+        ("Session 6: The Reckoning (Books XXI\u2013XXIV)", range(21, 25)),
     ]
 
     for session_title, chapter_range in odyssey_session_map:
         for ch_num in chapter_range:
             course_items.append(("text", f"Odyssey: Book {ch_num_to_roman(ch_num)}", "homer-odyssey", ch_num, None))
-        course_items.append(("discussion", f"Odyssey — {session_title}", "homer-odyssey", None, session_title))
+        course_items.append(("discussion", f"Odyssey \u2014 {session_title}", "homer-odyssey", None, session_title))
 
     # Insert chapters and segments
     chapter_num = 0
@@ -196,7 +250,6 @@ def main():
         chapter_num += 1
 
         if item_type == "text" and source_book and source_ch_num:
-            # Reference chapter — points to existing chapter for segments/audio
             source_chapters = iliad_chapters if source_book == "homer-iliad" else odyssey_chapters
             source_id = source_chapters.get(source_ch_num)
             if not source_id:
@@ -206,33 +259,27 @@ def main():
                 "INSERT INTO chapters (book_id, number, title, source_chapter_id, chapter_type) VALUES (?, ?, ?, ?, 'text')",
                 (COURSE_ID, chapter_num, title, source_id),
             )
-            print(f"  Ch {chapter_num}: {title} (ref → {source_book} ch {source_ch_num})")
+            print(f"  Ch {chapter_num}: {title} (ref -> {source_book} ch {source_ch_num})")
 
         elif item_type == "discussion":
-            # Discussion chapter — has its own segments
             cursor = conn.execute(
                 "INSERT INTO chapters (book_id, number, title, chapter_type) VALUES (?, ?, ?, 'discussion')",
                 (COURSE_ID, chapter_num, title),
             )
             chapter_id = cursor.lastrowid
 
-            # Generate segments from study guide content
-            if session_key == "intro_combined":
-                segments = generate_intro_segments(iliad_sessions, odyssey_sessions)
+            if session_key == "intro_iliad":
+                segments = generate_book_intro_segments("The Iliad", iliad_sessions)
+            elif session_key == "intro_odyssey":
+                segments = generate_book_intro_segments("The Odyssey", odyssey_sessions)
             else:
-                # Find the matching session content
+                # Find matching session content
                 session_content = None
-                if source_book == "homer-iliad":
-                    # Try to find matching session key
-                    for key, content in iliad_sessions.items():
-                        if key.startswith("Session") and session_key.startswith("Session") and key.split(":")[0] == session_key.split(":")[0]:
-                            session_content = content
-                            break
-                elif source_book == "homer-odyssey":
-                    for key, content in odyssey_sessions.items():
-                        if key.startswith("Session") and session_key.startswith("Session") and key.split(":")[0] == session_key.split(":")[0]:
-                            session_content = content
-                            break
+                sessions = iliad_sessions if source_book == "homer-iliad" else odyssey_sessions
+                for key, content in sessions.items():
+                    if key.startswith("Session") and session_key.startswith("Session") and key.split(":")[0] == session_key.split(":")[0]:
+                        session_content = content
+                        break
 
                 if session_content:
                     segments = parse_session_to_segments(session_content)
@@ -240,7 +287,6 @@ def main():
                     segments = [{"type": "text", "text": f"Discussion: {title}"}]
                     print(f"  WARNING: No session content found for '{session_key}'")
 
-            # Insert segments
             for seq, seg in enumerate(segments, 1):
                 conn.execute(
                     "INSERT INTO segments (chapter_id, sequence, text, segment_type) VALUES (?, ?, ?, ?)",
@@ -252,8 +298,7 @@ def main():
     conn.commit()
     conn.close()
 
-    total_chapters = chapter_num
-    print(f"\nDone! Created course '{COURSE_ID}' with {total_chapters} chapters.")
+    print(f"\nDone! Created course '{COURSE_ID}' with {chapter_num} chapters.")
 
 
 def ch_num_to_roman(n: int) -> str:
@@ -268,30 +313,13 @@ def ch_num_to_roman(n: int) -> str:
     return result
 
 
-def generate_intro_segments(iliad_sessions, odyssey_sessions):
-    """Generate introduction segments combining both 'Before You Read' sections."""
+def generate_book_intro_segments(book_title: str, sessions: dict) -> list[dict]:
+    """Generate introduction segments for a single book's 'Before You Read'."""
     segments = []
-
-    # Course intro
-    segments.append({"type": "heading", "text": "Welcome"})
-    segments.append({"type": "text", "text": "This course takes you through Homer's two great epics — the Iliad and the Odyssey — in sequence, with guided discussion sessions between sections."})
-    segments.append({"type": "text", "text": "You'll read each poem in full, pausing at natural breakpoints to reflect on themes, characters, and the connections between the two works."})
-    segments.append({"type": "text", "text": "Each discussion session includes summaries, key themes, and an essay question. You can also chat with an AI reading companion who knows the text."})
-    segments.append({"type": "paragraph_break", "text": ""})
-
-    # Pull in the Iliad intro
-    if "intro" in iliad_sessions:
-        segments.append({"type": "heading", "text": "The Iliad"})
-        for seg in parse_session_to_segments(iliad_sessions["intro"]):
-            segments.append(seg)
-        segments.append({"type": "paragraph_break", "text": ""})
-
-    # Pull in the Odyssey intro
-    if "intro" in odyssey_sessions:
-        segments.append({"type": "heading", "text": "The Odyssey"})
-        for seg in parse_session_to_segments(odyssey_sessions["intro"]):
-            segments.append(seg)
-
+    if "intro" in sessions:
+        segments = parse_session_to_segments(sessions["intro"], reorder_essay=False)
+    if not segments:
+        segments = [{"type": "text", "text": f"Introduction to {book_title}."}]
     return segments
 
 

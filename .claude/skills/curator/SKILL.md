@@ -7,23 +7,23 @@ allowed-tools: Read, Write, Bash, WebFetch, WebSearch
 
 # Curator
 
-The curator is the content pipeline for greatbooks.fm. It owns everything between "which books should we include" and "a student is reading a fully supported chapter." Four stages — Text, Audio, Research, Guide — tracked in the morning brief table.
+The curator is the content pipeline for greatbooks.fm. It owns everything between "which books should we include" and "a student is reading a fully supported chapter." Five stages — Text, Audio, Research, Guide, Course — tracked in the morning brief table.
 
 ```
-               T  A  R  G
-───────────────────────────
-Ancient Epics
-  Iliad        ✓  ✓  ✓  ·
-  Odyssey      ✓  ✓  ·  ·
+               T  A  R  G  C
+─────────────────────────────
+Ancient Epics (homer-epic)
+  Iliad        ✓  ✓  ✓  ✓  ✓
+  Odyssey      ✓  ✓  ✓  ✓  ✓
 Examined Life
-  Apology      ✓  ·  ·  ·
-  Phaedo       ✓  ·  ·  ·
-  Republic     ✓  ✓  ·  ·
+  Apology      ✓  ·  ·  ·  ·
+  Phaedo       ✓  ·  ·  ·  ·
+  Republic     ✓  ✓  ✓  ✓  ·
 How to Live
-  Meditations  ✓  ·  ·  ·
-  Discourses   ✓  ·  ·  ·
+  Meditations  ✓  ·  ·  ·  ·
+  Discourses   ✓  ·  ·  ·  ·
 
-T=Text A=Audio R=Research G=Guide
+T=Text A=Audio R=Research G=Guide C=Course
 ```
 
 Update this table when any stage completes for a book.
@@ -229,6 +229,70 @@ Course content that goes into the app itself — before-you-read guides, chapter
 - Its before-you-read text is served from the app's course enrollment flow
 - Each chapter shows a 2-3 sentence context card before the text
 - AI chat is enabled for that chapter with seeded prompts
+
+---
+
+## Course Pipeline (C)
+
+Assemble books into a course — the top-level product students enroll in. A course is a book with `type='course'` in the DB, whose chapters either reference existing book chapters or contain original discussion content.
+
+### Prerequisites
+
+All books in the course must have stages T, A, and R complete. Stage G (guide) is desirable but not blocking.
+
+### What a course contains
+
+1. **Introduction chapters** — one per book, drawn from the STUDYGUIDE.md "Before You Read" section
+2. **Reading chapters** — reference chapters pointing to existing book chapters via `source_chapter_id`. These inherit segments and audio from the source.
+3. **Discussion chapters** — study guide sessions parsed into segments. Content comes from the STUDYGUIDE.md session sections (Summaries, Themes & Characters, Discussion question, Coming Up).
+
+### Course structure pattern
+
+For each book in the course:
+```
+Introduction to [Book]           ← discussion chapter, from "Before You Read"
+[Book]: Chapter I                ← reference chapter → source book ch 1
+[Book]: Chapter II               ← reference chapter → source book ch 2
+[Book] — Session 1: [Title]     ← discussion chapter, from Session 1
+[Book]: Chapter III              ← reference chapter → source book ch 3
+...
+```
+
+Discussion sessions are placed after the chapters they cover (e.g., Session 1 covers Books I–II, so it appears after Book II).
+
+### How to create a course
+
+1. **Create a seed script** at `scripts/seed_<course-id>.py` following the pattern in `scripts/seed_homer_epic.py`
+2. The script should:
+   - Insert a `books` row with `type='course'`, `layout='prose'`
+   - Create reference chapters with `source_chapter_id` pointing to existing chapters
+   - Create discussion chapters with segments parsed from `STUDYGUIDE.md`
+   - Strip markdown formatting (`**bold**`, `*italic*`) from segment text
+   - Use `list_item` segment_type for bullet lists (no paragraph_breaks between consecutive list items)
+   - Reorder: put the "Discussion" (essay) section above "Coming Up" in each session
+3. Run: `.venv/bin/python scripts/seed_<course-id>.py`
+4. The script is idempotent — it deletes and re-seeds if the course already exists
+
+### Schema
+
+- `books.type = 'course'` — distinguishes courses from regular books
+- `chapters.source_chapter_id` — FK to another chapter; when set, `db.getSegments()` and `db.getResolvedChapter()` follow the reference transparently
+- `chapters.chapter_type` — `'text'` (reading) or `'discussion'` (study guide session)
+- `segments.segment_type = 'list_item'` — consecutive list_items are grouped into `<ul>` blocks by the frontend
+
+### Course ID convention
+
+`{author-or-theme}-{short-title}` — e.g., `homer-epic`, `examined-life`, `how-to-live`
+
+### Annotation sharing
+
+Annotations on course reference chapters are stored against the **source book** (not the course). This means highlights and comments are shared between reading a book independently and reading it as part of a course.
+
+### Current courses
+
+| Course ID | Title | Books | Status |
+|-----------|-------|-------|--------|
+| `homer-epic` | Homer's Epics | Iliad → Odyssey | ✓ seeded |
 
 ---
 

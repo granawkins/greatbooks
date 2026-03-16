@@ -173,6 +173,19 @@ export const db = {
       .all(resolvedId) as SegmentRow[];
   },
 
+  /** For a course reference chapter, get the source book_id and chapter number for annotations */
+  getSourceBookInfo: (bookId: string, chapterNum: number): { bookId: string; chapterNumber: number } | null => {
+    const chapter = connection
+      .prepare("SELECT source_chapter_id FROM chapters WHERE book_id = ? AND number = ?")
+      .get(bookId, chapterNum) as { source_chapter_id: number | null } | undefined;
+    if (!chapter?.source_chapter_id) return null;
+    const source = connection
+      .prepare("SELECT book_id, number FROM chapters WHERE id = ?")
+      .get(chapter.source_chapter_id) as { book_id: string; number: number } | undefined;
+    if (!source) return null;
+    return { bookId: source.book_id, chapterNumber: source.number };
+  },
+
   /** Resolve a chapter's audio info, following source_chapter_id if set */
   getResolvedChapter: (chapterId: number): ChapterRow | undefined => {
     const chapter = connection
