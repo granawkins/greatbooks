@@ -1,25 +1,5 @@
 const CHARS_PER_PAGE = 1500;
 
-function PagesIcon() {
-  return (
-    <svg width="0.7em" height="0.7em" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" style={{ display: "inline", verticalAlign: "middle" }}>
-      <rect x="4" y="1" width="9" height="12" rx="1" />
-      <rect x="3" y="3" width="9" height="12" rx="1" fill="var(--color-bg, #fff)" />
-      <rect x="3" y="3" width="9" height="12" rx="1" />
-    </svg>
-  );
-}
-
-function HeadphonesIcon() {
-  return (
-    <svg width="0.7em" height="0.7em" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline", verticalAlign: "middle" }}>
-      <path d="M2 10V8a6 6 0 1 1 12 0v2" />
-      <rect x="1" y="10" width="3" height="4" rx="1" fill="currentColor" stroke="none" />
-      <rect x="12" y="10" width="3" height="4" rx="1" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
 function formatHours(ms: number): string {
   const hours = Math.round(ms / 3600000);
   return hours < 1 ? "<1h" : `${hours}h`;
@@ -30,10 +10,8 @@ export type ProgressLineProps = {
   totalDurationMs: number | null;
   chapterCount: number;
   progressChapter?: number | null;
-  /** Bar color overrides for light-on-dark contexts */
   barTrackColor?: string;
   barFillColor?: string;
-  /** Fixed bar width (e.g. "120px") */
   barWidth?: string;
 };
 
@@ -56,6 +34,9 @@ export default function ProgressLine({
     ? (inProgress ? Math.round(totalDurationMs * remainingFraction) : totalDurationMs)
     : null;
 
+  const hasDuration = displayDuration != null && displayDuration > 0;
+  const label = `${displayPages} pages${hasDuration ? ` (${formatHours(displayDuration)})` : ""}${inProgress ? " left" : ""}`;
+
   return (
     <div style={{ textAlign: "center" }}>
       <span
@@ -65,7 +46,7 @@ export default function ProgressLine({
           color: "inherit",
         }}
       >
-        <PagesIcon />{displayPages}{displayDuration != null && displayDuration > 0 && <>{" "}<HeadphonesIcon />{formatHours(displayDuration)}</>}{inProgress && " left"}
+        {label}
       </span>
       {inProgress && (
         <div
