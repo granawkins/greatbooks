@@ -101,6 +101,19 @@ python .claude/skills/curator/text/img.py \
 
 Saves `data/<book-id>/cover.png` and updates `books.cover_image`. Each call ~$0.04. Add a Cover section to `data/<book-id>/SKILL.md` when done.
 
+#### Course covers (different from book covers)
+
+Course covers are **not** the same as book covers:
+- **No text** — no title or author on the image. The homepage renders text separately.
+- **Landscape aspect ratio** — used as a background image behind the course card.
+- **Two resolutions required:**
+  - `-lg.png` — large version (~1.5MB), used as CSS `background-image` on desktop
+  - `-sm.jpg` — small thumbnail (~45KB), used in the "Continue" section
+- **Naming:** `public/covers/<course-id>-lg.png` and `public/covers/<course-id>-sm.jpg`
+- See `homer-epic-lg.png` / `homer-epic-sm.jpg` for reference.
+
+When generating, override `img.py` defaults: pass a custom `--prompt` with no title/author instructions, and use landscape aspect ratio. Then resize/compress to create both variants.
+
 ### DB schema notes
 
 `books` row must include: `original_date`, `translator`, `translation_date`, `source_url`, `license`. See the `database` skill for full schema reference.

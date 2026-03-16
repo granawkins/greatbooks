@@ -17,6 +17,10 @@ Requires:
     - google-genai
     - python-dotenv
     - GOOGLE_API_KEY in .env
+
+Note: When running from Claude Code background tasks, dotenv may not find
+the .env file. Source it first:
+    set -a && source .env && set +a && .venv/bin/python .claude/skills/curator/text/img.py ...
 """
 
 import argparse
