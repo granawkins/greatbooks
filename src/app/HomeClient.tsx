@@ -201,6 +201,11 @@ export default function HomeClient({
           const courseStats = statsMap[course.id];
           const courseProgress = progressMap[course.id];
           const bookIds = courseBooks[course.id] ?? [];
+          const courseChapterCount = courseStats?.chapter_count ?? 0;
+          const courseProgressFraction =
+            enrolled && courseProgress && courseChapterCount > 0
+              ? (courseProgress.chapter_number - 1) / courseChapterCount
+              : 0;
           return (
             <section key={course.id} style={{ marginBottom: "3rem" }}>
               <Link
@@ -211,154 +216,80 @@ export default function HomeClient({
                   borderRadius: "var(--radius-lg)",
                   overflow: "hidden",
                   position: "relative",
-                  transition: "transform 0.15s",
                   backgroundImage: `url(${getCoverLgUrl(course.id)})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }}
                 className="group hover:scale-[1.005]"
               >
-                {/* Gradient overlay */}
+                {/* Subtle overlay */}
                 <div
                   style={{
                     position: "absolute",
                     inset: 0,
-                    background: "linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0.1) 100%)",
+                    background: "rgba(0,0,0,0.25)",
                   }}
                 />
 
-                {/* Content */}
+                {/* Content — centered */}
                 <div
                   style={{
                     position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                    padding: "1.5rem",
-                    minHeight: "200px",
+                    textAlign: "center",
+                    padding: "2rem 1.5rem",
                   }}
                 >
-                  {/* Text — left side */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p
-                      style={{
-                        fontFamily: "var(--font-ui)",
-                        fontSize: "0.7rem",
-                        fontWeight: 500,
-                        letterSpacing: "0.06em",
-                        textTransform: "uppercase",
-                        color: "rgba(255,255,255,0.7)",
-                        margin: "0 0 0.25rem",
-                      }}
-                    >
-                      Course
-                    </p>
-                    <h2
-                      style={{
-                        fontFamily: "var(--font-display)",
-                        fontSize: "1.5rem",
-                        fontWeight: 400,
-                        color: "#fff",
-                        margin: "0 0 0.25rem",
-                      }}
-                    >
-                      {course.title}
-                    </h2>
-                    {course.description && (
-                      <p
-                        style={{
-                          fontFamily: "var(--font-body)",
-                          fontSize: "0.875rem",
-                          color: "rgba(255,255,255,0.75)",
-                          margin: "0 0 1rem",
-                          lineHeight: 1.5,
-                        }}
-                      >
-                        {course.description}
-                      </p>
-                    )}
+                  {/* Course label */}
+                  <p
+                    style={{
+                      fontFamily: "var(--font-ui)",
+                      fontSize: "0.7rem",
+                      fontWeight: 500,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "var(--color-accent)",
+                      margin: "0 0 0.25rem",
+                      textShadow: "0 1px 4px rgba(0,0,0,0.5)",
+                    }}
+                  >
+                    Course
+                  </p>
 
-                    {/* Mobile: book covers inline */}
-                    {bookIds.length > 0 && (
-                      <div
-                        className="sm:hidden"
-                        style={{
-                          display: "flex",
-                          gap: "0.5rem",
-                          marginBottom: "1rem",
-                        }}
-                      >
-                        {bookIds.map((bid) => (
-                          <div
-                            key={bid}
-                            style={{
-                              width: 64,
-                              height: 85,
-                              borderRadius: "3px",
-                              overflow: "hidden",
-                              position: "relative",
-                              flexShrink: 0,
-                              boxShadow: "2px 3px 8px rgba(0,0,0,0.3)",
-                            }}
-                          >
-                            <Image
-                              src={getCoverSmUrl(bid)}
-                              alt=""
-                              fill
-                              sizes="64px"
-                              className="object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                  {/* Title */}
+                  <h2
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontSize: "1.5rem",
+                      fontWeight: 400,
+                      color: "#fff",
+                      margin: "0 0 1.25rem",
+                      textShadow: "0 1px 6px rgba(0,0,0,0.6)",
+                    }}
+                  >
+                    {course.title}
+                  </h2>
 
-                    <span
-                      style={{
-                        display: "inline-block",
-                        padding: "0.5rem 1.25rem",
-                        backgroundColor: "rgba(255,255,255,0.9)",
-                        color: "var(--color-text)",
-                        borderRadius: "var(--radius)",
-                        fontFamily: "var(--font-ui)",
-                        fontSize: "0.875rem",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {enrolled ? "Continue" : "Start Course"}
-                    </span>
-                    {enrolled && courseStats && courseProgress && (
-                      <span
-                        style={{
-                          marginLeft: "1rem",
-                          fontFamily: "var(--font-ui)",
-                          fontSize: "0.75rem",
-                          color: "rgba(255,255,255,0.7)",
-                        }}
-                      >
-                        Chapter {courseProgress.chapter_number} of {courseStats.chapter_count}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Desktop: book covers stacked on right */}
+                  {/* Book covers — side by side, centered, shrink on mobile */}
                   {bookIds.length > 0 && (
                     <div
-                      className="hidden sm:flex"
                       style={{
-                        flexDirection: "column",
-                        gap: "0.5rem",
-                        flexShrink: 0,
+                        display: "flex",
+                        justifyContent: "center",
+                        gap: "1rem",
+                        marginBottom: "1.25rem",
                       }}
                     >
                       {bookIds.map((bid) => (
                         <div
                           key={bid}
+                          className="transition-transform duration-200 group-hover:scale-[1.02]"
                           style={{
-                            width: 100,
-                            height: 133,
+                            width: "min(140px, calc((100% - " + (bookIds.length - 1) + "rem) / " + bookIds.length + "))",
+                            aspectRatio: "3 / 4",
                             borderRadius: "3px",
                             overflow: "hidden",
                             position: "relative",
+                            flexShrink: 1,
                             boxShadow: "4px 6px 16px rgba(0,0,0,0.3)",
                           }}
                         >
@@ -366,13 +297,85 @@ export default function HomeClient({
                             src={getCoverSmUrl(bid)}
                             alt=""
                             fill
-                            sizes="100px"
+                            sizes="140px"
                             className="object-cover"
                           />
                         </div>
                       ))}
                     </div>
                   )}
+
+                  {/* Bottom row: CTA button left, progress right */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "1rem",
+                    }}
+                  >
+                    {/* CTA button */}
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "0.5rem 1.25rem",
+                        backgroundColor: "rgba(255,255,255,0.9)",
+                        color: "#1a1a1a",
+                        borderRadius: "var(--radius)",
+                        fontFamily: "var(--font-ui)",
+                        fontSize: "0.875rem",
+                        fontWeight: 500,
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                      }}
+                    >
+                      {enrolled ? "Continue" : "Join"}
+                    </span>
+
+                    {/* Progress info */}
+                    {enrolled && courseProgress ? (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "4px" }}>
+                        <span
+                          style={{
+                            fontFamily: "var(--font-ui)",
+                            fontSize: "0.75rem",
+                            color: "rgba(255,255,255,0.8)",
+                            textShadow: "0 1px 4px rgba(0,0,0,0.5)",
+                          }}
+                        >
+                          Ch. {courseProgress.chapter_number} of {courseChapterCount}
+                        </span>
+                        <div
+                          style={{
+                            width: "120px",
+                            height: "3px",
+                            backgroundColor: "rgba(255,255,255,0.3)",
+                            borderRadius: "2px",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${Math.max(courseProgressFraction * 100, 2)}%`,
+                              backgroundColor: "rgba(255,255,255,0.9)",
+                              borderRadius: "2px",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <span
+                        style={{
+                          fontFamily: "var(--font-ui)",
+                          fontSize: "0.75rem",
+                          color: "rgba(255,255,255,0.8)",
+                          textShadow: "0 1px 4px rgba(0,0,0,0.5)",
+                        }}
+                      >
+                        {courseChapterCount} chapters
+                      </span>
+                    )}
+                  </div>
                 </div>
               </Link>
             </section>
