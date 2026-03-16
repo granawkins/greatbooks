@@ -3,7 +3,9 @@ import { getAuthUserId } from "@/lib/auth";
 import HomeClient from "./HomeClient";
 
 export default async function Home() {
-  const books = db.getBooks();
+  const allBooks = db.getBooks();
+  const books = allBooks.filter((b) => b.type !== "course");
+  const courses = allBooks.filter((b) => b.type === "course");
   const userId = await getAuthUserId();
   const progressRows = userId ? db.getProgress(userId) : [];
   const bookStats = db.getBookStats();
@@ -21,5 +23,5 @@ export default async function Home() {
     statsMap[s.book_id] = { chapter_count: s.chapter_count, total_duration_ms: s.total_duration_ms };
   }
 
-  return <HomeClient books={books} progressMap={progressMap} statsMap={statsMap} recentBookIds={recentBookIds} />;
+  return <HomeClient books={books} courses={courses} progressMap={progressMap} statsMap={statsMap} recentBookIds={recentBookIds} />;
 }

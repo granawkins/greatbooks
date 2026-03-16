@@ -128,7 +128,7 @@ export function ChapterBlocks({
 }: {
   blocks: Block[];
   chapterNum: number;
-  paraRefsMap: React.RefObject<Record<number, (HTMLParagraphElement | null)[]>>;
+  paraRefsMap: React.RefObject<Record<number, (HTMLElement | null)[]>>;
   verse?: boolean;
   annotations: Annotation[];
   bookId: string;
@@ -279,6 +279,26 @@ export function ChapterBlocks({
             >
               {block.text}
             </p>
+          ) : block.type === "list" ? (
+            <ul
+              key={i}
+              ref={(el) => {
+                if (!paraRefsMap.current[chapterNum]) paraRefsMap.current[chapterNum] = [];
+                paraRefsMap.current[chapterNum][i] = el;
+              }}
+              style={{
+                color: "var(--color-text)",
+                fontFamily: "var(--font-body)",
+                fontSize: "1.125rem",
+                lineHeight: "1.85",
+                paddingLeft: "1.5em",
+                margin: 0,
+              }}
+            >
+              {block.items.map((item, j) => (
+                <li key={j} style={{ marginBottom: "0.25em" }}>{item}</li>
+              ))}
+            </ul>
           ) : (
             <p
               key={i}

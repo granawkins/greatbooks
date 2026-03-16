@@ -9,7 +9,7 @@ export type Segment = {
   id: number;
   sequence: number;
   text: string;
-  segment_type: "heading" | "text" | "paragraph_break";
+  segment_type: "heading" | "text" | "paragraph_break" | "list_item";
   audio_start_ms: number | null;
   audio_end_ms: number | null;
   word_timestamps: WordTs[] | null;
@@ -34,7 +34,12 @@ export type HeadingBlock = {
   text: string;
 };
 
-export type Block = ParagraphBlock | HeadingBlock;
+export type ListBlock = {
+  type: "list";
+  items: string[];
+};
+
+export type Block = ParagraphBlock | HeadingBlock | ListBlock;
 
 export type WordSpan = {
   start_ms: number;

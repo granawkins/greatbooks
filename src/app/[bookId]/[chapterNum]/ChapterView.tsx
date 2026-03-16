@@ -88,10 +88,12 @@ const metaLineStyle = {
 export default function ChapterView({
   chapterNum,
   chapterData,
+  chapterType = "text",
   initialAudioPositionMs,
 }: {
   chapterNum: number;
   chapterData: ChapterData;
+  chapterType?: "text" | "discussion";
   initialAudioPositionMs: number;
 }) {
   const { bookId, bookMeta, chapters, setCurrentChapter, cacheChapter } = useBookShell();
@@ -103,7 +105,7 @@ export default function ChapterView({
   const { saveProgressNow } = useProgress(bookId);
   const { setScrolled } = useTopBar();
 
-  const paraRefsMap = useRef<Record<number, (HTMLParagraphElement | null)[]>>({});
+  const paraRefsMap = useRef<Record<number, (HTMLElement | null)[]>>({});
   const heroRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialScrollDone = useRef(false);
@@ -321,6 +323,32 @@ export default function ChapterView({
         )}
 
         <div ref={bottomRef} />
+
+        {chapterType === "discussion" && nextChapter && (
+          <div style={{ display: "flex", justifyContent: "center", margin: "2rem 0" }}>
+            <a
+              href={`/${bookId}/${nextChapter.num}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.875rem 2rem",
+                backgroundColor: "var(--color-accent)",
+                color: "var(--color-bg)",
+                borderRadius: "var(--radius-lg)",
+                fontFamily: "var(--font-ui)",
+                fontSize: "1rem",
+                fontWeight: 500,
+                textDecoration: "none",
+                transition: "opacity 0.15s",
+              }}
+              className="hover:opacity-90"
+            >
+              Continue to {nextChapter.title}
+            </a>
+          </div>
+        )}
+
         <ChapterNav bookId={bookId} prevChapter={prevChapter} nextChapter={nextChapter} />
         <div ref={setMarginEl} className="chapter-margin" />
       </article>

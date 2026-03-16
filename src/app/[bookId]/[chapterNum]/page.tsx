@@ -15,6 +15,8 @@ export default async function ChapterPage({
   const chapter = db.getChapter(bookId, chapterNum);
   if (!chapter) notFound();
 
+  // Resolve source chapter for segments/audio (course reference chapters)
+  const resolved = db.getResolvedChapter(chapter.id);
   const rawSegments = db.getSegments(chapter.id);
   const segments: Segment[] = rawSegments.map((seg) => ({
     id: seg.id,
@@ -39,9 +41,10 @@ export default async function ChapterPage({
       chapterData={{
         title: chapter.title,
         segments,
-        audio_file: chapter.audio_file,
-        audio_duration_ms: chapter.audio_duration_ms,
+        audio_file: resolved?.audio_file ?? chapter.audio_file,
+        audio_duration_ms: resolved?.audio_duration_ms ?? chapter.audio_duration_ms,
       }}
+      chapterType={chapter.chapter_type ?? "text"}
       initialAudioPositionMs={audioPositionMs}
     />
   );

@@ -12,11 +12,13 @@ type StatsMap = Record<string, { chapter_count: number; total_duration_ms: numbe
 
 export default function HomeClient({
   books,
+  courses,
   progressMap,
   statsMap,
   recentBookIds,
 }: {
   books: BookRow[];
+  courses: BookRow[];
   progressMap: ProgressMap;
   statsMap: StatsMap;
   recentBookIds: string[];
@@ -145,6 +147,96 @@ export default function HomeClient({
             </Link>
           </section>
         )}
+
+        {/* Courses */}
+        {courses.map((course) => {
+          const enrolled = !!progressMap[course.id];
+          const courseStats = statsMap[course.id];
+          const courseProgress = progressMap[course.id];
+          return (
+            <section key={course.id} style={{ marginBottom: "3rem" }}>
+              <Link
+                href={enrolled ? `/${course.id}` : `/${course.id}/contents`}
+                style={{
+                  display: "block",
+                  textDecoration: "none",
+                  borderRadius: "var(--radius-lg)",
+                  overflow: "hidden",
+                  border: "1px solid var(--color-border)",
+                  padding: "2rem",
+                  transition: "border-color 0.15s",
+                  background: "var(--color-bg-secondary)",
+                }}
+                className="group hover:border-[var(--color-text-secondary)]"
+              >
+                <p
+                  style={{
+                    fontFamily: "var(--font-ui)",
+                    fontSize: "0.75rem",
+                    fontWeight: 500,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: "var(--color-accent)",
+                    margin: "0 0 0.5rem",
+                  }}
+                >
+                  Course
+                </p>
+                <h2
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "1.75rem",
+                    fontWeight: 400,
+                    color: "var(--color-text)",
+                    margin: "0 0 0.5rem",
+                  }}
+                >
+                  {course.title}
+                </h2>
+                {course.description && (
+                  <p
+                    style={{
+                      fontFamily: "var(--font-body)",
+                      fontSize: "1rem",
+                      color: "var(--color-text-secondary)",
+                      margin: "0 0 1.25rem",
+                      lineHeight: 1.6,
+                      maxWidth: "40em",
+                    }}
+                  >
+                    {course.description}
+                  </p>
+                )}
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "0.5rem 1.25rem",
+                    backgroundColor: "var(--color-accent)",
+                    color: "var(--color-bg)",
+                    borderRadius: "var(--radius)",
+                    fontFamily: "var(--font-ui)",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                  }}
+                >
+                  {enrolled ? "Continue" : "Start Course"}
+                </span>
+                {enrolled && courseStats && courseProgress && (
+                  <span
+                    style={{
+                      marginLeft: "1rem",
+                      fontFamily: "var(--font-ui)",
+                      fontSize: "0.8rem",
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
+                    Chapter {courseProgress.chapter_number} of {courseStats.chapter_count}
+                  </span>
+                )}
+              </Link>
+            </section>
+          );
+        })}
 
         {/* All books */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-5 gap-y-8">

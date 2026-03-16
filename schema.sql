@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS books (
   translation_date TEXT,                -- year of translation (e.g. "1898")
   source_url TEXT,                      -- URL where the text was sourced
   license TEXT,                         -- copyright status (e.g. "Public Domain")
-  layout TEXT DEFAULT 'prose'           -- 'prose' (sentences flow) or 'verse' (line breaks between segments)
+  layout TEXT DEFAULT 'prose',          -- 'prose' (sentences flow) or 'verse' (line breaks between segments)
+  type TEXT DEFAULT 'book'              -- 'book' or 'course'
 );
 
 CREATE TABLE IF NOT EXISTS chapters (
@@ -21,7 +22,9 @@ CREATE TABLE IF NOT EXISTS chapters (
   number INTEGER NOT NULL,
   title TEXT NOT NULL,
   audio_file TEXT,                      -- relative path to MP3 (NULL if no audio)
-  audio_duration_ms INTEGER             -- total audio duration in milliseconds
+  audio_duration_ms INTEGER,            -- total audio duration in milliseconds
+  source_chapter_id INTEGER,            -- if set, use segments/audio from this chapter (for courses)
+  chapter_type TEXT DEFAULT 'text'       -- 'text' or 'discussion'
 );
 
 -- A segment is the smallest unit of text: a sentence (prose) or line (poetry).
@@ -31,7 +34,7 @@ CREATE TABLE IF NOT EXISTS segments (
   chapter_id INTEGER NOT NULL REFERENCES chapters(id),
   sequence INTEGER NOT NULL,           -- ordering within chapter
   text TEXT NOT NULL DEFAULT '',
-  segment_type TEXT NOT NULL DEFAULT 'text',  -- 'heading' | 'text' | 'paragraph_break'
+  segment_type TEXT NOT NULL DEFAULT 'text',  -- 'heading' | 'text' | 'paragraph_break' | 'list_item'
   audio_start_ms INTEGER,              -- start time in chapter audio (ms)
   audio_end_ms INTEGER,                -- end time in chapter audio (ms)
   word_timestamps JSON                 -- [{start_ms, end_ms, char_start, char_end}, ...]
