@@ -72,4 +72,5 @@ export type BookMeta = {
   translation_date?: string | null;
   source_url?: string | null;
   layout?: "prose" | "verse";
+  type?: "book" | "course";
 };
