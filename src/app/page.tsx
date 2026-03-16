@@ -18,9 +18,9 @@ export default async function Home() {
     recentBookIds.push(r.book_id);
   }
 
-  const statsMap: Record<string, { chapter_count: number; total_duration_ms: number | null }> = {};
+  const statsMap: Record<string, { chapter_count: number; total_duration_ms: number | null; total_chars: number; discussion_count: number }> = {};
   for (const s of bookStats) {
-    statsMap[s.book_id] = { chapter_count: s.chapter_count, total_duration_ms: s.total_duration_ms };
+    statsMap[s.book_id] = { chapter_count: s.chapter_count, total_duration_ms: s.total_duration_ms, total_chars: s.total_chars, discussion_count: s.discussion_count };
   }
 
   // Build a map of bookId → course title for books that are part of an enrolled course

@@ -8,7 +8,7 @@ import { getCoverSmUrl, getCoverLgUrl } from "@/lib/assets";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 
 type ProgressMap = Record<string, { chapter_number: number; audio_position_ms: number; updated_at: string }>;
-type StatsMap = Record<string, { chapter_count: number; total_duration_ms: number | null }>;
+type StatsMap = Record<string, { chapter_count: number; total_duration_ms: number | null; total_chars: number; discussion_count: number }>;
 
 type CourseForBook = Record<string, { courseId: string; courseTitle: string }>;
 
@@ -53,6 +53,32 @@ export default function HomeClient({
       ? (continueProgress.chapter_number - 1) / continueChapterCount
       : 0;
   const bookCourseInfo = !lastIsCourse && lastBookId ? courseForBook[lastBookId] : null;
+
+  // Stats line for continue section
+  const continueStatsLine = (() => {
+    if (!continueStats || !continueProgress || continueChapterCount === 0) return "";
+    const totalPages = Math.max(1, Math.round(continueStats.total_chars / 1500));
+    const remainFrac = 1 - (continueProgress.chapter_number - 1) / continueChapterCount;
+    const remPages = Math.max(1, Math.round(totalPages * remainFrac));
+    const remDuration = continueStats.total_duration_ms ? Math.round(continueStats.total_duration_ms * remainFrac) : null;
+    const isCourse = continueBook?.type === "course";
+    const remDiscussions = isCourse ? Math.max(0, Math.round(continueStats.discussion_count * remainFrac)) : 0;
+
+    const parts: string[] = [];
+    if (remDuration) {
+      const totalMin = Math.round(remDuration / 60000);
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      const dur = h === 0 ? `${m}m` : m === 0 ? `${h}h` : `${h}h ${m}m`;
+      parts.push(`${remPages} pages (${dur})`);
+    } else {
+      parts.push(`${remPages} pages`);
+    }
+    if (isCourse && remDiscussions > 0) {
+      parts.push(`${remDiscussions} session${remDiscussions !== 1 ? "s" : ""}`);
+    }
+    return `Remaining: ${parts.join(", ")}`;
+  })();
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)" }}>
@@ -169,7 +195,7 @@ export default function HomeClient({
                     margin: "4px 0 10px",
                   }}
                 >
-                  Ch. {continueProgress.chapter_number} of {continueChapterCount}
+                  {continueStatsLine}
                 </p>
                 {/* Progress bar */}
                 <div
@@ -342,7 +368,26 @@ export default function HomeClient({
                             textShadow: "0 1px 4px rgba(0,0,0,0.5)",
                           }}
                         >
-                          Ch. {courseProgress.chapter_number} of {courseChapterCount}
+                          {(() => {
+                            const cs = courseStats;
+                            if (!cs) return "";
+                            const totalPages = Math.max(1, Math.round(cs.total_chars / 1500));
+                            const remFrac = 1 - (courseProgress.chapter_number - 1) / courseChapterCount;
+                            const remPages = Math.max(1, Math.round(totalPages * remFrac));
+                            const remDur = cs.total_duration_ms ? Math.round(cs.total_duration_ms * remFrac) : null;
+                            const remDisc = Math.max(0, Math.round((cs.discussion_count ?? 0) * remFrac));
+                            const parts: string[] = [];
+                            if (remDur) {
+                              const tMin = Math.round(remDur / 60000);
+                              const h = Math.floor(tMin / 60); const m = tMin % 60;
+                              const dur = h === 0 ? `${m}m` : m === 0 ? `${h}h` : `${h}h ${m}m`;
+                              parts.push(`${remPages} pages (${dur})`);
+                            } else {
+                              parts.push(`${remPages} pages`);
+                            }
+                            if (remDisc > 0) parts.push(`${remDisc} session${remDisc !== 1 ? "s" : ""}`);
+                            return `Remaining: ${parts.join(", ")}`;
+                          })()}
                         </span>
                         <div
                           style={{
@@ -372,7 +417,22 @@ export default function HomeClient({
                           textShadow: "0 1px 4px rgba(0,0,0,0.5)",
                         }}
                       >
-                        {courseChapterCount} chapters
+                        {(() => {
+                          const cs = courseStats;
+                          if (!cs) return `${courseChapterCount} chapters`;
+                          const totalPages = Math.max(1, Math.round(cs.total_chars / 1500));
+                          const parts: string[] = [];
+                          if (cs.total_duration_ms) {
+                            const tMin = Math.round(cs.total_duration_ms / 60000);
+                            const h = Math.floor(tMin / 60); const m = tMin % 60;
+                            const dur = h === 0 ? `${m}m` : m === 0 ? `${h}h` : `${h}h ${m}m`;
+                            parts.push(`${totalPages} pages (${dur})`);
+                          } else {
+                            parts.push(`${totalPages} pages`);
+                          }
+                          if ((cs.discussion_count ?? 0) > 0) parts.push(`${cs.discussion_count} session${cs.discussion_count !== 1 ? "s" : ""}`);
+                          return parts.join(", ");
+                        })()}
                       </span>
                     )}
                   </div>

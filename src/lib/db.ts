@@ -278,12 +278,18 @@ export const db = {
     return result;
   },
 
-  getBookStats: (): { book_id: string; chapter_count: number; total_duration_ms: number | null }[] =>
+  getBookStats: (): { book_id: string; chapter_count: number; total_duration_ms: number | null; total_chars: number; discussion_count: number }[] =>
     connection
       .prepare(
-        "SELECT book_id, COUNT(*) as chapter_count, SUM(audio_duration_ms) as total_duration_ms FROM chapters GROUP BY book_id"
+        `SELECT c.book_id,
+                COUNT(*) as chapter_count,
+                SUM(c.audio_duration_ms) as total_duration_ms,
+                COALESCE((SELECT SUM(LENGTH(s.text)) FROM segments s JOIN chapters c2 ON s.chapter_id = c2.id WHERE c2.book_id = c.book_id AND s.segment_type = 'text'), 0) as total_chars,
+                SUM(CASE WHEN c.chapter_type = 'discussion' THEN 1 ELSE 0 END) as discussion_count
+         FROM chapters c
+         GROUP BY c.book_id`
       )
-      .all() as { book_id: string; chapter_count: number; total_duration_ms: number | null }[],
+      .all() as { book_id: string; chapter_count: number; total_duration_ms: number | null; total_chars: number; discussion_count: number }[],
 
   updateMessage: (
     id: number,
