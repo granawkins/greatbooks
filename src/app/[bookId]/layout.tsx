@@ -27,6 +27,7 @@ export default async function BookLayout({
           translation_date: book.translation_date,
           source_url: book.source_url,
           layout: book.layout || "prose",
+          type: book.type || "book",
         }}
         chapters={chapters.map((c) => ({ id: c.number, title: c.title }))}
       >

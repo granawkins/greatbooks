@@ -146,14 +146,14 @@ export default function ChapterView({
 
   // Hero scroll tracking (first chapter only)
   useEffect(() => {
-    if (!isFirstChapter) { setScrolled(true); return; }
+    if (!isFirstChapter || bookMeta.type === "course") { setScrolled(true); return; }
     const observer = new IntersectionObserver(
       ([entry]) => setScrolled(!entry.isIntersecting),
       { threshold: 0 }
     );
     if (heroRef.current) observer.observe(heroRef.current);
     return () => observer.disconnect();
-  }, [isFirstChapter, setScrolled]);
+  }, [isFirstChapter, setScrolled, bookMeta.type]);
 
   // ── Blocks ────────────────────────────────────────────────────────────
 
@@ -316,7 +316,7 @@ export default function ChapterView({
         />
       )}
       <article className="chapter-text">
-        {isFirstChapter && (
+        {isFirstChapter && bookMeta.type !== "course" && (
           <div ref={heroRef} style={{ minHeight: 1 }}>
             <CoverImage bookId={bookId} title={bookMeta.title} />
             <div style={{ textAlign: "center", paddingBottom: "1.5rem" }}>
