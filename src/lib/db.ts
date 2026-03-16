@@ -36,6 +36,19 @@ rwConnection.exec(`
   CREATE INDEX IF NOT EXISTS idx_annotations_user_book ON annotations(user_id, book_id, chapter_number);
 `);
 
+// Add type column to books (course support)
+try {
+  rwConnection.exec(`ALTER TABLE books ADD COLUMN type TEXT DEFAULT 'book'`);
+} catch { /* column already exists */ }
+
+// Add source_chapter_id and chapter_type columns to chapters (course support)
+try {
+  rwConnection.exec(`ALTER TABLE chapters ADD COLUMN source_chapter_id INTEGER`);
+} catch { /* column already exists */ }
+try {
+  rwConnection.exec(`ALTER TABLE chapters ADD COLUMN chapter_type TEXT DEFAULT 'text'`);
+} catch { /* column already exists */ }
+
 // -- Types matching the database schema --
 
 export type BookRow = {
@@ -50,6 +63,7 @@ export type BookRow = {
   source_url: string | null;
   license: string | null;
   layout: "prose" | "verse";
+  type: "book" | "course";
 };
 
 export type ChapterRow = {
@@ -59,6 +73,8 @@ export type ChapterRow = {
   title: string;
   audio_file: string | null;
   audio_duration_ms: number | null;
+  source_chapter_id: number | null;
+  chapter_type: "text" | "discussion";
 };
 
 export type SegmentRow = {
@@ -66,7 +82,7 @@ export type SegmentRow = {
   chapter_id: number;
   sequence: number;
   text: string;
-  segment_type: "heading" | "text" | "paragraph_break";
+  segment_type: "heading" | "text" | "paragraph_break" | "list_item";
   audio_start_ms: number | null;
   audio_end_ms: number | null;
   word_timestamps: string | null; // JSON string
@@ -122,8 +138,12 @@ export type AnnotationRow = {
 // -- Query helpers --
 
 export const db = {
-  getBooks: (): BookRow[] =>
-    connection.prepare("SELECT * FROM books").all() as BookRow[],
+  getBooks: (type?: "book" | "course"): BookRow[] => {
+    if (type) {
+      return connection.prepare("SELECT * FROM books WHERE type = ?").all(type) as BookRow[];
+    }
+    return connection.prepare("SELECT * FROM books").all() as BookRow[];
+  },
 
   getBook: (id: string): BookRow | undefined =>
     connection
@@ -142,12 +162,51 @@ export const db = {
       )
       .get(bookId, number) as ChapterRow | undefined,
 
-  getSegments: (chapterId: number): SegmentRow[] =>
-    connection
-      .prepare(
-        "SELECT * FROM segments WHERE chapter_id = ? ORDER BY sequence"
-      )
-      .all(chapterId) as SegmentRow[],
+  getSegments: (chapterId: number): SegmentRow[] => {
+    // Check if this chapter references another chapter (course reference chapter)
+    const chapter = connection
+      .prepare("SELECT source_chapter_id FROM chapters WHERE id = ?")
+      .get(chapterId) as { source_chapter_id: number | null } | undefined;
+    const resolvedId = chapter?.source_chapter_id ?? chapterId;
+    return connection
+      .prepare("SELECT * FROM segments WHERE chapter_id = ? ORDER BY sequence")
+      .all(resolvedId) as SegmentRow[];
+  },
+
+  /** For a course reference chapter, get the source book_id and chapter number for annotations */
+  getSourceBookInfo: (bookId: string, chapterNum: number): { bookId: string; chapterNumber: number } | null => {
+    const chapter = connection
+      .prepare("SELECT source_chapter_id FROM chapters WHERE book_id = ? AND number = ?")
+      .get(bookId, chapterNum) as { source_chapter_id: number | null } | undefined;
+    if (!chapter?.source_chapter_id) return null;
+    const source = connection
+      .prepare("SELECT book_id, number FROM chapters WHERE id = ?")
+      .get(chapter.source_chapter_id) as { book_id: string; number: number } | undefined;
+    if (!source) return null;
+    return { bookId: source.book_id, chapterNumber: source.number };
+  },
+
+  /** Resolve a chapter's audio info, following source_chapter_id if set */
+  getResolvedChapter: (chapterId: number): ChapterRow | undefined => {
+    const chapter = connection
+      .prepare("SELECT * FROM chapters WHERE id = ?")
+      .get(chapterId) as ChapterRow | undefined;
+    if (!chapter) return undefined;
+    if (chapter.source_chapter_id) {
+      const source = connection
+        .prepare("SELECT * FROM chapters WHERE id = ?")
+        .get(chapter.source_chapter_id) as ChapterRow | undefined;
+      if (source) {
+        // Return the course chapter but with source's audio info
+        return {
+          ...chapter,
+          audio_file: source.audio_file,
+          audio_duration_ms: source.audio_duration_ms,
+        };
+      }
+    }
+    return chapter;
+  },
 
   // -- User & progress (read-write) --
 
@@ -278,5 +337,47 @@ export const db = {
       .prepare("DELETE FROM annotations WHERE id = ? AND user_id = ?")
       .run(id, userId);
     return result.changes > 0;
+  },
+
+  // -- Course helpers --
+
+  /** Find courses that contain chapters from the given book */
+  getCoursesForBook: (bookId: string): { course_id: string; course_title: string }[] => {
+    return connection
+      .prepare(`
+        SELECT DISTINCT b.id as course_id, b.title as course_title
+        FROM books b
+        JOIN chapters cc ON cc.book_id = b.id
+        JOIN chapters sc ON cc.source_chapter_id = sc.id
+        WHERE b.type = 'course' AND sc.book_id = ?
+      `)
+      .all(bookId) as { course_id: string; course_title: string }[];
+  },
+
+  /** Find a course the user is enrolled in (has progress) that contains the given book.
+   *  Returns the course info + which course chapter corresponds to the user's book progress. */
+  getEnrolledCourseForBook: (userId: string, bookId: string): {
+    courseId: string;
+    courseTitle: string;
+    currentCourseChapter: number;
+  } | null => {
+    // Find courses containing this book where user has progress
+    const row = connection
+      .prepare(`
+        SELECT b.id as course_id, b.title as course_title, up.chapter_number
+        FROM books b
+        JOIN chapters cc ON cc.book_id = b.id
+        JOIN chapters sc ON cc.source_chapter_id = sc.id
+        JOIN user_progress up ON up.book_id = b.id AND up.user_id = ?
+        WHERE b.type = 'course' AND sc.book_id = ?
+        LIMIT 1
+      `)
+      .get(userId, bookId) as { course_id: string; course_title: string; chapter_number: number } | undefined;
+    if (!row) return null;
+    return {
+      courseId: row.course_id,
+      courseTitle: row.course_title,
+      currentCourseChapter: row.chapter_number,
+    };
   },
 };

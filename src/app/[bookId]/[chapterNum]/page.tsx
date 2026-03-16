@@ -15,6 +15,8 @@ export default async function ChapterPage({
   const chapter = db.getChapter(bookId, chapterNum);
   if (!chapter) notFound();
 
+  // Resolve source chapter for segments/audio (course reference chapters)
+  const resolved = db.getResolvedChapter(chapter.id);
   const rawSegments = db.getSegments(chapter.id);
   const segments: Segment[] = rawSegments.map((seg) => ({
     id: seg.id,
@@ -33,16 +35,48 @@ export default async function ChapterPage({
   const audioPositionMs =
     progress?.chapter_number === chapterNum ? (progress.audio_position_ms ?? 0) : 0;
 
+  // For course reference chapters with no course progress on this chapter,
+  // check if the source book has independent progress that's newer than the course progress.
+  // Only prompt if the user made independent progress AFTER their last course activity.
+  let sourceProgress: { bookTitle: string; chapterNumber: number; audioPositionMs: number } | null = null;
+  if (chapter.source_chapter_id && audioPositionMs === 0) {
+    const sourceInfo = db.getSourceBookInfo(bookId, chapterNum);
+    if (sourceInfo) {
+      const sourceBookProgress = progressRows.find((p) => p.book_id === sourceInfo.bookId);
+      const courseProgress = progressRows.find((p) => p.book_id === bookId);
+      if (
+        sourceBookProgress &&
+        sourceBookProgress.chapter_number === sourceInfo.chapterNumber &&
+        sourceBookProgress.audio_position_ms > 0
+      ) {
+        // Only show if source book progress is newer than course progress
+        // (i.e., the user read independently AFTER their last course session)
+        const sourceIsNewer = !courseProgress ||
+          sourceBookProgress.updated_at > courseProgress.updated_at;
+        if (sourceIsNewer) {
+          const sourceBook = db.getBook(sourceInfo.bookId);
+          sourceProgress = {
+            bookTitle: sourceBook?.title ?? sourceInfo.bookId,
+            chapterNumber: sourceInfo.chapterNumber,
+            audioPositionMs: sourceBookProgress.audio_position_ms,
+          };
+        }
+      }
+    }
+  }
+
   return (
     <ChapterView
       chapterNum={chapterNum}
       chapterData={{
         title: chapter.title,
         segments,
-        audio_file: chapter.audio_file,
-        audio_duration_ms: chapter.audio_duration_ms,
+        audio_file: resolved?.audio_file ?? chapter.audio_file,
+        audio_duration_ms: resolved?.audio_duration_ms ?? chapter.audio_duration_ms,
       }}
+      chapterType={chapter.chapter_type ?? "text"}
       initialAudioPositionMs={audioPositionMs}
+      sourceProgress={sourceProgress}
     />
   );
 }

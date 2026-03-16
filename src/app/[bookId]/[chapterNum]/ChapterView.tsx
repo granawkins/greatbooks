@@ -15,6 +15,7 @@ import {
   paraTimeRange,
   type ChapterData,
 } from "@/components/reader";
+import CourseChoiceModal from "@/components/CourseChoiceModal";
 import type { Annotation } from "@/components/reader/types";
 import { ChapterNav } from "@/components/reader/ChapterNav";
 
@@ -88,22 +89,26 @@ const metaLineStyle = {
 export default function ChapterView({
   chapterNum,
   chapterData,
+  chapterType = "text",
   initialAudioPositionMs,
+  sourceProgress,
 }: {
   chapterNum: number;
   chapterData: ChapterData;
+  chapterType?: "text" | "discussion";
   initialAudioPositionMs: number;
+  sourceProgress?: { bookTitle: string; chapterNumber: number; audioPositionMs: number } | null;
 }) {
   const { bookId, bookMeta, chapters, setCurrentChapter, cacheChapter } = useBookShell();
   const searchParams = useSearchParams();
   const scrollToBottom = searchParams.get("scroll") === "bottom";
   const autoplay = searchParams.get("autoplay") === "1";
 
-  const { session, loadSession, wordTimingsRef, scrollDataRef } = useAudioPlayer();
+  const { session, loadSession, wordTimingsRef, scrollDataRef, audioRef } = useAudioPlayer();
   const { saveProgressNow } = useProgress(bookId);
   const { setScrolled } = useTopBar();
 
-  const paraRefsMap = useRef<Record<number, (HTMLParagraphElement | null)[]>>({});
+  const paraRefsMap = useRef<Record<number, (HTMLElement | null)[]>>({});
   const heroRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialScrollDone = useRef(false);
@@ -258,15 +263,58 @@ export default function ChapterView({
     return () => { scrollDataRef.current = null; };
   }, [session?.bookId, session?.chapterId, bookId, chapterNum, paraRanges, scrollDataRef]);
 
+  // ── Source progress modal ─────────────────────────────────────────────
+
+  const [showSourceModal, setShowSourceModal] = useState(!!sourceProgress);
+
+  const handleCarryOver = useCallback(() => {
+    if (!sourceProgress) return;
+    setShowSourceModal(false);
+    // Seek audio to the carried-over position
+    const posMs = sourceProgress.audioPositionMs;
+    if (audioRef.current && posMs > 0) {
+      audioRef.current.currentTime = posMs / 1000;
+    }
+    saveProgressNow(chapterNum, posMs);
+  }, [sourceProgress, audioRef, saveProgressNow, chapterNum]);
+
+  const handleStartFresh = useCallback(() => {
+    setShowSourceModal(false);
+  }, []);
+
   // ── Render ────────────────────────────────────────────────────────────
 
   const [marginEl, setMarginEl] = useState<HTMLDivElement | null>(null);
+
+  const formatTime = (ms: number) => {
+    const totalSec = Math.floor(ms / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    return `${min}:${sec.toString().padStart(2, "0")}`;
+  };
 
   return (
     <div
       className="chapter-layout"
       style={{ paddingBottom: "200px" }}
     >
+      {showSourceModal && sourceProgress && (
+        <CourseChoiceModal
+          title={chapterData.title}
+          message={`You were listening to this chapter in ${sourceProgress.bookTitle}. Pick up where you left off?`}
+          choices={[
+            {
+              label: "Pick up where I left off",
+              sublabel: `At ${formatTime(sourceProgress.audioPositionMs)}`,
+              onClick: handleCarryOver,
+            },
+            {
+              label: "Start from the beginning",
+              onClick: handleStartFresh,
+            },
+          ]}
+        />
+      )}
       <article className="chapter-text">
         {isFirstChapter && (
           <div ref={heroRef} style={{ minHeight: 1 }}>
@@ -321,6 +369,32 @@ export default function ChapterView({
         )}
 
         <div ref={bottomRef} />
+
+        {chapterType === "discussion" && nextChapter && (
+          <div style={{ display: "flex", justifyContent: "center", margin: "2rem 0" }}>
+            <a
+              href={`/${bookId}/${nextChapter.num}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.875rem 2rem",
+                backgroundColor: "var(--color-accent)",
+                color: "var(--color-bg)",
+                borderRadius: "var(--radius-lg)",
+                fontFamily: "var(--font-ui)",
+                fontSize: "1rem",
+                fontWeight: 500,
+                textDecoration: "none",
+                transition: "opacity 0.15s",
+              }}
+              className="hover:opacity-90"
+            >
+              Continue to {nextChapter.title}
+            </a>
+          </div>
+        )}
+
         <ChapterNav bookId={bookId} prevChapter={prevChapter} nextChapter={nextChapter} />
         <div ref={setMarginEl} className="chapter-margin" />
       </article>
