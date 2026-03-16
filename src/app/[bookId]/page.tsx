@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthUserId } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import BookOrCourse from "./BookOrCourse";
+import BookOrCourseChoice from "./BookOrCourseChoice";
 
 export default async function BookPage({
   params,
@@ -19,7 +19,7 @@ export default async function BookPage({
   const progress = progressRows.find((p) => p.book_id === bookId) ?? null;
   const chapterNum = progress?.chapter_number ?? chapters[0].number;
 
-  // For courses or books not in any course, auto-redirect
+  // For courses, auto-redirect
   if (book.type === "course") {
     redirect(`/${bookId}/${chapterNum}`);
   }
@@ -30,9 +30,9 @@ export default async function BookPage({
     redirect(`/${bookId}/${chapterNum}`);
   }
 
-  // Show disambiguation: course vs independent reading
+  // Show choice modal: course vs independent reading
   return (
-    <BookOrCourse
+    <BookOrCourseChoice
       bookId={bookId}
       bookTitle={book.title}
       bookChapter={chapterNum}

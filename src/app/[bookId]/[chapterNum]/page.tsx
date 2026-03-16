@@ -35,6 +35,23 @@ export default async function ChapterPage({
   const audioPositionMs =
     progress?.chapter_number === chapterNum ? (progress.audio_position_ms ?? 0) : 0;
 
+  // For course reference chapters with no course progress, check source book progress
+  let sourceProgress: { bookTitle: string; chapterNumber: number; audioPositionMs: number } | null = null;
+  if (chapter.source_chapter_id && audioPositionMs === 0) {
+    const sourceInfo = db.getSourceBookInfo(bookId, chapterNum);
+    if (sourceInfo) {
+      const sourceBookProgress = progressRows.find((p) => p.book_id === sourceInfo.bookId);
+      if (sourceBookProgress && sourceBookProgress.chapter_number === sourceInfo.chapterNumber && sourceBookProgress.audio_position_ms > 0) {
+        const sourceBook = db.getBook(sourceInfo.bookId);
+        sourceProgress = {
+          bookTitle: sourceBook?.title ?? sourceInfo.bookId,
+          chapterNumber: sourceInfo.chapterNumber,
+          audioPositionMs: sourceBookProgress.audio_position_ms,
+        };
+      }
+    }
+  }
+
   return (
     <ChapterView
       chapterNum={chapterNum}
@@ -46,6 +63,7 @@ export default async function ChapterPage({
       }}
       chapterType={chapter.chapter_type ?? "text"}
       initialAudioPositionMs={audioPositionMs}
+      sourceProgress={sourceProgress}
     />
   );
 }
