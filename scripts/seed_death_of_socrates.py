@@ -1,8 +1,14 @@
 """
 Seed the death-of-socrates course into the database.
 
-Creates a course that presents the Apology, Phaedo, and Republic with
-interleaved discussion sessions drawn from study guides.
+Creates a course covering Plato's Apology, Phaedo, and Republic with
+introduction and discussion chapters drawn from existing study guides.
+
+Structure:
+  Apology: intro → reading ch → Session I → Session II
+  Phaedo: intro → reading ch → Session I → Session II → Session III
+  Republic: intro → chs 1–2 → Session I → chs 3–5 → Session II →
+            chs 6–7 → Session III → chs 8–9 → Session IV → ch 10 → Session V
 
 Usage: .venv/bin/python scripts/seed_death_of_socrates.py
 """
@@ -19,8 +25,8 @@ COURSE_TITLE = "The Death of Socrates"
 COURSE_AUTHOR = "Plato"
 COURSE_DESCRIPTION = (
     "Socrates spent his life asking one question: how should a person live? "
-    "Athens answered by executing him. Read his trial, his final hours, and "
-    "the philosophy he died for \u2014 in the words of the man who was there."
+    "Athens answered by executing him. Read his trial, his final hours, and the "
+    "philosophy he died for — in the words of the man who was there."
 )
 
 
@@ -85,7 +91,7 @@ def parse_session_to_segments(text: str, reorder_essay: bool = True) -> list[dic
             ):
                 i += 1
                 item_text += " " + lines[i].strip()
-            segments.append({"type": "list_item", "text": item_text})
+            segments.append({"type": "list_item", "text": strip_markdown(item_text)})
             i += 1
             continue
 
@@ -111,7 +117,7 @@ def parse_session_to_segments(text: str, reorder_essay: bool = True) -> list[dic
         for sent in sentences:
             sent = sent.strip()
             if sent:
-                segments.append({"type": "text", "text": sent})
+                segments.append({"type": "text", "text": strip_markdown(sent)})
 
         i += 1
 
@@ -147,32 +153,25 @@ def _reorder_essay_and_coming_up(text: str) -> str:
             )
             return text_without_essay
 
-    # No Coming Up found — append Discussion at the end
+    # No Coming Up found — just append Discussion at the end
     return text_without_essay.rstrip() + "\n\n---\n\n" + essay_content
 
 
 def extract_sessions(studyguide_path: str) -> dict[str, str]:
-    """Extract session content from a study guide file.
-
-    Handles session numbers as both Arabic digits (Session 1) and
-    Roman numerals (Session I, Session II, etc.).
-    """
+    """Extract session content from a Plato study guide file (Roman numeral sessions)."""
     with open(studyguide_path, "r") as f:
         content = f.read()
 
     sessions = {}
 
     # Extract "Before You Read" as intro content
-    before_match = re.search(
-        r"## Before You Read\n(.*?)(?=\n---\n|\n## Session)",
-        content,
-        re.DOTALL,
-    )
+    before_match = re.search(r"## Before You Read\n(.*?)(?=\n---\n|\n## Session)", content, re.DOTALL)
     if before_match:
         sessions["intro"] = before_match.group(1).strip()
 
-    # Extract each session — use [^:\n]+ to match both Arabic and Roman numerals
-    session_pattern = r"## (Session [^:\n]+:.*?)\n(.*?)(?=\n## Session|\n*$)"
+    # Extract each session (Roman numeral: Session I, II, III, IV, V, ...)
+    # Stop before *End of Study Guide or next session
+    session_pattern = r"## (Session [IVXLCDM]+:.*?)\n(.*?)(?=\n## Session|\n\*End|\n*$)"
     for match in re.finditer(session_pattern, content, re.DOTALL):
         title = match.group(1).strip()
         body = match.group(2).strip()
@@ -181,13 +180,16 @@ def extract_sessions(studyguide_path: str) -> dict[str, str]:
     return sessions
 
 
-def generate_book_intro_segments(book_title: str, sessions: dict) -> list[dict]:
+def session_short_title(full_title: str) -> str:
+    """Convert 'Session I: Title (subtitle)' to 'Session I: Title'."""
+    return re.sub(r'\s*\(.*?\)\s*$', '', full_title).strip()
+
+
+def generate_book_intro_segments(sessions: dict) -> list[dict]:
     """Generate introduction segments from 'Before You Read'."""
     if "intro" in sessions:
-        segs = parse_session_to_segments(sessions["intro"], reorder_essay=False)
-        if segs:
-            return segs
-    return [{"type": "text", "text": f"Introduction to {book_title}."}]
+        return parse_session_to_segments(sessions["intro"], reorder_essay=False)
+    return []
 
 
 def ch_num_to_roman(n: int) -> str:
@@ -221,111 +223,97 @@ def main():
         conn.execute("DELETE FROM books WHERE id = ?", (COURSE_ID,))
         conn.commit()
 
-    # Insert course book record
+    # Insert course book
     conn.execute(
         "INSERT INTO books (id, title, author, description, layout, type) VALUES (?, ?, ?, ?, 'prose', 'course')",
         (COURSE_ID, COURSE_TITLE, COURSE_AUTHOR, COURSE_DESCRIPTION),
     )
 
-    # Fetch source chapter ID maps
-    def get_chapter_map(book_id: str) -> dict[int, int]:
-        return {
-            row[0]: row[1]
-            for row in conn.execute(
-                "SELECT number, id FROM chapters WHERE book_id = ? ORDER BY number", (book_id,)
-            ).fetchall()
-        }
-
-    apology_chapters = get_chapter_map("plato-apology")
-    phaedo_chapters = get_chapter_map("plato-phaedo")
-    republic_chapters = get_chapter_map("plato-republic")
+    # Get source chapter IDs
+    apology_chapters = {
+        row[0]: row[1]
+        for row in conn.execute(
+            "SELECT number, id FROM chapters WHERE book_id = 'plato-apology' ORDER BY number"
+        ).fetchall()
+    }
+    phaedo_chapters = {
+        row[0]: row[1]
+        for row in conn.execute(
+            "SELECT number, id FROM chapters WHERE book_id = 'plato-phaedo' ORDER BY number"
+        ).fetchall()
+    }
+    republic_chapters = {
+        row[0]: row[1]
+        for row in conn.execute(
+            "SELECT number, id FROM chapters WHERE book_id = 'plato-republic' ORDER BY number"
+        ).fetchall()
+    }
 
     # Extract study guide sessions
     apology_sessions = extract_sessions(os.path.join(DATA_DIR, "plato-apology", "STUDYGUIDE.md"))
     phaedo_sessions = extract_sessions(os.path.join(DATA_DIR, "plato-phaedo", "STUDYGUIDE.md"))
     republic_sessions = extract_sessions(os.path.join(DATA_DIR, "plato-republic", "STUDYGUIDE.md"))
 
-    # ------------------------------------------------------------------
-    # Course items: (type, title, source_book_id, source_ch_num, session_key, sessions_dict)
-    # type = "text" (reference chapter) | "discussion" (study guide segment)
-    # For discussions: session_key = "intro" OR exact key from sessions dict
-    # ------------------------------------------------------------------
-    course_items = []
+    # Get sorted session keys (Roman numerals sort correctly alphabetically: I < II < III < IV < V)
+    apology_session_keys = sorted(k for k in apology_sessions if k.startswith("Session"))
+    phaedo_session_keys = sorted(k for k in phaedo_sessions if k.startswith("Session"))
+    republic_session_keys = sorted(k for k in republic_sessions if k.startswith("Session"))
 
-    # ---- APOLOGY (1 chapter, 2 sessions) ----
-    course_items.append(("discussion", "Introduction to the Apology", "plato-apology", None,
-                         "intro", apology_sessions))
-    course_items.append(("text", "Apology: Chapter I", "plato-apology", 1, None, None))
-    course_items.append(("discussion", "Apology \u2014 Session 1: The Defense", "plato-apology", None,
-                         "Session I: The Defense (The Full Speech)", apology_sessions))
-    course_items.append(("discussion", "Apology \u2014 Session 2: The Verdict", "plato-apology", None,
-                         "Session II: The Verdict", apology_sessions))
+    print(f"Apology sessions found: {apology_session_keys}")
+    print(f"Phaedo sessions found: {phaedo_session_keys}")
+    print(f"Republic sessions found: {republic_session_keys}")
 
-    # ---- PHAEDO (1 chapter, 3 sessions) ----
-    course_items.append(("discussion", "Introduction to the Phaedo", "plato-phaedo", None,
-                         "intro", phaedo_sessions))
-    course_items.append(("text", "Phaedo: Chapter I", "plato-phaedo", 1, None, None))
-    course_items.append(("discussion", "Phaedo \u2014 Session 1: Why Fear Death?", "plato-phaedo", None,
-                         "Session I: Why Fear Death? (Opening through the Argument from Recollection)",
-                         phaedo_sessions))
-    course_items.append(("discussion", "Phaedo \u2014 Session 2: The Soul and the Forms", "plato-phaedo", None,
-                         "Session II: The Soul and the Forms (Affinity Argument through Final Argument)",
-                         phaedo_sessions))
-    course_items.append(("discussion", "Phaedo \u2014 Session 3: The Last Hour", "plato-phaedo", None,
-                         "Session III: The Last Hour (The Myth and the Death Scene)", phaedo_sessions))
-
-    # ---- REPUBLIC (10 chapters, 5 sessions) ----
-    # Session I  → Books I–II    (chapters 1–2)
-    # Session II → Books III–V   (chapters 3–5)
-    # Session III→ Books VI–VII  (chapters 6–7)
-    # Session IV → Books VIII–IX (chapters 8–9)
-    # Session V  → Book X        (chapter 10)
-    course_items.append(("discussion", "Introduction to the Republic", "plato-republic", None,
-                         "intro", republic_sessions))
-    for ch in [1, 2]:
-        course_items.append(("text", f"Republic: Book {ch_num_to_roman(ch)}",
-                              "plato-republic", ch, None, None))
-    course_items.append(("discussion", "Republic \u2014 Session 1: What Is Justice?", "plato-republic", None,
-                         "Session I: What Is Justice? (Books I\u2013II)", republic_sessions))
-    for ch in [3, 4, 5]:
-        course_items.append(("text", f"Republic: Book {ch_num_to_roman(ch)}",
-                              "plato-republic", ch, None, None))
-    course_items.append(("discussion", "Republic \u2014 Session 2: The City in Speech", "plato-republic", None,
-                         "Session II: The City in Speech (Books III\u2013V)", republic_sessions))
-    for ch in [6, 7]:
-        course_items.append(("text", f"Republic: Book {ch_num_to_roman(ch)}",
-                              "plato-republic", ch, None, None))
-    course_items.append(("discussion", "Republic \u2014 Session 3: The Sun, the Line, and the Den",
-                         "plato-republic", None,
-                         "Session III: The Sun, the Line, and the Den (Books VI\u2013VII)",
-                         republic_sessions))
-    for ch in [8, 9]:
-        course_items.append(("text", f"Republic: Book {ch_num_to_roman(ch)}",
-                              "plato-republic", ch, None, None))
-    course_items.append(("discussion", "Republic \u2014 Session 4: The Decline of Regimes",
-                         "plato-republic", None,
-                         "Session IV: The Decline of Regimes (Books VIII\u2013IX)", republic_sessions))
-    course_items.append(("text", f"Republic: Book {ch_num_to_roman(10)}",
-                          "plato-republic", 10, None, None))
-    course_items.append(("discussion", "Republic \u2014 Session 5: The Myth of Er",
-                         "plato-republic", None,
-                         "Session V: The Myth of Er (Book X)", republic_sessions))
-
-    # ---- Insert all chapters and segments ----
-    chapter_num = 0
-    source_map = {
-        "plato-apology": apology_chapters,
-        "plato-phaedo": phaedo_chapters,
-        "plato-republic": republic_chapters,
+    # Republic: place sessions after specific chapters
+    # Session I (Books I–II): after ch 2
+    # Session II (Books III–V): after ch 5
+    # Session III (Books VI–VII): after ch 7
+    # Session IV (Books VIII–IX): after ch 9
+    # Session V (Book X): after ch 10
+    republic_session_after = {
+        2: republic_session_keys[0],
+        5: republic_session_keys[1],
+        7: republic_session_keys[2],
+        9: republic_session_keys[3],
+        10: republic_session_keys[4],
     }
 
-    for item_type, title, source_book, source_ch_num, session_key, sessions_dict in course_items:
+    # Build course items list:
+    # Each tuple: (item_type, title, source_chapters_dict, source_ch_num, session_key, sessions_dict)
+    course_items = []
+
+    # === APOLOGY ===
+    course_items.append(("discussion", "Introduction to the Apology", None, None, "intro", apology_sessions))
+    course_items.append(("text", "Apology", apology_chapters, 1, None, None))
+    for key in apology_session_keys:
+        course_items.append(("discussion", session_short_title(key), None, None, key, apology_sessions))
+
+    # === PHAEDO ===
+    course_items.append(("discussion", "Introduction to the Phaedo", None, None, "intro", phaedo_sessions))
+    course_items.append(("text", "Phaedo", phaedo_chapters, 1, None, None))
+    for key in phaedo_session_keys:
+        course_items.append(("discussion", session_short_title(key), None, None, key, phaedo_sessions))
+
+    # === REPUBLIC ===
+    course_items.append(("discussion", "Introduction to the Republic", None, None, "intro", republic_sessions))
+    for ch_num in range(1, 11):
+        course_items.append(
+            ("text", f"Republic: Book {ch_num_to_roman(ch_num)}", republic_chapters, ch_num, None, None)
+        )
+        if ch_num in republic_session_after:
+            session_key = republic_session_after[ch_num]
+            course_items.append(
+                ("discussion", session_short_title(session_key), None, None, session_key, republic_sessions)
+            )
+
+    # Insert chapters and segments
+    chapter_num = 0
+    for item_type, title, source_chapters, source_ch_num, session_key, sessions_dict in course_items:
         chapter_num += 1
 
         if item_type == "text":
-            source_id = source_map[source_book].get(source_ch_num)
+            source_id = source_chapters.get(source_ch_num)
             if not source_id:
-                print(f"  WARNING: Source chapter {source_book} #{source_ch_num} not found, skipping")
+                print(f"  WARNING: Source chapter #{source_ch_num} not found, skipping")
                 chapter_num -= 1
                 continue
             conn.execute(
@@ -333,7 +321,7 @@ def main():
                 "VALUES (?, ?, ?, ?, 'text')",
                 (COURSE_ID, chapter_num, title, source_id),
             )
-            print(f"  Ch {chapter_num}: {title} (ref -> {source_book} ch {source_ch_num})")
+            print(f"  Ch {chapter_num}: {title} (text, source_id={source_id})")
 
         elif item_type == "discussion":
             cursor = conn.execute(
@@ -343,15 +331,14 @@ def main():
             chapter_id = cursor.lastrowid
 
             if session_key == "intro":
-                segments = generate_book_intro_segments(title, sessions_dict)
+                segments = generate_book_intro_segments(sessions_dict)
             else:
                 session_content = sessions_dict.get(session_key)
                 if session_content:
                     segments = parse_session_to_segments(session_content)
                 else:
                     segments = [{"type": "text", "text": f"Discussion: {title}"}]
-                    print(f"  WARNING: No session content for key '{session_key}'")
-                    print(f"    Available: {list(sessions_dict.keys())}")
+                    print(f"  WARNING: No session content found for '{session_key}'")
 
             for seq, seg in enumerate(segments, 1):
                 conn.execute(
