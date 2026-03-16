@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { BookRow } from "@/lib/db";
 import BookCard from "@/components/BookCard";
-import { getCoverSmUrl } from "@/lib/assets";
+import { getCoverSmUrl, getCoverLgUrl } from "@/lib/assets";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 
 type ProgressMap = Record<string, { chapter_number: number; audio_position_ms: number; updated_at: string }>;
@@ -19,6 +19,7 @@ export default function HomeClient({
   statsMap,
   recentBookIds,
   courseForBook,
+  courseBooks,
 }: {
   books: BookRow[];
   courses: BookRow[];
@@ -26,6 +27,7 @@ export default function HomeClient({
   statsMap: StatsMap;
   recentBookIds: string[];
   courseForBook: CourseForBook;
+  courseBooks: Record<string, string[]>;
 }) {
   const { session } = useAudioPlayer();
 
@@ -54,7 +56,7 @@ export default function HomeClient({
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)" }}>
-      <header className="max-w-5xl mx-auto px-6 pt-10 pb-6">
+      <header style={{ maxWidth: "68ch", margin: "0 auto", padding: "2.5rem 1.5rem 1.5rem" }}>
         <p
           style={{
             fontFamily: "var(--font-display)",
@@ -68,7 +70,7 @@ export default function HomeClient({
         </p>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6" style={{ paddingBottom: session ? 220 : 64 }}>
+      <main style={{ maxWidth: "68ch", margin: "0 auto", padding: "0 1.5rem", paddingBottom: session ? 220 : 64 }}>
         {/* Continue — most recently read item (book or course) */}
         {continueBook && continueProgress && (
           <section style={{ marginBottom: "3rem" }}>
@@ -198,6 +200,7 @@ export default function HomeClient({
           const enrolled = !!progressMap[course.id];
           const courseStats = statsMap[course.id];
           const courseProgress = progressMap[course.id];
+          const bookIds = courseBooks[course.id] ?? [];
           return (
             <section key={course.id} style={{ marginBottom: "3rem" }}>
               <Link
@@ -212,97 +215,177 @@ export default function HomeClient({
                 }}
                 className="group hover:scale-[1.005]"
               >
-                {/* Background cover image */}
-                <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2" }}>
-                  <Image
-                    src={getCoverSmUrl(course.id)}
-                    alt={course.title}
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 64rem"
-                    className="object-cover"
-                    priority
-                  />
-                  {/* Gradient overlay for text readability */}
+                {/* Cover image with overlay */}
+                <div style={{ position: "relative", width: "100%" }}>
+                  {/* Desktop: fixed aspect ratio. Mobile: auto height cropped */}
+                  <div
+                    className="course-hero-img"
+                    style={{ position: "relative", width: "100%", aspectRatio: "3 / 2" }}
+                  >
+                    <Image
+                      src={getCoverLgUrl(course.id)}
+                      alt={course.title}
+                      fill
+                      sizes="68ch"
+                      className="object-cover"
+                      priority
+                    />
+                    {/* Gradient overlay */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0.1) 100%)",
+                      }}
+                    />
+                  </div>
+
+                  {/* Content overlay */}
                   <div
                     style={{
                       position: "absolute",
                       inset: 0,
-                      background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)",
-                    }}
-                  />
-                  {/* Text overlay */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
+                      display: "flex",
+                      alignItems: "center",
                       padding: "1.5rem",
                     }}
                   >
-                    <p
-                      style={{
-                        fontFamily: "var(--font-ui)",
-                        fontSize: "0.7rem",
-                        fontWeight: 500,
-                        letterSpacing: "0.06em",
-                        textTransform: "uppercase",
-                        color: "rgba(255,255,255,0.7)",
-                        margin: "0 0 0.25rem",
-                      }}
-                    >
-                      Course
-                    </p>
-                    <h2
-                      style={{
-                        fontFamily: "var(--font-display)",
-                        fontSize: "1.5rem",
-                        fontWeight: 400,
-                        color: "#fff",
-                        margin: "0 0 0.25rem",
-                      }}
-                    >
-                      {course.title}
-                    </h2>
-                    {course.description && (
+                    {/* Text — left side */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <p
                         style={{
-                          fontFamily: "var(--font-body)",
-                          fontSize: "0.875rem",
-                          color: "rgba(255,255,255,0.75)",
-                          margin: "0 0 1rem",
-                          lineHeight: 1.5,
-                          maxWidth: "36em",
+                          fontFamily: "var(--font-ui)",
+                          fontSize: "0.7rem",
+                          fontWeight: 500,
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                          color: "rgba(255,255,255,0.7)",
+                          margin: "0 0 0.25rem",
                         }}
                       >
-                        {course.description}
+                        Course
                       </p>
-                    )}
-                    <span
-                      style={{
-                        display: "inline-block",
-                        padding: "0.5rem 1.25rem",
-                        backgroundColor: "rgba(255,255,255,0.9)",
-                        color: "var(--color-text)",
-                        borderRadius: "var(--radius)",
-                        fontFamily: "var(--font-ui)",
-                        fontSize: "0.875rem",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {enrolled ? "Continue" : "Start Course"}
-                    </span>
-                    {enrolled && courseStats && courseProgress && (
+                      <h2
+                        style={{
+                          fontFamily: "var(--font-display)",
+                          fontSize: "1.5rem",
+                          fontWeight: 400,
+                          color: "#fff",
+                          margin: "0 0 0.25rem",
+                        }}
+                      >
+                        {course.title}
+                      </h2>
+                      {course.description && (
+                        <p
+                          style={{
+                            fontFamily: "var(--font-body)",
+                            fontSize: "0.875rem",
+                            color: "rgba(255,255,255,0.75)",
+                            margin: "0 0 1rem",
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          {course.description}
+                        </p>
+                      )}
+
+                      {/* Mobile: book covers inline */}
+                      {bookIds.length > 0 && (
+                        <div
+                          className="sm:hidden"
+                          style={{
+                            display: "flex",
+                            gap: "0.5rem",
+                            marginBottom: "1rem",
+                          }}
+                        >
+                          {bookIds.map((bid) => (
+                            <div
+                              key={bid}
+                              style={{
+                                width: 48,
+                                height: 64,
+                                borderRadius: "3px",
+                                overflow: "hidden",
+                                position: "relative",
+                                flexShrink: 0,
+                                boxShadow: "2px 3px 8px rgba(0,0,0,0.3)",
+                              }}
+                            >
+                              <Image
+                                src={getCoverSmUrl(bid)}
+                                alt=""
+                                fill
+                                sizes="48px"
+                                className="object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       <span
                         style={{
-                          marginLeft: "1rem",
+                          display: "inline-block",
+                          padding: "0.5rem 1.25rem",
+                          backgroundColor: "rgba(255,255,255,0.9)",
+                          color: "var(--color-text)",
+                          borderRadius: "var(--radius)",
                           fontFamily: "var(--font-ui)",
-                          fontSize: "0.75rem",
-                          color: "rgba(255,255,255,0.7)",
+                          fontSize: "0.875rem",
+                          fontWeight: 500,
                         }}
                       >
-                        Chapter {courseProgress.chapter_number} of {courseStats.chapter_count}
+                        {enrolled ? "Continue" : "Start Course"}
                       </span>
+                      {enrolled && courseStats && courseProgress && (
+                        <span
+                          style={{
+                            marginLeft: "1rem",
+                            fontFamily: "var(--font-ui)",
+                            fontSize: "0.75rem",
+                            color: "rgba(255,255,255,0.7)",
+                          }}
+                        >
+                          Chapter {courseProgress.chapter_number} of {courseStats.chapter_count}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Desktop: book covers stacked on right */}
+                    {bookIds.length > 0 && (
+                      <div
+                        className="hidden sm:flex"
+                        style={{
+                          flexDirection: "column",
+                          gap: "0.625rem",
+                          marginLeft: "1.5rem",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {bookIds.map((bid) => (
+                          <div
+                            key={bid}
+                            style={{
+                              width: 80,
+                              height: 107,
+                              borderRadius: "3px",
+                              overflow: "hidden",
+                              position: "relative",
+                              boxShadow: "4px 6px 16px rgba(0,0,0,0.3)",
+                            }}
+                          >
+                            <Image
+                              src={getCoverSmUrl(bid)}
+                              alt=""
+                              fill
+                              sizes="80px"
+                              className="object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>

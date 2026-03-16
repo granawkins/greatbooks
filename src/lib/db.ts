@@ -341,6 +341,20 @@ export const db = {
 
   // -- Course helpers --
 
+  /** Get distinct source book IDs for a course */
+  getCourseBookIds: (courseId: string): string[] => {
+    const rows = connection
+      .prepare(`
+        SELECT DISTINCT sc.book_id
+        FROM chapters cc
+        JOIN chapters sc ON cc.source_chapter_id = sc.id
+        WHERE cc.book_id = ?
+        ORDER BY MIN(cc.number)
+      `)
+      .all(courseId) as { book_id: string }[];
+    return rows.map((r) => r.book_id);
+  },
+
   /** Find courses that contain chapters from the given book */
   getCoursesForBook: (bookId: string): { course_id: string; course_title: string }[] => {
     return connection
