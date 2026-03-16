@@ -7,6 +7,7 @@ type BookCardProps = {
   book: BookRow;
   progress?: { chapter_number: number; audio_position_ms: number } | null;
   stats?: { chapter_count: number; total_duration_ms: number | null } | null;
+  courseInfo?: { courseId: string; courseTitle: string } | null;
 };
 
 function formatDuration(ms: number): string {
@@ -18,7 +19,7 @@ function formatDuration(ms: number): string {
   return `${hours}h ${minutes}m`;
 }
 
-export default function BookCard({ book, progress, stats }: BookCardProps) {
+export default function BookCard({ book, progress, stats, courseInfo }: BookCardProps) {
   const chapterCount = stats?.chapter_count ?? 0;
   const totalDuration = stats?.total_duration_ms ?? null;
 
@@ -94,6 +95,18 @@ export default function BookCard({ book, progress, stats }: BookCardProps) {
             {totalDuration
               ? `${chapterCount} ch · ${formatDuration(totalDuration)}`
               : `${chapterCount} chapter${chapterCount !== 1 ? "s" : ""}`}
+          </p>
+        )}
+        {courseInfo && (
+          <p
+            style={{
+              fontSize: "0.65rem",
+              color: "var(--color-accent)",
+              fontFamily: "var(--font-ui)",
+              marginTop: "2px",
+            }}
+          >
+            In: {courseInfo.courseTitle}
           </p>
         )}
       </div>

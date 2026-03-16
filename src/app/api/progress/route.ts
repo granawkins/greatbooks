@@ -30,5 +30,11 @@ export async function POST(req: NextRequest) {
   db.upsertUser(userId);
   db.upsertProgress(userId, bookId, chapterNumber, audioPositionMs ?? 0);
 
+  // For course reference chapters, also sync progress to the source book
+  const source = db.getSourceBookInfo(bookId, chapterNumber);
+  if (source) {
+    db.upsertProgress(userId, source.bookId, source.chapterNumber, audioPositionMs ?? 0);
+  }
+
   return NextResponse.json({ ok: true });
 }

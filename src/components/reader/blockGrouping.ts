@@ -3,9 +3,10 @@ import type { Segment, Block, ParagraphBlock, WordSpan } from "./types";
 export function groupIntoBlocks(segments: Segment[], layout: "prose" | "verse" = "prose"): Block[] {
   const blocks: Block[] = [];
   let current: Segment[] = [];
+  let listItems: string[] = [];
   const sep = layout === "verse" ? "\n" : " ";
 
-  const flush = () => {
+  const flushParagraph = () => {
     if (current.length === 0) return;
     let offset = 0;
     const offsets = current.map((seg) => {
@@ -19,23 +20,35 @@ export function groupIntoBlocks(segments: Segment[], layout: "prose" | "verse" =
       text: current.map((s) => s.text).join(sep),
       charOffsets: offsets,
     });
+    current = [];
+  };
+
+  const flushList = () => {
+    if (listItems.length === 0) return;
+    blocks.push({ type: "list", items: [...listItems] });
+    listItems = [];
   };
 
   for (const seg of segments) {
+    if (seg.segment_type === "list_item") {
+      flushParagraph();
+      listItems.push(seg.text);
+      continue;
+    }
+    flushList();
     if (seg.segment_type === "heading") {
-      flush();
-      current = [];
+      flushParagraph();
       blocks.push({ type: "heading", text: seg.text });
       continue;
     }
     if (seg.segment_type !== "text") {
-      flush();
-      current = [];
+      flushParagraph();
       continue;
     }
     current.push(seg);
   }
-  flush();
+  flushParagraph();
+  flushList();
   return blocks;
 }
 

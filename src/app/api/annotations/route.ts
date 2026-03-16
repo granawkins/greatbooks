@@ -16,7 +16,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "bookId and chapterNum required" }, { status: 400 });
   }
 
-  const annotations = db.getAnnotations(userId, bookId, Number(chapterNum));
+  // For course reference chapters, use the source book's annotations
+  const source = db.getSourceBookInfo(bookId, Number(chapterNum));
+  const resolvedBookId = source?.bookId ?? bookId;
+  const resolvedChapterNum = source?.chapterNumber ?? Number(chapterNum);
+
+  const annotations = db.getAnnotations(userId, resolvedBookId, resolvedChapterNum);
   return NextResponse.json(annotations);
 }
 
@@ -55,11 +60,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "type must be highlight or comment" }, { status: 400 });
   }
 
+  // For course reference chapters, store annotations against the source book
+  const source = db.getSourceBookInfo(bookId, chapterNumber);
+  const resolvedBookId = source?.bookId ?? bookId;
+  const resolvedChapterNum = source?.chapterNumber ?? chapterNumber;
+
   db.upsertUser(userId);
   const annotation = db.insertAnnotation(
     userId,
-    bookId,
-    chapterNumber,
+    resolvedBookId,
+    resolvedChapterNum,
     startSegmentSeq,
     startChar,
     endSegmentSeq,

@@ -11,6 +11,9 @@ export async function GET(
     return NextResponse.json({ error: "Chapter not found" }, { status: 404 });
   }
 
+  // Resolve source chapter for segments/audio (course reference chapters)
+  const resolved = db.getResolvedChapter(chapter.id);
+
   const segments = db.getSegments(chapter.id).map((seg) => ({
     id: seg.id,
     text: seg.text,
@@ -26,8 +29,9 @@ export async function GET(
       number: chapter.number,
       title: chapter.title,
       segments,
-      audio_file: chapter.audio_file,
-      audio_duration_ms: chapter.audio_duration_ms,
+      audio_file: resolved?.audio_file ?? chapter.audio_file,
+      audio_duration_ms: resolved?.audio_duration_ms ?? chapter.audio_duration_ms,
+      chapter_type: chapter.chapter_type ?? "text",
     },
     {
       headers: {
