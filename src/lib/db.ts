@@ -283,10 +283,15 @@ export const db = {
       .prepare(
         `SELECT c.book_id,
                 COUNT(*) as chapter_count,
-                SUM(c.audio_duration_ms) as total_duration_ms,
-                COALESCE((SELECT SUM(LENGTH(s.text)) FROM segments s JOIN chapters c2 ON s.chapter_id = c2.id WHERE c2.book_id = c.book_id AND s.segment_type = 'text'), 0) as total_chars,
+                SUM(COALESCE(c.audio_duration_ms, src.audio_duration_ms)) as total_duration_ms,
+                COALESCE(SUM(
+                  (SELECT SUM(LENGTH(s.text)) FROM segments s
+                   WHERE s.chapter_id = COALESCE(c.source_chapter_id, c.id)
+                   AND s.segment_type = 'text')
+                ), 0) as total_chars,
                 SUM(CASE WHEN c.chapter_type = 'discussion' THEN 1 ELSE 0 END) as discussion_count
          FROM chapters c
+         LEFT JOIN chapters src ON c.source_chapter_id = src.id
          GROUP BY c.book_id`
       )
       .all() as { book_id: string; chapter_count: number; total_duration_ms: number | null; total_chars: number; discussion_count: number }[],
