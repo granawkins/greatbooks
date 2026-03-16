@@ -34,5 +34,11 @@ export default async function Home() {
     }
   }
 
-  return <HomeClient books={books} courses={courses} progressMap={progressMap} statsMap={statsMap} recentBookIds={recentBookIds} courseForBook={courseForBook} />;
+  // Get the book IDs in each course (for displaying book covers on course cards)
+  const courseBooks: Record<string, string[]> = {};
+  for (const course of courses) {
+    courseBooks[course.id] = db.getCourseBookIds(course.id);
+  }
+
+  return <HomeClient books={books} courses={courses} progressMap={progressMap} statsMap={statsMap} recentBookIds={recentBookIds} courseForBook={courseForBook} courseBooks={courseBooks} />;
 }

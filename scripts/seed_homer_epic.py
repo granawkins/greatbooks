@@ -17,10 +17,7 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 COURSE_ID = "homer-epic"
 COURSE_TITLE = "Homer's Epics"
 COURSE_AUTHOR = "Homer"
-COURSE_DESCRIPTION = (
-    "Read the Iliad and Odyssey together — the two foundational epics of Western literature. "
-    "Guided discussions after each section help you reflect on themes, characters, and what connects these poems."
-)
+COURSE_DESCRIPTION = "The two foundational epics of Western literature, together."
 
 
 def strip_markdown(text: str) -> str:
