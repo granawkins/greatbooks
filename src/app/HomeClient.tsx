@@ -1,16 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { BookRow } from "@/lib/db";
+import BookCover from "@/components/BookCover";
 import ProgressLine from "@/components/ProgressLine";
-import { getCoverSmUrl, getCoverLgUrl } from "@/lib/assets";
+import { getCoverSmUrl } from "@/lib/assets";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
 
 type ProgressMap = Record<string, { chapter_number: number; audio_position_ms: number; updated_at: string }>;
 type StatsMap = Record<string, { chapter_count: number; total_duration_ms: number | null; total_chars: number; discussion_count: number }>;
-
 type CourseForBook = Record<string, { courseId: string; courseTitle: string }>;
 
 const sectionHeadingStyle = {
@@ -60,8 +59,8 @@ export default function HomeClient({
   const bookCourseInfo = !lastIsCourse && lastBookId ? courseForBook[lastBookId] : null;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)" }}>
-      <header style={{ maxWidth: "var(--content-max-width)", margin: "0 auto", padding: "2.5rem 1.5rem 1.5rem" }}>
+    <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)", display: "flex", flexDirection: "column" }}>
+      <header style={{ maxWidth: "var(--content-max-width)", margin: "0 auto", padding: "2.5rem 1.5rem 1.5rem", width: "100%" }}>
         <p
           style={{
             fontFamily: "var(--font-display)",
@@ -75,7 +74,7 @@ export default function HomeClient({
         </p>
       </header>
 
-      <main style={{ maxWidth: "var(--content-max-width)", margin: "0 auto", padding: "0 1.5rem", paddingBottom: session ? 220 : 64 }}>
+      <main style={{ maxWidth: "var(--content-max-width)", margin: "0 auto", padding: "0 1.5rem", paddingBottom: session ? 220 : 64, width: "100%", flex: 1 }}>
 
         {/* ── Continue ── */}
         {continueBook && continueProgress && (
@@ -86,7 +85,6 @@ export default function HomeClient({
                 ? `/${bookCourseInfo.courseId}`
                 : `/${continueBook.id}/${continueProgress.chapter_number}`
               }
-              className="group"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -95,7 +93,6 @@ export default function HomeClient({
               }}
             >
               <div
-                className="transition-transform duration-200 group-hover:scale-[1.02]"
                 style={{
                   width: lastIsCourse ? "160px" : "100px",
                   height: lastIsCourse ? "107px" : "133px",
@@ -156,13 +153,10 @@ export default function HomeClient({
         {courses.length > 0 && (
           <section style={{ marginBottom: "3rem" }}>
             <h2 style={sectionHeadingStyle}>Courses</h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               {courses.map((course) => {
                 const enrolled = !!progressMap[course.id];
-                const courseStats = statsMap[course.id];
-                const courseProgress = progressMap[course.id];
                 const bookIds = courseBooks[course.id] ?? [];
-                const courseChapterCount = courseStats?.chapter_count ?? 0;
                 return (
                   <Link
                     key={course.id}
@@ -171,129 +165,81 @@ export default function HomeClient({
                       display: "block",
                       textDecoration: "none",
                       borderRadius: "var(--radius-lg)",
-                      overflow: "hidden",
-                      position: "relative",
-                      backgroundImage: `url(${getCoverLgUrl(course.id)})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
+                      backgroundColor: "var(--color-bg-secondary)",
+                      boxShadow: "0 2px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06)",
+                      padding: "1.5rem",
                     }}
-                    className="group hover:scale-[1.005]"
                   >
-                    <div
+                    <h3
                       style={{
-                        position: "absolute",
-                        inset: 0,
-                        background: "rgba(0,0,0,0.25)",
-                      }}
-                    />
-                    <div
-                      style={{
-                        position: "relative",
-                        textAlign: "center",
-                        padding: "2rem 1.5rem",
+                        fontFamily: "var(--font-display)",
+                        fontSize: "1.25rem",
+                        fontWeight: 500,
+                        color: "var(--color-text)",
+                        margin: 0,
                       }}
                     >
-                      <h3
+                      {course.title}
+                    </h3>
+
+                    {course.description && (
+                      <p
                         style={{
-                          fontFamily: "var(--font-display)",
-                          fontSize: "1.5rem",
-                          fontWeight: 400,
-                          color: "#fff",
-                          margin: 0,
-                          textShadow: "0 1px 6px rgba(0,0,0,0.6)",
+                          fontFamily: "var(--font-body)",
+                          fontSize: "0.8125rem",
+                          color: "var(--color-text-secondary)",
+                          margin: "0.375rem 0 0",
+                          lineHeight: 1.5,
                         }}
                       >
-                        {course.title}
-                      </h3>
+                        {course.description}
+                      </p>
+                    )}
 
-                      {course.description && (
-                        <p
-                          style={{
-                            fontFamily: "var(--font-body)",
-                            fontSize: "0.875rem",
-                            color: "rgba(255,255,255,0.85)",
-                            margin: "0.5rem 0 1.25rem",
-                            textShadow: "0 1px 4px rgba(0,0,0,0.5)",
-                            lineHeight: 1.5,
-                          }}
-                        >
-                          {course.description}
-                        </p>
-                      )}
-
-                      {bookIds.length > 0 && (
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "center",
-                            gap: "1rem",
-                            marginBottom: "1.25rem",
-                          }}
-                        >
-                          {bookIds.map((bid) => (
-                            <div
-                              key={bid}
-                              className="transition-transform duration-200 group-hover:scale-[1.02]"
-                              style={{
-                                width: "min(140px, calc((100% - " + (bookIds.length - 1) + "rem) / " + bookIds.length + "))",
-                                aspectRatio: "3 / 4",
-                                borderRadius: "3px",
-                                overflow: "hidden",
-                                position: "relative",
-                                flexShrink: 1,
-                                boxShadow: "4px 6px 16px rgba(0,0,0,0.3)",
-                              }}
-                            >
-                              <Image
-                                src={getCoverSmUrl(bid)}
-                                alt=""
-                                fill
-                                sizes="140px"
-                                className="object-cover"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
+                    {bookIds.length > 0 && (
                       <div
                         style={{
                           display: "flex",
-                          alignItems: "center",
                           justifyContent: "center",
-                          gap: "1rem",
+                          gap: "0.75rem",
+                          marginTop: "1rem",
                         }}
                       >
-                        <span
-                          style={{
-                            display: "inline-block",
-                            padding: "0.5rem 1.25rem",
-                            backgroundColor: "rgba(255,255,255,0.9)",
-                            color: "#1a1a1a",
-                            borderRadius: "var(--radius)",
-                            fontFamily: "var(--font-ui)",
-                            fontSize: "0.875rem",
-                            fontWeight: 500,
-                            boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-                          }}
-                        >
-                          {enrolled ? "Continue" : "Join"}
-                        </span>
-                        <div style={{
-                          color: "rgba(255,255,255,0.8)",
-                          textShadow: "0 1px 4px rgba(0,0,0,0.5)",
-                        }}>
-                          <ProgressLine
-                            totalChars={courseStats?.total_chars ?? 0}
-                            totalDurationMs={courseStats?.total_duration_ms ?? null}
-                            chapterCount={courseChapterCount}
-                            progressChapter={enrolled && courseProgress ? courseProgress.chapter_number : undefined}
-                            barTrackColor="rgba(255,255,255,0.3)"
-                            barFillColor="rgba(255,255,255,0.9)"
-                            barWidth="120px"
-                          />
-                        </div>
+                        {bookIds.map((bid) => {
+                          const bookStats = statsMap[bid];
+                          const bookProgress = progressMap[bid];
+                          return (
+                            <div key={bid} style={{ width: "140px" }}>
+                              <BookCover
+                                bookId={bid}
+                                stats={bookStats ? {
+                                  total_chars: bookStats.total_chars,
+                                  total_duration_ms: bookStats.total_duration_ms,
+                                  chapter_count: bookStats.chapter_count,
+                                } : null}
+                                progress={bookProgress ? { chapter_number: bookProgress.chapter_number } : null}
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
+                    )}
+
+                    <div style={{ marginTop: "1rem", textAlign: "center" }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "0.5rem 1.25rem",
+                          backgroundColor: "var(--color-text)",
+                          color: "var(--color-bg)",
+                          borderRadius: "var(--radius)",
+                          fontFamily: "var(--font-ui)",
+                          fontSize: "0.8125rem",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {enrolled ? "Continue" : "Read with AI Tutor"}
+                      </span>
                     </div>
                   </Link>
                 );
@@ -302,114 +248,95 @@ export default function HomeClient({
           </section>
         )}
 
-        {/* ── Library ── */}
-        <section>
-          <h2 style={sectionHeadingStyle}>Library</h2>
-          <BooksGrid books={books} statsMap={statsMap} />
+        {/* ── Pricing ── */}
+        <section style={{ marginBottom: "3rem" }}>
+          <h2 style={sectionHeadingStyle}>Pricing</h2>
+          <div
+            style={{
+              borderRadius: "var(--radius-lg)",
+              border: "1px solid var(--color-border)",
+              overflow: "hidden",
+              fontFamily: "var(--font-ui)",
+              fontSize: "0.875rem",
+            }}
+          >
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", fontWeight: 500, color: "var(--color-text-secondary)", textAlign: "left" }} />
+                  <th style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", fontWeight: 600, color: "var(--color-text)", textAlign: "center" }}>Basic</th>
+                  <th style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", fontWeight: 600, color: "var(--color-text)", textAlign: "center" }}>Plus</th>
+                  <th style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", fontWeight: 600, color: "var(--color-text)", textAlign: "center" }}>Premium</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", color: "var(--color-text)" }}>Text</td>
+                  <td style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", textAlign: "center" }}>{INF}</td>
+                  <td style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", textAlign: "center" }}>{INF}</td>
+                  <td style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", textAlign: "center" }}>{INF}</td>
+                </tr>
+                <tr>
+                  <td style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", color: "var(--color-text)" }}>Audio</td>
+                  <td style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", textAlign: "center", color: "var(--color-text-secondary)" }}>5 min</td>
+                  <td style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", textAlign: "center" }}>{INF}</td>
+                  <td style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", textAlign: "center" }}>{INF}</td>
+                </tr>
+                <tr>
+                  <td style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", color: "var(--color-text)" }}>AI Tutor</td>
+                  <td style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", textAlign: "center", color: "var(--color-text-secondary)" }}>5 min</td>
+                  <td style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", textAlign: "center", color: "var(--color-text-secondary)" }}>5 min</td>
+                  <td style={{ ...cellStyle, borderBottom: "1px solid var(--color-border)", textAlign: "center" }}>{INF}</td>
+                </tr>
+                <tr>
+                  <td style={{ ...cellStyle, color: "var(--color-text)", fontWeight: 500 }}>Price</td>
+                  <td style={{ ...cellStyle, textAlign: "center", fontWeight: 600, color: "var(--color-text)" }}>Free</td>
+                  <td style={{ ...cellStyle, textAlign: "center", fontWeight: 600, color: "var(--color-text)" }}>$1/mo</td>
+                  <td style={{ ...cellStyle, textAlign: "center", fontWeight: 600, color: "var(--color-text)" }}>$6/mo</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </section>
       </main>
-    </div>
-  );
-}
 
-function PagesIcon() {
-  return (
-    <svg width="0.85em" height="0.85em" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" style={{ display: "inline", verticalAlign: "-0.05em" }}>
-      <rect x="4" y="1" width="9" height="12" rx="1" />
-      <rect x="3" y="3" width="9" height="12" rx="1" fill="var(--color-bg, #fff)" />
-      <rect x="3" y="3" width="9" height="12" rx="1" />
-    </svg>
-  );
-}
-
-function HeadphonesIcon() {
-  return (
-    <svg width="0.85em" height="0.85em" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline", verticalAlign: "-0.05em" }}>
-      <path d="M2 10V8a6 6 0 1 1 12 0v2" />
-      <rect x="1" y="10" width="3" height="4" rx="1" fill="currentColor" stroke="none" />
-      <rect x="12" y="10" width="3" height="4" rx="1" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function formatHours(ms: number): string {
-  const hours = Math.round(ms / 3600000);
-  return hours < 1 ? "<1h" : `${hours}h`;
-}
-
-function BooksGrid({ books, statsMap }: { books: BookRow[]; statsMap: StatsMap }) {
-  const [search, setSearch] = useState("");
-  const query = search.toLowerCase().trim();
-  const filtered = query
-    ? books.filter(
-        (b) =>
-          b.title.toLowerCase().includes(query) ||
-          b.author.toLowerCase().includes(query)
-      )
-    : books;
-
-  return (
-    <div>
-      <input
-        type="text"
-        placeholder="Search by title or author..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
+      {/* ── Footer ── */}
+      <footer
         style={{
-          width: "100%",
-          padding: "0.5rem 0.75rem",
-          marginBottom: "1.25rem",
-          fontFamily: "var(--font-ui)",
-          fontSize: "0.875rem",
-          color: "var(--color-text)",
-          backgroundColor: "var(--color-bg-secondary)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius)",
-          outline: "none",
+          borderTop: "1px solid var(--color-border)",
+          backgroundColor: "var(--color-bg)",
+          marginTop: "auto",
         }}
-      />
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-5 gap-y-6">
-        {filtered.map((book) => {
-          const stats = statsMap[book.id];
-          const totalPages = stats ? Math.max(1, Math.round(stats.total_chars / 1500)) : 0;
-          const hasDuration = stats?.total_duration_ms != null && stats.total_duration_ms > 0;
-          return (
-            <Link key={book.id} href={`/${book.id}`} className="block group">
-              <div
-                className="relative overflow-hidden transition-transform duration-200 group-hover:scale-[1.02]"
-                style={{
-                  aspectRatio: "3 / 4",
-                  borderRadius: "3px",
-                  boxShadow:
-                    "4px 6px 16px rgba(0,0,0,0.12), 1px 2px 4px rgba(0,0,0,0.08), inset -1px 0 2px rgba(0,0,0,0.04)",
-                  backgroundColor: "var(--color-bg-secondary)",
-                }}
-              >
-                <Image
-                  src={getCoverSmUrl(book.id)}
-                  alt={`${book.title} cover`}
-                  fill
-                  sizes="(max-width: 640px) 50vw, 33vw"
-                  className="object-cover"
-                />
-              </div>
-              {totalPages > 0 && (
-                <p
-                  style={{
-                    textAlign: "center",
-                    fontSize: "0.75rem",
-                    color: "var(--color-text-secondary)",
-                    fontFamily: "var(--font-ui)",
-                    marginTop: "0.375rem",
-                  }}
-                >
-                  <PagesIcon />{totalPages}{hasDuration && <>{" \u00a0 "}<HeadphonesIcon />{formatHours(stats!.total_duration_ms!)}</>}
-                </p>
-              )}
-            </Link>
-          );
-        })}
-      </div>
+      >
+        <div
+          style={{
+            maxWidth: "var(--content-max-width)",
+            margin: "0 auto",
+            padding: "1.5rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontFamily: "var(--font-ui)",
+            fontSize: "0.75rem",
+            color: "var(--color-text-secondary)",
+          }}
+        >
+          <span>&copy; 2026 Earmark FM</span>
+          <a
+            href="mailto:support@greatbooks.fm"
+            style={{ color: "var(--color-text-secondary)", textDecoration: "none" }}
+          >
+            support@greatbooks.fm
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }
+
+const cellStyle = {
+  padding: "0.75rem 1rem",
+  color: "var(--color-text)",
+} as const;
+
+const INF = <span style={{ fontSize: "1.1em" }}>&infin;</span>;

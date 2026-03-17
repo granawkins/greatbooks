@@ -41,6 +41,11 @@ try {
   rwConnection.exec(`ALTER TABLE books ADD COLUMN type TEXT DEFAULT 'book'`);
 } catch { /* column already exists */ }
 
+// Add playback_speed column to users
+try {
+  rwConnection.exec(`ALTER TABLE users ADD COLUMN playback_speed REAL DEFAULT 1.0`);
+} catch { /* column already exists */ }
+
 // Add source_chapter_id and chapter_type columns to chapters (course support)
 try {
   rwConnection.exec(`ALTER TABLE chapters ADD COLUMN source_chapter_id INTEGER`);
@@ -98,6 +103,7 @@ export type WordTimestamp = {
 export type UserRow = {
   id: string;
   email: string | null;
+  playback_speed: number;
   created_at: string;
 };
 
@@ -230,6 +236,12 @@ export const db = {
     rwConnection
       .prepare("UPDATE users SET email = ? WHERE id = ?")
       .run(email, id);
+  },
+
+  updatePlaybackSpeed: (id: string, speed: number): void => {
+    rwConnection
+      .prepare("UPDATE users SET playback_speed = ? WHERE id = ?")
+      .run(speed, id);
   },
 
   getProgress: (userId: string): UserProgressRow[] =>

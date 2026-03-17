@@ -4,6 +4,7 @@ import "./globals.css";
 import { AudioPlayerProvider } from "@/lib/AudioPlayerContext";
 import { AuthProvider } from "@/lib/AuthContext";
 import PersistentPlayerBar from "@/components/audio/PersistentPlayerBar";
+import PlaybackSpeedSync from "@/components/audio/PlaybackSpeedSync";
 import TopBar from "@/components/TopBar";
 import { ThemeProvider } from "@/lib/ThemeProvider";
 import { TopBarProvider } from "@/lib/TopBarContext";
@@ -51,6 +52,7 @@ export default function RootLayout({
         <ThemeProvider />
         <AuthProvider>
           <AudioPlayerProvider>
+            <PlaybackSpeedSync />
             <TopBarProvider>
               <TopBar />
               <div style={{ paddingTop: "var(--topbar-height)" }}>
