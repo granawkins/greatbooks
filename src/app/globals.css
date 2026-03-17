@@ -101,6 +101,19 @@ body::before {
   }
 }
 
+/* ── Feature grid: hidden on mobile, 3-col on desktop ──────────── */
+
+.feature-grid-desktop {
+  display: none;
+}
+@media (min-width: 640px) {
+  .feature-grid-desktop {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
 /* ── Comment hover coordination (DOM-driven, no React re-render) ── */
 
 .comment-hover.comment-underline {
