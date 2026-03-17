@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import ChatMessage from "./ChatMessage";
 import { useChatSocket } from "./useChatSocket";
@@ -28,9 +28,16 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
     }
   }, [chat.messages, chat.partialTranscript, chat.userTranscript]);
 
-  // Focus input on mount
+  // Track visual viewport height for mobile keyboard resize
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+
   useEffect(() => {
-    if (inputRef.current) inputRef.current.focus();
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => setViewportHeight(vv.height);
+    onResize();
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
   }, []);
 
   const displayMessages =
@@ -52,7 +59,11 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
     <div
       style={{
         position: "fixed",
-        inset: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        ...(viewportHeight != null ? { height: viewportHeight } : {}),
         zIndex: 100,
         backgroundColor: "rgba(0, 0, 0, 0.5)",
         backdropFilter: "blur(8px)",
@@ -175,7 +186,7 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
 
 // ── Subcomponents ──────────────────────────────────────────────────────────
 
-import { useState, forwardRef } from "react";
+import { forwardRef } from "react";
 
 type ChatInputProps = {
   onSend: (text: string) => void;
@@ -219,7 +230,7 @@ const ChatInput = forwardRef<HTMLInputElement, ChatInputProps>(
             backgroundColor: "rgba(255, 255, 255, 0.1)",
             color: "#ffffff",
             fontFamily: "var(--font-ui)",
-            fontSize: "0.875rem",
+            fontSize: "16px",
             outline: "none",
           }}
         />
