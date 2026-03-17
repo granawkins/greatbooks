@@ -157,26 +157,41 @@ export default function TopBar() {
         </div>
 
         {/* Right side */}
-        {!isProfile && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexShrink: 0, marginLeft: "0.75rem" }}>
           <Link
-            href="/profile"
-            aria-label="Profile"
+            href="/library"
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 36,
-              height: 36,
+              fontFamily: "var(--font-ui)",
+              fontSize: "0.875rem",
+              fontWeight: 500,
               color: "var(--color-text-secondary)",
+              textDecoration: "none",
+              padding: "0.25rem 0.5rem",
               transition: "color 0.15s",
-              flexShrink: 0,
-              marginLeft: "0.75rem",
             }}
             className="hover:text-[var(--color-text)]"
           >
-            <ProfileIcon />
+            Library
           </Link>
-        )}
+          {!isProfile && (
+            <Link
+              href="/profile"
+              aria-label="Profile"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 36,
+                height: 36,
+                color: "var(--color-text-secondary)",
+                transition: "color 0.15s",
+              }}
+              className="hover:text-[var(--color-text)]"
+            >
+              <ProfileIcon />
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );

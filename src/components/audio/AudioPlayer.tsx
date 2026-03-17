@@ -49,6 +49,8 @@ export default function AudioPlayer() {
     scrollDataRef,
     viewingChapterRef,
     onChatClickRef,
+    playbackSpeedRef,
+    setPlaybackSpeed,
   } = useAudioPlayer();
 
   const router = useRouter();
@@ -73,11 +75,12 @@ export default function AudioPlayer() {
     };
   }, [audioRef]);
 
+  // Sync speed index from the context's playback speed ref on session load
   useEffect(() => {
-    setSpeedIdx(1);
-    const audio = audioRef.current;
-    if (audio) audio.playbackRate = 1;
-  }, [session, audioRef]);
+    const speed = playbackSpeedRef.current;
+    const idx = SPEEDS.indexOf(speed);
+    setSpeedIdx(idx >= 0 ? idx : 1);
+  }, [session, playbackSpeedRef]);
 
   // ── Playback controls ────────────────────────────────────────────────
 
@@ -135,11 +138,10 @@ export default function AudioPlayer() {
   const cycleSpeed = useCallback(() => {
     setSpeedIdx((prev) => {
       const next = (prev + 1) % SPEEDS.length;
-      const audio = audioRef.current;
-      if (audio) audio.playbackRate = SPEEDS[next];
+      setPlaybackSpeed(SPEEDS[next]);
       return next;
     });
-  }, [audioRef]);
+  }, [setPlaybackSpeed]);
 
   // ── Imperative refs for scrubber, highlighting, scroll ──────────────────
 

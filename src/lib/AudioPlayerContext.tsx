@@ -54,6 +54,10 @@ type AudioPlayerContextValue = {
   onPauseRef: MutableRefObject<((ms: number) => void) | null>;
   onChatClickRef: MutableRefObject<(() => void) | null>;
   onChapterSelectRef: MutableRefObject<((chapterId: number, startMs?: number, autoPlay?: boolean) => void) | null>;
+
+  // Playback speed — stored as ref so it can be applied on audio init
+  playbackSpeedRef: MutableRefObject<number>;
+  setPlaybackSpeed: (speed: number) => void;
 };
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
@@ -79,6 +83,13 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const onPauseRef = useRef<((ms: number) => void) | null>(null);
   const onChatClickRef = useRef<(() => void) | null>(null);
   const onChapterSelectRef = useRef<((chapterId: number) => void) | null>(null);
+  const playbackSpeedRef = useRef(1);
+
+  const setPlaybackSpeed = useCallback((speed: number) => {
+    playbackSpeedRef.current = speed;
+    const audio = audioRef.current;
+    if (audio) audio.playbackRate = speed;
+  }, []);
 
   // Save progress on any pause (user-initiated, loadSession, dismiss, ended)
   useEffect(() => {
@@ -114,6 +125,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         if (initialMsRef.current > 0) {
           audio.currentTime = initialMsRef.current / 1000;
         }
+        audio.playbackRate = playbackSpeedRef.current;
         seekedRef.current = true;
       }
       if (autoPlayRef.current) {
@@ -133,7 +145,6 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         audio.pause();
         audio.src = newSession.src;
         audio.currentTime = 0;
-        audio.playbackRate = 1;
       }
       setSession({ ...newSession, initialPositionMs: initialPositionMs ?? 0 });
       seekedRef.current = false;
@@ -165,6 +176,8 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     onPauseRef,
     onChatClickRef,
     onChapterSelectRef,
+    playbackSpeedRef,
+    setPlaybackSpeed,
   };
 
   return (

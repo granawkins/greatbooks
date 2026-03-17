@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS segments (
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT,
+  playback_speed REAL DEFAULT 1.0,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
