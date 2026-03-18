@@ -33,6 +33,8 @@ export type ScrollData = {
   elements: (HTMLElement | null)[];
 };
 
+export type ViewMode = "audio" | "text";
+
 type AudioPlayerContextValue = {
   session: AudioSession | null;
   audioRef: MutableRefObject<HTMLAudioElement | null>;
@@ -58,6 +60,10 @@ type AudioPlayerContextValue = {
   // Playback speed — stored as ref so it can be applied on audio init
   playbackSpeedRef: MutableRefObject<number>;
   setPlaybackSpeed: (speed: number) => void;
+
+  // View mode — audio (full player) or text (scroll-based progress)
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
 };
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
@@ -71,6 +77,12 @@ export function useAudioPlayer() {
 export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [session, setSession] = useState<AudioSession | null>(null);
+  const [viewMode, setViewModeState] = useState<ViewMode>("audio");
+
+  const setViewMode = useCallback((mode: ViewMode) => {
+    setViewModeState(mode);
+    try { localStorage.setItem("greatbooks-view-mode", mode); } catch {}
+  }, []);
 
   const seekedRef = useRef(false);
   const initialMsRef = useRef(0);
@@ -178,6 +190,8 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     onChapterSelectRef,
     playbackSpeedRef,
     setPlaybackSpeed,
+    viewMode,
+    setViewMode,
   };
 
   return (
