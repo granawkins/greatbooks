@@ -146,9 +146,9 @@ export function ChapterBlocks({
     setDraftComment({ ...intent, id: `draft-${Date.now()}` });
   }, []);
 
-  const handleDraftSave = useCallback(async (commentText: string) => {
+  const handleDraftSave = useCallback((commentText: string) => {
     if (!draftComment) return;
-    await fetch("/api/annotations", {
+    fetch("/api/annotations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -162,7 +162,7 @@ export function ChapterBlocks({
         type: "comment",
         commentText,
       }),
-    });
+    }).catch(() => {});
     setDraftComment(null);
     onAnnotationSaved();
   }, [draftComment, bookId, chapterNum, onAnnotationSaved]);
@@ -238,21 +238,18 @@ export function ChapterBlocks({
     return () => window.removeEventListener("resize", h);
   }, [positionCards]);
 
-  const handleDeleteAnnotation = useCallback(async (id: number) => {
-    await fetch(`/api/annotations/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
+  const handleDeleteAnnotation = useCallback((id: number) => {
+    fetch(`/api/annotations/${id}`, { method: "DELETE", credentials: "include" }).catch(() => {});
     onAnnotationSaved();
   }, [onAnnotationSaved]);
 
-  const handleEditAnnotation = useCallback(async (id: number, commentText: string) => {
-    await fetch(`/api/annotations/${id}`, {
+  const handleEditAnnotation = useCallback((id: number, commentText: string) => {
+    fetch(`/api/annotations/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ commentText }),
-    });
+    }).catch(() => {});
     onAnnotationSaved();
   }, [onAnnotationSaved]);
 
