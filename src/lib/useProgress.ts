@@ -8,13 +8,15 @@ type BookProgress = {
   audio_position_ms: number;
 };
 
+export type ProgressMode = "listen" | "read";
+
 const SAVE_INTERVAL_MS = 5000;
 
 export function useProgress(bookId: string) {
   const [progress, setProgress] = useState<BookProgress | null>(null);
   const [allProgress, setAllProgress] = useState<BookProgress[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const pendingRef = useRef<BookProgress | null>(null);
+  const pendingRef = useRef<(BookProgress & { mode?: ProgressMode; durationMs?: number }) | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch progress on mount
@@ -43,6 +45,8 @@ export function useProgress(bookId: string) {
         bookId: data.book_id,
         chapterNumber: data.chapter_number,
         audioPositionMs: data.audio_position_ms,
+        mode: data.mode,
+        durationMs: data.durationMs,
       }),
     }).catch(() => {});
   }, []);
@@ -57,11 +61,13 @@ export function useProgress(bookId: string) {
 
   // Debounced save
   const saveProgress = useCallback(
-    (chapterNumber: number, audioPositionMs: number) => {
-      const data: BookProgress = {
+    (chapterNumber: number, audioPositionMs: number, mode?: ProgressMode, durationMs?: number) => {
+      const data = {
         book_id: bookId,
         chapter_number: chapterNumber,
         audio_position_ms: audioPositionMs,
+        mode,
+        durationMs,
       };
       setProgress(data);
       pendingRef.current = data;
@@ -78,11 +84,13 @@ export function useProgress(bookId: string) {
 
   // Immediate save (for pause, chapter change)
   const saveProgressNow = useCallback(
-    (chapterNumber: number, audioPositionMs: number) => {
-      const data: BookProgress = {
+    (chapterNumber: number, audioPositionMs: number, mode?: ProgressMode, durationMs?: number) => {
+      const data = {
         book_id: bookId,
         chapter_number: chapterNumber,
         audio_position_ms: audioPositionMs,
+        mode,
+        durationMs,
       };
       setProgress(data);
       pendingRef.current = data;

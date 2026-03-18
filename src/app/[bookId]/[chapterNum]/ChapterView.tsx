@@ -222,6 +222,8 @@ export default function ChapterView({
   const heroRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialScrollDone = useRef<number | null>(null);
+  const lastReadSaveRef = useRef<number>(0); // timestamp of last read-mode save
+  const [scrollReady, setScrollReady] = useState(false);
 
   // ── Restore font size from localStorage ──────────────────────────────
   useEffect(() => {
@@ -283,13 +285,13 @@ export default function ChapterView({
   // ── Scroll position ───────────────────────────────────────────────────
 
   // Use live audio position when returning to a chapter with an active session
-  const effectiveAudioMs = useMemo(() => {
+  const [effectiveAudioMs, setEffectiveAudioMs] = useState(initialAudioPositionMs);
+  useEffect(() => {
     if (session?.bookId === bookId && session?.chapterId === chapterNum && audioRef.current) {
       const currentMs = Math.floor(audioRef.current.currentTime * 1000);
-      if (currentMs > 0) return currentMs;
+      if (currentMs > 0) setEffectiveAudioMs(currentMs);
     }
-    return initialAudioPositionMs;
-  }, [session?.bookId, session?.chapterId, bookId, chapterNum, audioRef, initialAudioPositionMs]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const scrollTargetBlockIdx = useMemo(() => {
     if (scrollToBottom || effectiveAudioMs <= 0) return -1;
@@ -316,11 +318,11 @@ export default function ChapterView({
     initialScrollDone.current = chapterNum;
     if (scrollToBottom) {
       bottomRef.current?.scrollIntoView({ block: "end", behavior: "instant" });
-      return;
+    } else if (scrollTargetBlockIdx >= 0) {
+      const el = paraRefsMap.current[chapterNum]?.[scrollTargetBlockIdx];
+      if (el) scrollToCenter(el, "instant", viewMode === "text");
     }
-    if (scrollTargetBlockIdx < 0) return;
-    const el = paraRefsMap.current[chapterNum]?.[scrollTargetBlockIdx];
-    if (el) scrollToCenter(el, "instant", viewMode === "text");
+    setScrollReady(true);
   }, [scrollTargetBlockIdx, chapterNum, scrollToBottom, viewMode]);
 
   // ── Audio integration ─────────────────────────────────────────────────
@@ -404,6 +406,7 @@ export default function ChapterView({
   useEffect(() => {
     if (prevViewMode.current !== "text" && viewMode === "text") {
       hasScrolledRef.current = false; // reset on each switch
+      lastReadSaveRef.current = Date.now(); // start tracking read time
       const audioMs = audioRef.current ? Math.floor(audioRef.current.currentTime * 1000) : 0;
       if (audioMs > 0) {
         const refs = paraRefsMap.current[chapterNum];
@@ -445,7 +448,12 @@ export default function ChapterView({
 
   // Helper: set progress + seek audio to a given ms, flash the bookmark word
   const applyBookmark = useCallback((ms: number, blockIdx?: number, segIdx?: number) => {
-    saveProgressNow(chapterNum, ms);
+    const now = Date.now();
+    const elapsed = lastReadSaveRef.current > 0 ? now - lastReadSaveRef.current : 0;
+    // Cap at 30s to avoid counting idle time if bookmark was stale
+    const readDurationMs = Math.min(elapsed, 30000);
+    lastReadSaveRef.current = now;
+    saveProgressNow(chapterNum, ms, "read", readDurationMs);
     if (audioRef.current) {
       audioRef.current.currentTime = ms / 1000;
     }
@@ -611,7 +619,7 @@ export default function ChapterView({
 
   return (
     <div
-      className="chapter-layout"
+      className={scrollReady ? "chapter-layout" : "chapter-layout chapter-layout--positioning"}
       style={{ paddingBottom: isTextMode ? "80px" : "200px" }}
     >
       {showIntroModal && (

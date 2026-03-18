@@ -103,7 +103,7 @@ export default function BookShell({
 
   useEffect(() => {
     if (!session || session.bookId !== bookId) return;
-    onPauseRef.current = (timeMs: number) => saveProgressNow(session.chapterId, timeMs);
+    onPauseRef.current = (timeMs: number) => saveProgressNow(session.chapterId, timeMs, "listen", 5000);
     return () => { onPauseRef.current = null; };
   }, [session, bookId, saveProgressNow, onPauseRef]);
 

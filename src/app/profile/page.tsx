@@ -9,6 +9,20 @@ import BookCover from "@/components/BookCover";
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
 
+type UsageSummary = {
+  listen_ms: number;
+  read_ms: number;
+};
+
+function formatDuration(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSec / 3600);
+  const min = Math.floor((totalSec % 3600) / 60);
+  const sec = totalSec % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(hours)}:${pad(min)}:${pad(sec)}`;
+}
+
 type HistoryItem = {
   book_id: string;
   title: string;
@@ -60,11 +74,16 @@ export default function ProfilePage() {
   const { user, loading, logout, updatePlaybackSpeed } = useAuth();
   const { setPlaybackSpeed } = useAudioPlayer();
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
 
   useEffect(() => {
     fetch("/api/user/history", { credentials: "include" })
       .then((r) => r.json())
       .then(setHistory)
+      .catch(() => {});
+    fetch("/api/user/usage", { credentials: "include" })
+      .then((r) => r.json())
+      .then(setUsage)
       .catch(() => {});
   }, []);
 
@@ -167,6 +186,36 @@ export default function ProfilePage() {
                 ))}
               </div>
             </div>
+
+            {/* Usage stats */}
+            {usage && (usage.listen_ms > 0 || usage.read_ms > 0) && (
+              <>
+                <div style={rowStyle}>
+                  <span style={labelStyle}>Time listened</span>
+                  <span
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "var(--color-text)",
+                      fontFamily: "var(--font-ui)",
+                    }}
+                  >
+                    {formatDuration(usage.listen_ms)}
+                  </span>
+                </div>
+                <div style={rowStyle}>
+                  <span style={labelStyle}>Time reading</span>
+                  <span
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "var(--color-text)",
+                      fontFamily: "var(--font-ui)",
+                    }}
+                  >
+                    {formatDuration(usage.read_ms)}
+                  </span>
+                </div>
+              </>
+            )}
 
             {/* History */}
             {history.length > 0 && (
