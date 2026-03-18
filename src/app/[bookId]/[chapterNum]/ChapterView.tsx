@@ -21,6 +21,8 @@ import CourseChoiceModal from "@/components/CourseChoiceModal";
 import { FloatingControls } from "@/app/[bookId]/FloatingControls";
 import type { Annotation } from "@/components/reader/types";
 import { ChapterNav } from "@/components/reader/ChapterNav";
+import { ChapterListIcon } from "@/components/audio/icons";
+import { ChapterPicker } from "@/components/ChapterPicker";
 
 // ── Cover image (chapter 1 only) ────────────────────────────────────────
 
@@ -207,6 +209,8 @@ export default function ChapterView({
 }) {
   const { bookId, bookMeta, chapters, setCurrentChapter, cacheChapter } = useBookShell();
   const searchParams = useSearchParams();
+  const [headerPickerOpen, setHeaderPickerOpen] = useState(false);
+  const headerChapterBtnRef = useRef<HTMLDivElement | null>(null);
   const scrollToBottom = searchParams.get("scroll") === "bottom";
   const autoplay = searchParams.get("autoplay") === "1";
 
@@ -683,12 +687,48 @@ export default function ChapterView({
         <ChapterNav bookId={bookId} prevChapter={prevChapter} nextChapter={nextChapter} />
 
         {chapters.length > 1 && (
-          <h2 style={{
-            color: "var(--color-text-secondary)", fontFamily: "var(--font-body)",
-            fontSize: "1.25rem", fontWeight: 400, textAlign: "center", margin: "2rem 0",
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            gap: "0.5rem", margin: "2rem 0",
           }}>
-            {chapterData.title}
-          </h2>
+            <div ref={headerChapterBtnRef} style={{ position: "relative", flexShrink: 0 }}>
+              <button
+                aria-label="Select chapter"
+                onClick={() => setHeaderPickerOpen((o) => !o)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 24,
+                  height: 24,
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  color: "var(--color-text-secondary)",
+                  borderRadius: "var(--radius)",
+                  padding: 0,
+                }}
+                className="hover:text-[var(--color-text)]"
+              >
+                <ChapterListIcon />
+              </button>
+              {headerPickerOpen && (
+                <ChapterPicker
+                  chapters={chapters.map(c => ({ id: c.id, title: c.title }))}
+                  activeChapterId={chapterNum}
+                  onSelect={(id) => { window.location.href = `/${bookId}/${id}`; }}
+                  onClose={() => setHeaderPickerOpen(false)}
+                  containerRef={headerChapterBtnRef}
+                />
+              )}
+            </div>
+            <h2 style={{
+              color: "var(--color-text-secondary)", fontFamily: "var(--font-body)",
+              fontSize: "1.25rem", fontWeight: 400, textAlign: "center", margin: 0,
+            }}>
+              {chapterData.title}
+            </h2>
+          </div>
         )}
 
         {blocks.length === 0 ? (
