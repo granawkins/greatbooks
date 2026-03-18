@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { getCoverSmUrl } from "@/lib/assets";
 
-const CHARS_PER_PAGE = 1500;
+const CHARS_PER_PAGE = 2200;
 
 function PagesIcon() {
   return (

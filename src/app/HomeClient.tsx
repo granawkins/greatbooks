@@ -22,6 +22,7 @@ type HomeProps = {
   recentBookIds: string[];
   courseForBook: CourseForBook;
   courseBooks: Record<string, string[]>;
+  isLoggedIn: boolean;
 };
 
 export default function HomeClient(props: HomeProps) {
@@ -39,166 +40,167 @@ export default function HomeClient(props: HomeProps) {
 // Tone: Warm, literary, lifestyle. Emphasis on the listening experience.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, courseForBook, books }: HomeProps) {
+function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, courseForBook, books, isLoggedIn }: HomeProps) {
   const { session } = useAudioPlayer();
 
-  // Continue reading logic
-  const allItems = [...books, ...courses];
-  const allById = Object.fromEntries(allItems.map((b) => [b.id, b]));
-  const lastId = recentBookIds.find((id) => allById[id]) ?? null;
-  const lastItem = lastId ? allById[lastId] : null;
-  const lastIsCourse = lastItem?.type === "course";
+  // Continue reading logic — always prefer the book (not the course)
   const booksById = Object.fromEntries(books.map((b) => [b.id, b]));
   const lastBookId = recentBookIds.find((id) => booksById[id]) ?? null;
   const lastBook = lastBookId ? booksById[lastBookId] : null;
-  const continueBook = lastIsCourse ? lastItem : lastBook;
+  const continueBook = lastBook;
   const continueProgress = continueBook ? progressMap[continueBook.id] : null;
   const continueStats = continueBook ? statsMap[continueBook.id] ?? null : null;
   const continueChapterCount = continueStats?.chapter_count ?? 0;
-  const bookCourseInfo = !lastIsCourse && lastBookId ? courseForBook[lastBookId] : null;
+  const bookCourseInfo = lastBookId ? courseForBook[lastBookId] : null;
+
+  const showHero = !isLoggedIn || !continueBook || !continueProgress;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)", display: "flex", flexDirection: "column" }}>
 
-      {/* ── Hero ── */}
-      <section
-        style={{
-          padding: "4rem 1.5rem 3rem",
-          maxWidth: "var(--content-max-width)",
-          margin: "0 auto",
-          width: "100%",
-          textAlign: "center",
-        }}
-      >
-        <h1
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "clamp(2rem, 6vw, 3.25rem)",
-            fontWeight: 400,
-            color: "var(--color-text)",
-            lineHeight: 1.15,
-            margin: "0 0 1rem",
-            letterSpacing: "-0.01em",
-          }}
-        >
-          Long Walks<br />with Old Books
-        </h1>
-        <p
-          style={{
-            fontFamily: "var(--font-body)",
-            fontSize: "1.0625rem",
-            color: "var(--color-text-secondary)",
-            lineHeight: 1.6,
-            maxWidth: "36ch",
-            margin: "0 auto 2rem",
-            fontStyle: "italic",
-          }}
-        >
-          Listen to Homer, Plato, and Milton — beautifully narrated, with an AI tutor at your side.
-        </p>
-        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-          <Link
-            href={courses[0] ? `/${courses[0].id}/contents` : "/library"}
+      {/* ── Hero (hidden for logged-in users with progress) ── */}
+      {showHero && (
+        <>
+          <section
             style={{
-              display: "inline-block",
-              padding: "0.75rem 2rem",
-              backgroundColor: "var(--color-text)",
-              color: "var(--color-bg)",
-              borderRadius: "var(--radius)",
-              fontFamily: "var(--font-ui)",
-              fontSize: "0.9375rem",
-              fontWeight: 500,
-              textDecoration: "none",
-              letterSpacing: "0.01em",
+              padding: "4rem 1.5rem 3rem",
+              maxWidth: "var(--content-max-width)",
+              margin: "0 auto",
+              width: "100%",
+              textAlign: "center",
             }}
           >
-            Start Listening
-          </Link>
-          <Link
-            href="/library"
-            style={{
-              display: "inline-block",
-              padding: "0.75rem 2rem",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text-secondary)",
-              borderRadius: "var(--radius)",
-              fontFamily: "var(--font-ui)",
-              fontSize: "0.9375rem",
-              fontWeight: 500,
-              textDecoration: "none",
-            }}
-          >
-            Browse Library
-          </Link>
-        </div>
-      </section>
-
-      {/* ── How it works ── */}
-      <section
-        style={{
-          maxWidth: "var(--content-max-width)",
-          margin: "0 auto",
-          padding: "0 1.5rem 3rem",
-          width: "100%",
-        }}
-      >
-        {/* Desktop: 3-col grid */}
-        <div className="feature-grid-desktop" style={{ textAlign: "center" }}>
-          {[
-            { num: "1", title: "Read", desc: "Clean, distraction-free text of the world's greatest books." },
-            { num: "2", title: "Listen", desc: "AI-narrated audio that syncs with the page as you walk." },
-            { num: "3", title: "Ask", desc: "An AI tutor who knows the text and answers your questions." },
-          ].map((step) => (
-            <div key={step.num}>
-              <div
+            <h1
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "clamp(2rem, 6vw, 3.25rem)",
+                fontWeight: 400,
+                color: "var(--color-text)",
+                lineHeight: 1.15,
+                margin: "0 0 1rem",
+                letterSpacing: "-0.01em",
+              }}
+            >
+              Long Walks<br />with Old Books
+            </h1>
+            <p
+              style={{
+                fontFamily: "var(--font-body)",
+                fontSize: "1.0625rem",
+                color: "var(--color-text-secondary)",
+                lineHeight: 1.6,
+                maxWidth: "36ch",
+                margin: "0 auto 2rem",
+                fontStyle: "italic",
+              }}
+            >
+              Listen to Homer, Plato, and Milton — beautifully narrated, with an AI tutor at your side.
+            </p>
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+              <Link
+                href={courses[0] ? `/${courses[0].id}/contents` : "/library"}
                 style={{
-                  width: "2rem",
-                  height: "2rem",
-                  borderRadius: "50%",
-                  border: "1.5px solid var(--color-border)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 0.625rem",
-                  fontFamily: "var(--font-display)",
-                  fontSize: "0.9375rem",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                {step.num}
-              </div>
-              <h3
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontSize: "1.125rem",
-                  fontWeight: 500,
-                  color: "var(--color-text)",
-                  margin: "0 0 0.25rem",
-                }}
-              >
-                {step.title}
-              </h3>
-              <p
-                style={{
+                  display: "inline-block",
+                  padding: "0.75rem 2rem",
+                  backgroundColor: "var(--color-text)",
+                  color: "var(--color-bg)",
+                  borderRadius: "var(--radius)",
                   fontFamily: "var(--font-ui)",
-                  fontSize: "0.8125rem",
-                  color: "var(--color-text-secondary)",
-                  lineHeight: 1.5,
-                  margin: 0,
+                  fontSize: "0.9375rem",
+                  fontWeight: 500,
+                  textDecoration: "none",
+                  letterSpacing: "0.01em",
                 }}
               >
-                {step.desc}
-              </p>
+                Start Listening
+              </Link>
+              <Link
+                href="/library"
+                style={{
+                  display: "inline-block",
+                  padding: "0.75rem 2rem",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-text-secondary)",
+                  borderRadius: "var(--radius)",
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "0.9375rem",
+                  fontWeight: 500,
+                  textDecoration: "none",
+                }}
+              >
+                Browse Library
+              </Link>
             </div>
-          ))}
-        </div>
-      </section>
+          </section>
+
+          {/* ── How it works ── */}
+          <section
+            style={{
+              maxWidth: "var(--content-max-width)",
+              margin: "0 auto",
+              padding: "0 1.5rem 3rem",
+              width: "100%",
+            }}
+          >
+            {/* Desktop: 3-col grid */}
+            <div className="feature-grid-desktop" style={{ textAlign: "center" }}>
+              {[
+                { num: "1", title: "Read", desc: "Clean, distraction-free text of the world's greatest books." },
+                { num: "2", title: "Listen", desc: "AI-narrated audio that syncs with the page as you walk." },
+                { num: "3", title: "Ask", desc: "An AI tutor who knows the text and answers your questions." },
+              ].map((step) => (
+                <div key={step.num}>
+                  <div
+                    style={{
+                      width: "2rem",
+                      height: "2rem",
+                      borderRadius: "50%",
+                      border: "1.5px solid var(--color-border)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      margin: "0 auto 0.625rem",
+                      fontFamily: "var(--font-display)",
+                      fontSize: "0.9375rem",
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
+                    {step.num}
+                  </div>
+                  <h3
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontSize: "1.125rem",
+                      fontWeight: 500,
+                      color: "var(--color-text)",
+                      margin: "0 0 0.25rem",
+                    }}
+                  >
+                    {step.title}
+                  </h3>
+                  <p
+                    style={{
+                      fontFamily: "var(--font-ui)",
+                      fontSize: "0.8125rem",
+                      color: "var(--color-text-secondary)",
+                      lineHeight: 1.5,
+                      margin: 0,
+                    }}
+                  >
+                    {step.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
 
       <main style={{ maxWidth: "var(--content-max-width)", margin: "0 auto", padding: "0 1.5rem", paddingBottom: session ? 220 : 64, width: "100%", flex: 1 }}>
 
         {/* ── Continue ── */}
         {continueBook && continueProgress && (
-          <section style={{ marginBottom: "3rem" }}>
+          <section style={{ marginBottom: "3rem", marginTop: !showHero ? "2.5rem" : undefined }}>
             <h2 style={sectionHeadingStyle}>Continue</h2>
             <Link
               href={bookCourseInfo
@@ -214,8 +216,8 @@ function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
             >
               <div
                 style={{
-                  width: lastIsCourse ? "160px" : "100px",
-                  height: lastIsCourse ? "107px" : "133px",
+                  width: "100px",
+                  height: "133px",
                   flexShrink: 0,
                   borderRadius: "4px",
                   overflow: "hidden",
@@ -227,7 +229,7 @@ function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
                   src={getCoverSmUrl(continueBook.id)}
                   alt={continueBook.title}
                   fill
-                  sizes={lastIsCourse ? "160px" : "100px"}
+                  sizes="100px"
                   className="object-cover"
                 />
               </div>
@@ -252,7 +254,7 @@ function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
                       margin: "2px 0 0",
                     }}
                   >
-                    In: {bookCourseInfo.courseTitle}
+                    {bookCourseInfo.courseTitle}
                   </p>
                 )}
                 <div style={{ color: "var(--color-text-secondary)", margin: "4px 0 0" }}>
@@ -460,164 +462,165 @@ function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
 // Tone: Direct, confident, value-anchored. The price is the hook.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-function VariantB({ courses, progressMap, statsMap, courseBooks, recentBookIds, courseForBook, books }: HomeProps) {
+function VariantB({ courses, progressMap, statsMap, courseBooks, recentBookIds, courseForBook, books, isLoggedIn }: HomeProps) {
   const { session } = useAudioPlayer();
 
-  // Continue reading logic
-  const allItems = [...books, ...courses];
-  const allById = Object.fromEntries(allItems.map((b) => [b.id, b]));
-  const lastId = recentBookIds.find((id) => allById[id]) ?? null;
-  const lastItem = lastId ? allById[lastId] : null;
-  const lastIsCourse = lastItem?.type === "course";
+  // Continue reading logic — always prefer the book (not the course)
   const booksById = Object.fromEntries(books.map((b) => [b.id, b]));
   const lastBookId = recentBookIds.find((id) => booksById[id]) ?? null;
   const lastBook = lastBookId ? booksById[lastBookId] : null;
-  const continueBook = lastIsCourse ? lastItem : lastBook;
+  const continueBook = lastBook;
   const continueProgress = continueBook ? progressMap[continueBook.id] : null;
   const continueStats = continueBook ? statsMap[continueBook.id] ?? null : null;
   const continueChapterCount = continueStats?.chapter_count ?? 0;
-  const bookCourseInfo = !lastIsCourse && lastBookId ? courseForBook[lastBookId] : null;
+  const bookCourseInfo = lastBookId ? courseForBook[lastBookId] : null;
+
+  const showHero = !isLoggedIn || !continueBook || !continueProgress;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)", display: "flex", flexDirection: "column" }}>
 
-      {/* ── Hero ── */}
-      <section
-        style={{
-          padding: "4rem 1.5rem 2rem",
-          maxWidth: "var(--content-max-width)",
-          margin: "0 auto",
-          width: "100%",
-          textAlign: "center",
-        }}
-      >
-        <p
-          style={{
-            fontFamily: "var(--font-ui)",
-            fontSize: "0.8125rem",
-            fontWeight: 500,
-            color: "var(--color-accent)",
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            margin: "0 0 0.75rem",
-          }}
-        >
-          Homer &middot; Plato &middot; Milton &middot; and more
-        </p>
-        <h1
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "clamp(2rem, 6vw, 3.25rem)",
-            fontWeight: 400,
-            color: "var(--color-text)",
-            lineHeight: 1.15,
-            margin: "0 0 1rem",
-            letterSpacing: "-0.01em",
-          }}
-        >
-          A Classics Education<br />
-          <span style={{ color: "var(--color-accent)" }}>for $1/mo</span>
-        </h1>
-        <p
-          style={{
-            fontFamily: "var(--font-ui)",
-            fontSize: "0.9375rem",
-            color: "var(--color-text-secondary)",
-            lineHeight: 1.6,
-            maxWidth: "42ch",
-            margin: "0 auto 2rem",
-          }}
-        >
-          Read the great books, listen on the go, and discuss them with an AI tutor who knows every line. Free to start.
-        </p>
-        <Link
-          href={courses[0] ? `/${courses[0].id}/contents` : "/library"}
-          style={{
-            display: "inline-block",
-            padding: "0.75rem 2.5rem",
-            backgroundColor: "var(--color-text)",
-            color: "var(--color-bg)",
-            borderRadius: "var(--radius)",
-            fontFamily: "var(--font-ui)",
-            fontSize: "0.9375rem",
-            fontWeight: 500,
-            textDecoration: "none",
-            letterSpacing: "0.01em",
-          }}
-        >
-          Start Reading — Free
-        </Link>
-      </section>
-
-      {/* ── What you get ── */}
-      <section
-        style={{
-          maxWidth: "var(--content-max-width)",
-          margin: "0 auto",
-          padding: "1.5rem 1.5rem 3rem",
-          width: "100%",
-        }}
-      >
-        {/* Desktop: 3-col grid with icons */}
-        <div
-          className="feature-grid-desktop"
-          style={{
-            backgroundColor: "var(--color-border)",
-            borderRadius: "var(--radius-lg)",
-            overflow: "hidden",
-            gap: "1px",
-          }}
-        >
-          {[
-            { icon: "book", title: "Every Text, Free", desc: "Full public-domain texts — Iliad, Republic, Paradise Lost — clean and ad-free." },
-            { icon: "headphones", title: "Audio Narration", desc: "AI-narrated chapters with word-level sync. Read along or just listen." },
-            { icon: "chat", title: "AI Tutor", desc: "Ask questions about any passage. Get context, analysis, connections." },
-          ].map((item) => (
-            <div
-              key={item.title}
+      {/* ── Hero (hidden for logged-in users with progress) ── */}
+      {showHero && (
+        <>
+          <section
+            style={{
+              padding: "4rem 1.5rem 2rem",
+              maxWidth: "var(--content-max-width)",
+              margin: "0 auto",
+              width: "100%",
+              textAlign: "center",
+            }}
+          >
+            <p
               style={{
-                backgroundColor: "var(--color-bg-secondary)",
-                padding: "1.25rem",
-                textAlign: "center",
+                fontFamily: "var(--font-ui)",
+                fontSize: "0.8125rem",
+                fontWeight: 500,
+                color: "var(--color-accent)",
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                margin: "0 0 0.75rem",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.5rem" }}>
-                {item.icon === "book" && <BookIcon />}
-                {item.icon === "headphones" && <HeadphonesIconLg />}
-                {item.icon === "chat" && <ChatIconLg />}
-              </div>
-              <h3
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontSize: "1.0625rem",
-                  fontWeight: 500,
-                  color: "var(--color-text)",
-                  margin: "0 0 0.25rem",
-                }}
-              >
-                {item.title}
-              </h3>
-              <p
-                style={{
-                  fontFamily: "var(--font-ui)",
-                  fontSize: "0.8125rem",
-                  color: "var(--color-text-secondary)",
-                  lineHeight: 1.5,
-                  margin: 0,
-                }}
-              >
-                {item.desc}
-              </p>
+              Homer &middot; Plato &middot; Milton &middot; and more
+            </p>
+            <h1
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "clamp(2rem, 6vw, 3.25rem)",
+                fontWeight: 400,
+                color: "var(--color-text)",
+                lineHeight: 1.15,
+                margin: "0 0 1rem",
+                letterSpacing: "-0.01em",
+              }}
+            >
+              A Classics Education<br />
+              <span style={{ color: "var(--color-accent)" }}>for $1/mo</span>
+            </h1>
+            <p
+              style={{
+                fontFamily: "var(--font-ui)",
+                fontSize: "0.9375rem",
+                color: "var(--color-text-secondary)",
+                lineHeight: 1.6,
+                maxWidth: "42ch",
+                margin: "0 auto 2rem",
+              }}
+            >
+              Read the great books, listen on the go, and discuss them with an AI tutor who knows every line. Free to start.
+            </p>
+            <Link
+              href={courses[0] ? `/${courses[0].id}/contents` : "/library"}
+              style={{
+                display: "inline-block",
+                padding: "0.75rem 2.5rem",
+                backgroundColor: "var(--color-text)",
+                color: "var(--color-bg)",
+                borderRadius: "var(--radius)",
+                fontFamily: "var(--font-ui)",
+                fontSize: "0.9375rem",
+                fontWeight: 500,
+                textDecoration: "none",
+                letterSpacing: "0.01em",
+              }}
+            >
+              Start Reading — Free
+            </Link>
+          </section>
+
+          {/* ── What you get ── */}
+          <section
+            style={{
+              maxWidth: "var(--content-max-width)",
+              margin: "0 auto",
+              padding: "1.5rem 1.5rem 3rem",
+              width: "100%",
+            }}
+          >
+            {/* Desktop: 3-col grid with icons */}
+            <div
+              className="feature-grid-desktop"
+              style={{
+                backgroundColor: "var(--color-border)",
+                borderRadius: "var(--radius-lg)",
+                overflow: "hidden",
+                gap: "1px",
+              }}
+            >
+              {[
+                { icon: "book", title: "Every Text, Free", desc: "Full public-domain texts — Iliad, Republic, Paradise Lost — clean and ad-free." },
+                { icon: "headphones", title: "Audio Narration", desc: "AI-narrated chapters with word-level sync. Read along or just listen." },
+                { icon: "chat", title: "AI Tutor", desc: "Ask questions about any passage. Get context, analysis, connections." },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  style={{
+                    backgroundColor: "var(--color-bg-secondary)",
+                    padding: "1.25rem",
+                    textAlign: "center",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.5rem" }}>
+                    {item.icon === "book" && <BookIcon />}
+                    {item.icon === "headphones" && <HeadphonesIconLg />}
+                    {item.icon === "chat" && <ChatIconLg />}
+                  </div>
+                  <h3
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontSize: "1.0625rem",
+                      fontWeight: 500,
+                      color: "var(--color-text)",
+                      margin: "0 0 0.25rem",
+                    }}
+                  >
+                    {item.title}
+                  </h3>
+                  <p
+                    style={{
+                      fontFamily: "var(--font-ui)",
+                      fontSize: "0.8125rem",
+                      color: "var(--color-text-secondary)",
+                      lineHeight: 1.5,
+                      margin: 0,
+                    }}
+                  >
+                    {item.desc}
+                  </p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
+          </section>
+        </>
+      )}
 
       <main style={{ maxWidth: "var(--content-max-width)", margin: "0 auto", padding: "0 1.5rem", paddingBottom: session ? 220 : 64, width: "100%", flex: 1 }}>
 
         {/* ── Continue ── */}
         {continueBook && continueProgress && (
-          <section style={{ marginBottom: "3rem" }}>
+          <section style={{ marginBottom: "3rem", marginTop: !showHero ? "2.5rem" : undefined }}>
             <h2 style={sectionHeadingStyle}>Continue</h2>
             <Link
               href={bookCourseInfo
@@ -633,8 +636,8 @@ function VariantB({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
             >
               <div
                 style={{
-                  width: lastIsCourse ? "160px" : "100px",
-                  height: lastIsCourse ? "107px" : "133px",
+                  width: "100px",
+                  height: "133px",
                   flexShrink: 0,
                   borderRadius: "4px",
                   overflow: "hidden",
@@ -646,7 +649,7 @@ function VariantB({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
                   src={getCoverSmUrl(continueBook.id)}
                   alt={continueBook.title}
                   fill
-                  sizes={lastIsCourse ? "160px" : "100px"}
+                  sizes="100px"
                   className="object-cover"
                 />
               </div>
@@ -671,7 +674,7 @@ function VariantB({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
                       margin: "2px 0 0",
                     }}
                   >
-                    In: {bookCourseInfo.courseTitle}
+                    {bookCourseInfo.courseTitle}
                   </p>
                 )}
                 <div style={{ color: "var(--color-text-secondary)", margin: "4px 0 0" }}>
