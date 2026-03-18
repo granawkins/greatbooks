@@ -223,6 +223,7 @@ export default function ChapterView({
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialScrollDone = useRef<number | null>(null);
   const lastReadSaveRef = useRef<number>(0); // timestamp of last read-mode save
+  const [scrollReady, setScrollReady] = useState(false);
 
   // ── Restore font size from localStorage ──────────────────────────────
   useEffect(() => {
@@ -317,11 +318,11 @@ export default function ChapterView({
     initialScrollDone.current = chapterNum;
     if (scrollToBottom) {
       bottomRef.current?.scrollIntoView({ block: "end", behavior: "instant" });
-      return;
+    } else if (scrollTargetBlockIdx >= 0) {
+      const el = paraRefsMap.current[chapterNum]?.[scrollTargetBlockIdx];
+      if (el) scrollToCenter(el, "instant", viewMode === "text");
     }
-    if (scrollTargetBlockIdx < 0) return;
-    const el = paraRefsMap.current[chapterNum]?.[scrollTargetBlockIdx];
-    if (el) scrollToCenter(el, "instant", viewMode === "text");
+    setScrollReady(true);
   }, [scrollTargetBlockIdx, chapterNum, scrollToBottom, viewMode]);
 
   // ── Audio integration ─────────────────────────────────────────────────
@@ -618,7 +619,7 @@ export default function ChapterView({
 
   return (
     <div
-      className="chapter-layout"
+      className={scrollReady ? "chapter-layout" : "chapter-layout chapter-layout--positioning"}
       style={{ paddingBottom: isTextMode ? "80px" : "200px" }}
     >
       {showIntroModal && (
