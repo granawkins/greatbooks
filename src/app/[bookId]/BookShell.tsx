@@ -72,6 +72,7 @@ export default function BookShell({
 
   useEffect(() => {
     setBookNav({
+      bookId,
       title: bookMeta.title,
       chapters,
       activeChapterId: currentChapter,

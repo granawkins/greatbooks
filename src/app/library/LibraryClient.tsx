@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import type { BookRow } from "@/lib/db";
 import BookCover from "@/components/BookCover";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { useBookDetailsModal } from "@/lib/BookDetailsModalContext";
 
 type ProgressMap = Record<string, { chapter_number: number }>;
 type StatsMap = Record<string, { chapter_count: number; total_duration_ms: number | null; total_chars: number }>;
@@ -19,7 +19,13 @@ export default function LibraryClient({
   progressMap: ProgressMap;
 }) {
   const { session } = useAudioPlayer();
+  const { openBookDetails, setMaps } = useBookDetailsModal();
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    setMaps(statsMap, progressMap);
+  }, [statsMap, progressMap, setMaps]);
+
   const query = search.toLowerCase().trim();
   const filtered = query
     ? books.filter(
@@ -66,14 +72,19 @@ export default function LibraryClient({
             const stats = statsMap[book.id];
             const progress = progressMap[book.id];
             return (
-              <Link key={book.id} href={`/${book.id}`} className="block">
+              <button
+                key={book.id}
+                onClick={() => openBookDetails(book.id)}
+                className="block"
+                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}
+              >
                 <BookCover
                   bookId={book.id}
                   title={book.title}
                   stats={stats ?? null}
                   progress={progress ?? null}
                 />
-              </Link>
+              </button>
             );
           })}
         </div>
