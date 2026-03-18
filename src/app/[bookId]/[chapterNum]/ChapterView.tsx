@@ -19,6 +19,8 @@ import CourseChoiceModal from "@/components/CourseChoiceModal";
 import { FloatingControls } from "@/app/[bookId]/FloatingControls";
 import type { Annotation } from "@/components/reader/types";
 import Link from "next/link";
+import { useAuth } from "@/lib/AuthContext";
+import UpgradeModal, { type UpgradeModalVariant } from "@/components/UpgradeModal";
 
 // ── Helper ──────────────────────────────────────────────────────────────
 
@@ -160,9 +162,11 @@ export default function ChapterView({
   const scrollToBottom = searchParams.get("scroll") === "bottom";
   const autoplay = searchParams.get("autoplay") === "1";
 
-  const { session, loadSession, wordTimingsRef, scrollDataRef, audioRef, viewMode } = useAudioPlayer();
+  const { session, loadSession, wordTimingsRef, scrollDataRef, audioRef, viewMode, audioGateCheckRef, onAudioBlockedRef } = useAudioPlayer();
+  const { user } = useAuth();
   const { saveProgressNow } = useProgress(bookId);
   const { setScrolled } = useTopBar();
+  const [upgradeModal, setUpgradeModal] = useState<UpgradeModalVariant | null>(null);
 
   const paraRefsMap = useRef<Record<number, (HTMLElement | null)[]>>({});
   const heroRef = useRef<HTMLDivElement | null>(null);
@@ -180,6 +184,20 @@ export default function ChapterView({
       }
     } catch {}
   }, []);
+
+  // ── Audio gate check ─────────────────────────────────────────────────
+  useEffect(() => {
+    audioGateCheckRef.current = () => {
+      if (!user || user.tier === "anonymous") return "login";
+      if (user.audioLimitMs !== Infinity && user.audioUsedMs >= user.audioLimitMs) return "audio_limit";
+      return null;
+    };
+    onAudioBlockedRef.current = (reason) => setUpgradeModal(reason);
+    return () => {
+      audioGateCheckRef.current = null;
+      onAudioBlockedRef.current = null;
+    };
+  }, [user, audioGateCheckRef, onAudioBlockedRef]);
 
   // ── Annotations ───────────────────────────────────────────────────────
 
@@ -731,6 +749,10 @@ export default function ChapterView({
         )}
         <div ref={setMarginEl} className="chapter-margin" />
       </article>
+
+      {upgradeModal && (
+        <UpgradeModal variant={upgradeModal} onClose={() => setUpgradeModal(null)} />
+      )}
     </div>
   );
 }

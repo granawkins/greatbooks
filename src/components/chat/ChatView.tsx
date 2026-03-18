@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import ChatMessage from "./ChatMessage";
 import { useChatSocket } from "./useChatSocket";
+import UpgradeModal from "@/components/UpgradeModal";
 
 type ChatViewProps = {
   bookId: string;
@@ -20,6 +21,7 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
   const chat = useChatSocket({ bookId });
   const { voiceState } = chat;
   const voiceActive = voiceState === "active" || voiceState === "connecting";
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -72,8 +74,8 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
         flexDirection: "column",
       }}
     >
-      {/* Close button */}
-      <div style={{ padding: "1rem 1.25rem", flexShrink: 0 }}>
+      {/* Header: close + credits */}
+      <div style={{ padding: "1rem 1.25rem", flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <button
           onClick={onClose}
           aria-label="Close chat"
@@ -97,6 +99,20 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
             <path d="M4 4l8 8M12 4l-8 8" />
           </svg>
         </button>
+        {chat.creditsLimit > 0 && chat.creditsLimit !== Infinity && (
+          <span
+            style={{
+              fontFamily: "var(--font-ui)",
+              fontSize: "0.75rem",
+              color: chat.creditsExhausted ? "rgba(239, 68, 68, 0.9)" : "rgba(255, 255, 255, 0.5)",
+              padding: "4px 10px",
+              borderRadius: 999,
+              backgroundColor: "rgba(255, 255, 255, 0.1)",
+            }}
+          >
+            {Math.round(chat.creditsUsed)}/{chat.creditsLimit} credits
+          </span>
+        )}
       </div>
 
       {/* Messages */}
@@ -165,7 +181,35 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
           flexShrink: 0,
         }}
       >
-        {voiceActive ? (
+        {chat.creditsExhausted ? (
+          <div style={{ textAlign: "center" }}>
+            <p
+              style={{
+                fontFamily: "var(--font-ui)",
+                fontSize: "0.8125rem",
+                color: "rgba(255, 255, 255, 0.6)",
+                margin: "0 0 0.75rem",
+              }}
+            >
+              You&apos;ve used all your AI credits this month.
+            </p>
+            <button
+              onClick={() => setShowUpgradeModal(true)}
+              style={{
+                padding: "0.5rem 1.5rem",
+                borderRadius: "var(--radius)",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                color: "#ffffff",
+                fontFamily: "var(--font-ui)",
+                fontSize: "0.8125rem",
+                cursor: "pointer",
+              }}
+            >
+              Upgrade for more credits
+            </button>
+          </div>
+        ) : voiceActive ? (
           <VoiceControls
             state={voiceState}
             audioLevel={chat.audioLevel}
@@ -180,6 +224,10 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
           />
         )}
       </div>
+
+      {showUpgradeModal && (
+        <UpgradeModal variant="credits_exhausted" onClose={() => setShowUpgradeModal(false)} />
+      )}
     </div>
   );
 }

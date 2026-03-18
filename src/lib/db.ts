@@ -7,6 +7,7 @@
 
 import Database from "better-sqlite3";
 import path from "path";
+import { type Tier, resolveUserTier, TIER_LIMITS, audioLimitMs, currentMonth } from "./tiers";
 
 const DB_PATH = path.join(process.cwd(), "greatbooks.db");
 const connection = new Database(DB_PATH, { readonly: true });
@@ -60,6 +61,19 @@ rwConnection.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id, started_at);
 `);
+
+// Add tier and tier_expires_at columns to users
+try {
+  rwConnection.exec(`ALTER TABLE users ADD COLUMN tier TEXT DEFAULT 'basic'`);
+} catch { /* column already exists */ }
+try {
+  rwConnection.exec(`ALTER TABLE users ADD COLUMN tier_expires_at TEXT`);
+} catch { /* column already exists */ }
+
+// Add credits_used column to messages
+try {
+  rwConnection.exec(`ALTER TABLE messages ADD COLUMN credits_used REAL DEFAULT 0`);
+} catch { /* column already exists */ }
 
 // Add source_chapter_id and chapter_type columns to chapters (course support)
 try {
@@ -119,6 +133,8 @@ export type UserRow = {
   id: string;
   email: string | null;
   playback_speed: number;
+  tier: string;
+  tier_expires_at: string | null;
   created_at: string;
 };
 
@@ -144,6 +160,7 @@ export type MessageRow = {
   text: string;
   status: "pending" | "streaming" | "completed" | "error";
   model: string | null;
+  credits_used: number;
   created_at: string;
 };
 
@@ -544,6 +561,77 @@ export const db = {
       courseId: row.course_id,
       courseTitle: row.course_title,
       currentCourseChapter: row.chapter_number,
+    };
+  },
+
+  // -- Tier & credits --
+
+  /** Get the effective tier for a user, handling expiration and anonymous detection */
+  getUserTier: (userId: string): Tier => {
+    const user = connection
+      .prepare("SELECT email, tier, tier_expires_at FROM users WHERE id = ?")
+      .get(userId) as { email: string | null; tier: string; tier_expires_at: string | null } | undefined;
+    if (!user) return "anonymous";
+    const effective = resolveUserTier(user);
+    // Persist downgrade if paid tier expired
+    if (user.tier !== "basic" && effective === "basic" && user.tier_expires_at) {
+      rwConnection.prepare("UPDATE users SET tier = 'basic', tier_expires_at = NULL WHERE id = ?").run(userId);
+    }
+    return effective;
+  },
+
+  setUserTier: (userId: string, tier: Tier, expiresAt?: string): void => {
+    rwConnection
+      .prepare("UPDATE users SET tier = ?, tier_expires_at = ? WHERE id = ?")
+      .run(tier, expiresAt ?? null, userId);
+  },
+
+  /** Get audio usage in ms for the current month */
+  getMonthlyAudioUsageMs: (userId: string): number => {
+    const month = currentMonth();
+    const summary = db.getUserUsageSummary(userId, month);
+    return summary.listen_ms;
+  },
+
+  /** Get AI credits used this month (sum of credits_used from messages) */
+  getMonthlyCreditUsage: (userId: string): number => {
+    const month = currentMonth();
+    const row = connection
+      .prepare(
+        `SELECT COALESCE(SUM(credits_used), 0) as total
+         FROM messages
+         WHERE user_id = ? AND created_at >= ? AND created_at < date(?, '+1 month')`
+      )
+      .get(userId, `${month}-01`, `${month}-01`) as { total: number };
+    return Math.round(row.total * 100) / 100;
+  },
+
+  /** Record credits used on an assistant message */
+  setMessageCredits: (messageId: number, credits: number): void => {
+    rwConnection
+      .prepare("UPDATE messages SET credits_used = ? WHERE id = ?")
+      .run(credits, messageId);
+  },
+
+  /** Get tier info + usage for the /api/auth/me response */
+  getUserTierInfo: (userId: string): {
+    tier: Tier;
+    audioUsedMs: number;
+    audioLimitMs: number;
+    creditsUsed: number;
+    creditsLimit: number;
+    tierExpiresAt: string | null;
+  } => {
+    const tier = db.getUserTier(userId);
+    const limits = TIER_LIMITS[tier];
+    const user = connection.prepare("SELECT tier_expires_at FROM users WHERE id = ?").get(userId) as { tier_expires_at: string | null } | undefined;
+    return {
+      tier,
+      audioUsedMs: tier === "anonymous" ? 0 : db.getMonthlyAudioUsageMs(userId),
+      audioLimitMs: audioLimitMs(tier),
+      creditsUsed: tier === "anonymous" ? 0 : db.getMonthlyCreditUsage(userId),
+      creditsLimit: limits.creditsPerMonth,
+      tierExpiresAt: user?.tier_expires_at ?? null,
     };
   },
 };

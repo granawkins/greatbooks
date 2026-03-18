@@ -64,6 +64,11 @@ type AudioPlayerContextValue = {
   // View mode — audio (full player) or text (scroll-based progress)
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
+
+  // Audio gating — set by consumer to handle blocked audio (e.g. show upgrade modal)
+  // Returns "login" | "audio_limit" if blocked, or null if allowed
+  audioGateCheckRef: MutableRefObject<(() => "login" | "audio_limit" | null) | null>;
+  onAudioBlockedRef: MutableRefObject<((reason: "login" | "audio_limit") => void) | null>;
 };
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
@@ -103,6 +108,8 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const onPauseRef = useRef<((ms: number) => void) | null>(null);
   const onChatClickRef = useRef<(() => void) | null>(null);
   const onChapterSelectRef = useRef<((chapterId: number) => void) | null>(null);
+  const audioGateCheckRef = useRef<(() => "login" | "audio_limit" | null) | null>(null);
+  const onAudioBlockedRef = useRef<((reason: "login" | "audio_limit") => void) | null>(null);
   const playbackSpeedRef = useRef(1);
 
   const setPlaybackSpeed = useCallback((speed: number) => {
@@ -160,6 +167,13 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
   const loadSession = useCallback(
     (newSession: AudioSession, initialPositionMs?: number, autoPlay?: boolean) => {
+      // Check audio gate before loading
+      const blocked = audioGateCheckRef.current?.();
+      if (blocked) {
+        onAudioBlockedRef.current?.(blocked);
+        return;
+      }
+
       const audio = audioRef.current;
       if (audio) {
         audio.pause();
@@ -200,6 +214,8 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     setPlaybackSpeed,
     viewMode,
     setViewMode,
+    audioGateCheckRef,
+    onAudioBlockedRef,
   };
 
   return (

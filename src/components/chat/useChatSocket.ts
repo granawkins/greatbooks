@@ -23,6 +23,9 @@ export function useChatSocket({ bookId }: UseChatSocketOptions) {
   const [audioLevel, setAudioLevel] = useState(0);
   const [partialTranscript, setPartialTranscript] = useState("");
   const [userTranscript, setUserTranscript] = useState("");
+  const [creditsUsed, setCreditsUsed] = useState(0);
+  const [creditsLimit, setCreditsLimit] = useState(0);
+  const [creditsExhausted, setCreditsExhausted] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -201,7 +204,22 @@ export function useChatSocket({ bookId }: UseChatSocketOptions) {
             setUserTranscript("");
             break;
 
+          case "credits_update": {
+            const limit = msg.creditsLimit === -1 ? Infinity : msg.creditsLimit;
+            setCreditsUsed(msg.creditsUsed);
+            setCreditsLimit(limit);
+            setCreditsExhausted(msg.creditsUsed >= limit && limit !== Infinity);
+            break;
+          }
+
           case "error":
+            if (msg.message === "credits_exhausted") {
+              setCreditsExhausted(true);
+              if (msg.creditsUsed !== undefined) setCreditsUsed(msg.creditsUsed);
+              if (msg.creditsLimit !== undefined) {
+                setCreditsLimit(msg.creditsLimit === -1 ? Infinity : msg.creditsLimit);
+              }
+            }
             console.error("[chat] Server error:", msg.message);
             break;
         }
@@ -328,5 +346,8 @@ export function useChatSocket({ bookId }: UseChatSocketOptions) {
     userTranscript,
     startVoice,
     stopVoice,
+    creditsUsed,
+    creditsLimit,
+    creditsExhausted,
   };
 }
