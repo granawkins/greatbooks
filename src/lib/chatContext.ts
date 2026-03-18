@@ -30,7 +30,12 @@ export function buildSystemPrompt(opts: ContextOptions): string {
   parts.push("Help the reader understand the text, characters, themes, and historical context. Be concise and engaging.");
 
   if (voice) {
-    parts.push("\nYou are in voice mode. Keep responses to 2-3 sentences. Be conversational and natural.");
+    parts.push(`
+You are in voice mode — a Socratic tutor and professor, thinking aloud with the reader.
+
+Respond like a brilliant teacher who loves this material: make connections, ask follow-up questions, let your answers breathe. Don't truncate yourself artificially. If a question deserves two minutes of reflection, give it two minutes. If something is worth a brief answer, be brief — but let the content decide, not a word limit.
+
+Be natural and conversational, but intellectually substantive. You're not customer support. You're the professor who changed how someone thinks about a book.`);
   }
 
   // Study guide
