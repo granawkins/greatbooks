@@ -1,13 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTopBar } from "@/lib/TopBarContext";
 import { useBookDetailsModal } from "@/lib/BookDetailsModalContext";
-import { ChapterListIcon } from "@/components/audio/icons";
-import { ChapterPicker } from "@/components/ChapterPicker";
 
 function ProfileIcon() {
   return (
@@ -23,19 +20,18 @@ export default function TopBar() {
   const isProfile = pathname === "/profile";
   const { bookNav, scrolled } = useTopBar();
   const { openBookDetails } = useBookDetailsModal();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const chapterBtnRef = useRef<HTMLDivElement | null>(null);
 
-  const closeDropdown = useCallback(() => setDropdownOpen(false), []);
+  const onBookPage = !!bookNav;
+  // For courses, use the source book title if available for the active chapter
+  const activeChapter = bookNav?.chapters.find((c) => c.id === bookNav.activeChapterId);
+  const displayTitle = activeChapter?.sourceBookTitle ?? bookNav?.title ?? "";
+  const showChapterTitle = bookNav && scrolled && bookNav.chapters.length > 1;
 
-  // Close dropdown when scroll state changes
-  useEffect(() => { setDropdownOpen(false); }, [scrolled]);
-
-  const showBookTitle = !!bookNav;
-  const showChapterNav = bookNav && scrolled && bookNav.chapters.length > 1;
-  const activeChapterTitle = showChapterNav
-    ? bookNav.chapters.find((c) => c.id === bookNav.activeChapterId)?.title ?? ""
-    : "";
+  // Build chapter subtitle — strip the book title prefix if the chapter title starts with it
+  let chapterSubtitle = activeChapter?.title ?? "";
+  if (showChapterTitle && chapterSubtitle.startsWith(displayTitle + ":")) {
+    chapterSubtitle = chapterSubtitle.slice(displayTitle.length + 1).trim();
+  }
 
   return (
     <header
@@ -65,7 +61,7 @@ export default function TopBar() {
         }}
       >
         {/* Left side */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.125rem", minWidth: 0, flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0, flex: 1 }}>
           <Link
             href="/"
             style={{
@@ -79,11 +75,11 @@ export default function TopBar() {
             <Image
               src="/logo-v2.png"
               alt="Great Books"
-              width={showBookTitle ? 26 : 32}
-              height={showBookTitle ? 26 : 32}
+              width={32}
+              height={32}
               style={{ display: "block", flexShrink: 0 }}
             />
-            {!showBookTitle && (
+            {!onBookPage && (
               <span style={{
                 fontFamily: "var(--font-ui)",
                 fontSize: "1.125rem",
@@ -95,102 +91,54 @@ export default function TopBar() {
             )}
           </Link>
 
-          {/* Book title — always visible on book/course pages */}
-          {showBookTitle && (
-            <>
-              <span style={{ color: "var(--color-border)", margin: "0 0.25rem", fontSize: "0.875rem", flexShrink: 0 }}>/</span>
-              <button
-                onClick={() => openBookDetails(bookNav.bookId)}
-                style={{
-                  fontFamily: "var(--font-ui)",
-                  fontSize: "0.875rem",
-                  fontWeight: 500,
-                  color: "var(--color-text-secondary)",
-                  flexShrink: 0,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 0,
-                  transition: "color 0.15s",
-                }}
-                className="hover:text-[var(--color-text)]"
-              >
-                {bookNav.title}
-              </button>
-            </>
-          )}
-
-          {/* Chapter nav — appears when chapter title has scrolled out of view */}
-          {showChapterNav && (
-            <>
-              <span style={{ color: "var(--color-border)", margin: "0 0.25rem", fontSize: "0.875rem", flexShrink: 0 }}>/</span>
-              <div ref={chapterBtnRef} style={{ position: "relative", flexShrink: 0 }}>
-                <button
-                  aria-label="Select chapter"
-                  onClick={() => setDropdownOpen((o) => !o)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 24,
-                    height: 24,
-                    border: "none",
-                    background: "none",
-                    cursor: "pointer",
-                    color: "var(--color-text-secondary)",
-                    borderRadius: "var(--radius)",
-                    padding: 0,
-                  }}
-                  className="hover:text-[var(--color-text)]"
-                >
-                  <ChapterListIcon />
-                </button>
-                {dropdownOpen && (
-                  <ChapterPicker
-                    chapters={bookNav.chapters}
-                    activeChapterId={bookNav.activeChapterId}
-                    onSelect={bookNav.onChapterSelect}
-                    onClose={closeDropdown}
-                    containerRef={chapterBtnRef}
-                  />
-                )}
-              </div>
-              <span
-                style={{
-                  fontFamily: "var(--font-ui)",
-                  fontSize: "0.875rem",
-                  fontWeight: 500,
-                  color: "var(--color-text-secondary)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  minWidth: 0,
-                  marginLeft: "0.125rem",
-                }}
-              >
-                {activeChapterTitle}
-              </span>
-            </>
+          {/* Book + chapter title — clickable to open modal */}
+          {onBookPage && (
+            <button
+              onClick={() => openBookDetails(bookNav.bookId)}
+              style={{
+                fontFamily: "var(--font-ui)",
+                fontSize: "0.875rem",
+                fontWeight: 500,
+                color: "var(--color-text-secondary)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                transition: "color 0.15s",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                minWidth: 0,
+                textDecoration: "underline",
+                textDecorationColor: "var(--color-border)",
+                textUnderlineOffset: "3px",
+              }}
+              className="hover:text-[var(--color-text)]"
+            >
+              {displayTitle}{showChapterTitle ? `: ${chapterSubtitle}` : ""}
+            </button>
           )}
         </div>
 
         {/* Right side */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexShrink: 0, marginLeft: "0.75rem" }}>
-          <Link
-            href="/library"
-            style={{
-              fontFamily: "var(--font-ui)",
-              fontSize: "0.875rem",
-              fontWeight: 500,
-              color: "var(--color-text-secondary)",
-              textDecoration: "none",
-              padding: "0.25rem 0.5rem",
-              transition: "color 0.15s",
-            }}
-            className="hover:text-[var(--color-text)]"
-          >
-            Library
-          </Link>
+          {!onBookPage && (
+            <Link
+              href="/library"
+              style={{
+                fontFamily: "var(--font-ui)",
+                fontSize: "0.875rem",
+                fontWeight: 500,
+                color: "var(--color-text-secondary)",
+                textDecoration: "none",
+                padding: "0.25rem 0.5rem",
+                transition: "color 0.15s",
+              }}
+              className="hover:text-[var(--color-text)]"
+            >
+              Library
+            </Link>
+          )}
           {!isProfile && (
             <Link
               href="/profile"

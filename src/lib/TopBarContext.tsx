@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useRef, useState } from "react"
 export type TopBarBookNav = {
   bookId: string;
   title: string;
-  chapters: { id: number; title: string }[];
+  chapters: { id: number; title: string; sourceBookTitle?: string }[];
   activeChapterId: number;
   onChapterSelect: (id: number) => void;
 };

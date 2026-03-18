@@ -63,7 +63,7 @@ export type Annotation = {
   created_at: string;
 };
 
-export type NavChapter = { id: number; title: string };
+export type NavChapter = { id: number; title: string; sourceBookTitle?: string };
 export type BookMeta = {
   title: string;
   author: string;
