@@ -28,8 +28,19 @@ export default async function ChapterPage({
     word_timestamps: seg.word_timestamps ? JSON.parse(seg.word_timestamps) : null,
   }));
 
-  // Audio position only if progress matches this chapter
+  // Fetch user-specific data
   const userId = await getAuthUserId();
+
+  // Annotations (resolve source chapter for course reference chapters)
+  let initialAnnotations: import("@/components/reader/types").Annotation[] = [];
+  if (userId) {
+    const source = db.getSourceBookInfo(bookId, chapterNum);
+    const resolvedBookId = source?.bookId ?? bookId;
+    const resolvedChapterNum = source?.chapterNumber ?? chapterNum;
+    initialAnnotations = db.getAnnotations(userId, resolvedBookId, resolvedChapterNum);
+  }
+
+  // Audio position only if progress matches this chapter
   const progressRows = userId ? db.getProgress(userId) : [];
   const progress = progressRows.find((p) => p.book_id === bookId) ?? null;
   const audioPositionMs =
@@ -77,6 +88,7 @@ export default async function ChapterPage({
       chapterType={chapter.chapter_type ?? "text"}
       initialAudioPositionMs={audioPositionMs}
       sourceProgress={sourceProgress}
+      initialAnnotations={initialAnnotations}
     />
   );
 }

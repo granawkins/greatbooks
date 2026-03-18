@@ -197,12 +197,14 @@ export default function ChapterView({
   chapterType = "text",
   initialAudioPositionMs,
   sourceProgress,
+  initialAnnotations = [],
 }: {
   chapterNum: number;
   chapterData: ChapterData;
   chapterType?: "text" | "discussion";
   initialAudioPositionMs: number;
   sourceProgress?: { bookTitle: string; chapterNumber: number; audioPositionMs: number } | null;
+  initialAnnotations?: Annotation[];
 }) {
   const { bookId, bookMeta, chapters, setCurrentChapter, cacheChapter } = useBookShell();
   const searchParams = useSearchParams();
@@ -230,7 +232,7 @@ export default function ChapterView({
 
   // ── Annotations ───────────────────────────────────────────────────────
 
-  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [annotations, setAnnotations] = useState<Annotation[]>(initialAnnotations);
 
   const fetchAnnotations = useCallback(async () => {
     try {
@@ -241,8 +243,6 @@ export default function ChapterView({
       if (res.ok) setAnnotations(await res.json());
     } catch { /* ignore */ }
   }, [bookId, chapterNum]);
-
-  useEffect(() => { fetchAnnotations(); }, [fetchAnnotations]);
 
   const isFirstChapter = chapterNum === chapters[0]?.id;
   const layout = bookMeta.layout || "prose";

@@ -115,6 +115,12 @@ export type UserProgressRow = {
   updated_at: string;
 };
 
+export type ProgressWithBookRow = UserProgressRow & {
+  title: string;
+  author: string;
+  type: "book" | "course";
+};
+
 export type MessageRow = {
   id: number;
   user_id: string;
@@ -248,6 +254,17 @@ export const db = {
     connection
       .prepare("SELECT * FROM user_progress WHERE user_id = ? ORDER BY updated_at DESC")
       .all(userId) as UserProgressRow[],
+
+  getProgressWithBooks: (userId: string): ProgressWithBookRow[] =>
+    connection
+      .prepare(
+        `SELECT p.*, b.title, b.author, b.type
+         FROM user_progress p
+         JOIN books b ON p.book_id = b.id
+         WHERE p.user_id = ?
+         ORDER BY p.updated_at DESC`
+      )
+      .all(userId) as ProgressWithBookRow[],
 
   upsertProgress: (
     userId: string,

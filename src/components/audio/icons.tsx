@@ -1,5 +1,3 @@
-"use client";
-
 export function PlayIcon() {
   return (
     <svg width="38" height="38" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
