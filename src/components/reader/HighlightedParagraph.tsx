@@ -327,14 +327,12 @@ export function HighlightedParagraph({
   const selectionHasHighlight = selectionHighlightIds.length > 0;
 
   // ── Highlight (toggle) ────────────────────────────────────────────────
-  const handleHighlight = useCallback(async () => {
+  const handleHighlight = useCallback(() => {
     if (!anchor) return;
 
     if (selectionHasHighlight) {
-      await Promise.all(
-        selectionHighlightIds.map((id) =>
-          fetch(`/api/annotations/${id}`, { method: "DELETE", credentials: "include" })
-        )
+      selectionHighlightIds.forEach((id) =>
+        fetch(`/api/annotations/${id}`, { method: "DELETE", credentials: "include" }).catch(() => {})
       );
     } else {
       const anchorSpan = spans[anchor.spanIdx];
@@ -342,7 +340,7 @@ export function HighlightedParagraph({
       const lo = anchor.spanIdx <= (selEnd?.spanIdx ?? anchor.spanIdx) ? anchorSpan : endSpan;
       const hi = anchor.spanIdx <= (selEnd?.spanIdx ?? anchor.spanIdx) ? endSpan : anchorSpan;
 
-      await fetch("/api/annotations", {
+      fetch("/api/annotations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -355,7 +353,7 @@ export function HighlightedParagraph({
           endChar: hi.segCharEnd,
           type: "highlight",
         }),
-      });
+      }).catch(() => {});
     }
     clearSelection();
     onAnnotationSaved();
@@ -386,14 +384,14 @@ export function HighlightedParagraph({
     setSelEnd(null);
   }, [anchor, selEnd, spans, onStartComment]);
 
-  const handleMobileCommentSave = useCallback(async (commentText: string) => {
+  const handleMobileCommentSave = useCallback((commentText: string) => {
     if (!anchor) return;
     const anchorSpan = spans[anchor.spanIdx];
     const endSpan = selEnd ? spans[selEnd.spanIdx] : anchorSpan;
     const lo = anchor.spanIdx <= (selEnd?.spanIdx ?? anchor.spanIdx) ? anchorSpan : endSpan;
     const hi = anchor.spanIdx <= (selEnd?.spanIdx ?? anchor.spanIdx) ? endSpan : anchorSpan;
 
-    await fetch("/api/annotations", {
+    fetch("/api/annotations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -407,27 +405,24 @@ export function HighlightedParagraph({
         type: "comment",
         commentText,
       }),
-    });
+    }).catch(() => {});
     clearSelection();
     onAnnotationSaved();
   }, [anchor, selEnd, spans, bookId, chapterNum, clearSelection, onAnnotationSaved]);
 
   // ── Delete annotation ─────────────────────────────────────────────────
-  const handleDeleteAnnotation = useCallback(async (id: number) => {
-    await fetch(`/api/annotations/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
+  const handleDeleteAnnotation = useCallback((id: number) => {
+    fetch(`/api/annotations/${id}`, { method: "DELETE", credentials: "include" }).catch(() => {});
     onAnnotationSaved();
   }, [onAnnotationSaved]);
 
-  const handleEditAnnotation = useCallback(async (id: number, commentText: string) => {
-    await fetch(`/api/annotations/${id}`, {
+  const handleEditAnnotation = useCallback((id: number, commentText: string) => {
+    fetch(`/api/annotations/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ commentText }),
-    });
+    }).catch(() => {});
     onAnnotationSaved();
   }, [onAnnotationSaved]);
 

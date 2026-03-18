@@ -79,6 +79,14 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AudioSession | null>(null);
   const [viewMode, setViewModeState] = useState<ViewMode>("audio");
 
+  // Restore viewMode from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("greatbooks-view-mode");
+      if (stored === "audio" || stored === "text") setViewModeState(stored);
+    } catch {}
+  }, []);
+
   const setViewMode = useCallback((mode: ViewMode) => {
     setViewModeState(mode);
     try { localStorage.setItem("greatbooks-view-mode", mode); } catch {}
