@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTopBar } from "@/lib/TopBarContext";
+import { useBookDetailsModal } from "@/lib/BookDetailsModalContext";
 import { ChapterListIcon } from "@/components/audio/icons";
 import { ChapterPicker } from "@/components/ChapterPicker";
 
@@ -21,6 +22,7 @@ export default function TopBar() {
   const pathname = usePathname();
   const isProfile = pathname === "/profile";
   const { bookNav, scrolled } = useTopBar();
+  const { openBookDetails } = useBookDetailsModal();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const chapterBtnRef = useRef<HTMLDivElement | null>(null);
 
@@ -97,9 +99,24 @@ export default function TopBar() {
           {showBookTitle && (
             <>
               <span style={{ color: "var(--color-border)", margin: "0 0.25rem", fontSize: "0.875rem", flexShrink: 0 }}>/</span>
-              <span style={{ fontFamily: "var(--font-ui)", fontSize: "0.875rem", fontWeight: 500, color: "var(--color-text-secondary)", flexShrink: 0 }}>
+              <button
+                onClick={() => openBookDetails(bookNav.bookId)}
+                style={{
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  color: "var(--color-text-secondary)",
+                  flexShrink: 0,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  transition: "color 0.15s",
+                }}
+                className="hover:text-[var(--color-text)]"
+              >
                 {bookNav.title}
-              </span>
+              </button>
             </>
           )}
 

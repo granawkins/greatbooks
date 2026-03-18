@@ -8,6 +8,7 @@ import PlaybackSpeedSync from "@/components/audio/PlaybackSpeedSync";
 import TopBar from "@/components/TopBar";
 import { ThemeProvider } from "@/lib/ThemeProvider";
 import { TopBarProvider } from "@/lib/TopBarContext";
+import { BookDetailsModalProvider } from "@/lib/BookDetailsModalContext";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
@@ -54,10 +55,12 @@ export default function RootLayout({
           <AudioPlayerProvider>
             <PlaybackSpeedSync />
             <TopBarProvider>
-              <TopBar />
-              <div style={{ paddingTop: "var(--topbar-height)" }}>
-                {children}
-              </div>
+              <BookDetailsModalProvider>
+                <TopBar />
+                <div style={{ paddingTop: "var(--topbar-height)" }}>
+                  {children}
+                </div>
+              </BookDetailsModalProvider>
             </TopBarProvider>
             <PersistentPlayerBar />
           </AudioPlayerProvider>

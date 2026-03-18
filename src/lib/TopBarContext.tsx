@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useRef, useState } from "react";
 
 export type TopBarBookNav = {
+  bookId: string;
   title: string;
   chapters: { id: number; title: string }[];
   activeChapterId: number;

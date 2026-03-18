@@ -8,6 +8,7 @@ import BookCover from "@/components/BookCover";
 import ProgressLine from "@/components/ProgressLine";
 import { getCoverSmUrl } from "@/lib/assets";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { useBookDetailsModal } from "@/lib/BookDetailsModalContext";
 
 type ProgressMap = Record<string, { chapter_number: number; audio_position_ms: number; updated_at: string }>;
 type StatsMap = Record<string, { chapter_count: number; total_duration_ms: number | null; total_chars: number; discussion_count: number }>;
@@ -42,6 +43,15 @@ export default function HomeClient(props: HomeProps) {
 
 function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, courseForBook, books, isLoggedIn }: HomeProps) {
   const { session } = useAudioPlayer();
+  const { openBookDetails, setMaps } = useBookDetailsModal();
+
+  useEffect(() => {
+    const s: Record<string, { total_chars: number; total_duration_ms: number | null; chapter_count: number }> = {};
+    for (const [k, v] of Object.entries(statsMap)) s[k] = { total_chars: v.total_chars, total_duration_ms: v.total_duration_ms, chapter_count: v.chapter_count };
+    const p: Record<string, { chapter_number: number }> = {};
+    for (const [k, v] of Object.entries(progressMap)) p[k] = { chapter_number: v.chapter_number };
+    setMaps(s, p);
+  }, [statsMap, progressMap, setMaps]);
 
   // Continue reading logic — always prefer the book (not the course)
   const booksById = Object.fromEntries(books.map((b) => [b.id, b]));
@@ -97,8 +107,8 @@ function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
               Listen to Homer, Plato, and Milton — beautifully narrated, with an AI tutor at your side.
             </p>
             <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-              <Link
-                href={courses[0] ? `/${courses[0].id}/contents` : "/library"}
+              <button
+                onClick={() => courses[0] ? openBookDetails(courses[0].id) : null}
                 style={{
                   display: "inline-block",
                   padding: "0.75rem 2rem",
@@ -108,12 +118,13 @@ function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
                   fontFamily: "var(--font-ui)",
                   fontSize: "0.9375rem",
                   fontWeight: 500,
-                  textDecoration: "none",
+                  border: "none",
+                  cursor: "pointer",
                   letterSpacing: "0.01em",
                 }}
               >
                 Start Listening
-              </Link>
+              </button>
               <Link
                 href="/library"
                 style={{
@@ -280,9 +291,9 @@ function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
                 const enrolled = !!progressMap[course.id];
                 const bookIds = courseBooks[course.id] ?? [];
                 return (
-                  <Link
+                  <button
                     key={course.id}
-                    href={enrolled ? `/${course.id}` : `/${course.id}/contents`}
+                    onClick={() => openBookDetails(course.id)}
                     style={{
                       display: "block",
                       textDecoration: "none",
@@ -290,6 +301,10 @@ function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
                       backgroundColor: "var(--color-bg-secondary)",
                       boxShadow: "0 2px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06)",
                       padding: "1.5rem",
+                      border: "none",
+                      cursor: "pointer",
+                      width: "100%",
+                      textAlign: "left",
                     }}
                   >
                     <h3
@@ -363,7 +378,7 @@ function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
                         {enrolled ? "Continue" : "Read with AI Tutor"}
                       </span>
                     </div>
-                  </Link>
+                  </button>
                 );
               })}
             </div>
@@ -464,6 +479,15 @@ function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
 
 function VariantB({ courses, progressMap, statsMap, courseBooks, recentBookIds, courseForBook, books, isLoggedIn }: HomeProps) {
   const { session } = useAudioPlayer();
+  const { openBookDetails, setMaps } = useBookDetailsModal();
+
+  useEffect(() => {
+    const s: Record<string, { total_chars: number; total_duration_ms: number | null; chapter_count: number }> = {};
+    for (const [k, v] of Object.entries(statsMap)) s[k] = { total_chars: v.total_chars, total_duration_ms: v.total_duration_ms, chapter_count: v.chapter_count };
+    const p: Record<string, { chapter_number: number }> = {};
+    for (const [k, v] of Object.entries(progressMap)) p[k] = { chapter_number: v.chapter_number };
+    setMaps(s, p);
+  }, [statsMap, progressMap, setMaps]);
 
   // Continue reading logic — always prefer the book (not the course)
   const booksById = Object.fromEntries(books.map((b) => [b.id, b]));
@@ -531,8 +555,8 @@ function VariantB({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
             >
               Read the great books, listen on the go, and discuss them with an AI tutor who knows every line. Free to start.
             </p>
-            <Link
-              href={courses[0] ? `/${courses[0].id}/contents` : "/library"}
+            <button
+              onClick={() => courses[0] ? openBookDetails(courses[0].id) : null}
               style={{
                 display: "inline-block",
                 padding: "0.75rem 2.5rem",
@@ -542,12 +566,13 @@ function VariantB({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
                 fontFamily: "var(--font-ui)",
                 fontSize: "0.9375rem",
                 fontWeight: 500,
-                textDecoration: "none",
+                border: "none",
+                cursor: "pointer",
                 letterSpacing: "0.01em",
               }}
             >
               Start Reading — Free
-            </Link>
+            </button>
           </section>
 
           {/* ── What you get ── */}
@@ -700,9 +725,9 @@ function VariantB({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
                 const enrolled = !!progressMap[course.id];
                 const bookIds = courseBooks[course.id] ?? [];
                 return (
-                  <Link
+                  <button
                     key={course.id}
-                    href={enrolled ? `/${course.id}` : `/${course.id}/contents`}
+                    onClick={() => openBookDetails(course.id)}
                     style={{
                       display: "block",
                       textDecoration: "none",
@@ -710,6 +735,10 @@ function VariantB({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
                       backgroundColor: "var(--color-bg-secondary)",
                       boxShadow: "0 2px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06)",
                       padding: "1.5rem",
+                      border: "none",
+                      cursor: "pointer",
+                      width: "100%",
+                      textAlign: "left",
                     }}
                   >
                     <h3
@@ -783,7 +812,7 @@ function VariantB({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
                         {enrolled ? "Continue" : "Read with AI Tutor"}
                       </span>
                     </div>
-                  </Link>
+                  </button>
                 );
               })}
             </div>
