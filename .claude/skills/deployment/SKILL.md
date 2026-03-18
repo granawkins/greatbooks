@@ -91,10 +91,10 @@ ssh greatbooks "free -h && df -h /"                          # resources
 
 ## VM Management (gcloud)
 
-Requires `/tmp/google-cloud-sdk/` (may need reinstall after reboot).
+Installed at `~/google-cloud-sdk/`.
 
 ```bash
-export CLOUDSDK_PYTHON=python3 PATH="/tmp/google-cloud-sdk/bin:$PATH"
+export CLOUDSDK_PYTHON=python3 PATH="$HOME/google-cloud-sdk/bin:$PATH"
 
 # Resize VM
 gcloud compute instances stop greatbooks --zone=us-central1-a
