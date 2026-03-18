@@ -82,7 +82,7 @@ export default function ProfilePage() {
     >
       <div
         style={{
-          maxWidth: "28rem",
+          maxWidth: "var(--content-max-width)",
           margin: "0 auto",
           padding: "2.5rem 1.5rem",
         }}
