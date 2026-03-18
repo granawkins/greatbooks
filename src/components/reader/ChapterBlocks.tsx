@@ -290,7 +290,7 @@ export function ChapterBlocks({
               style={{
                 color: "var(--color-text)",
                 fontFamily: "var(--font-body)",
-                fontSize: "1.125rem",
+                fontSize: "var(--font-size-body)",
                 lineHeight: "1.85",
                 paddingLeft: "1.5em",
                 margin: 0,
@@ -311,7 +311,7 @@ export function ChapterBlocks({
               style={{
                 color: "var(--color-text)",
                 fontFamily: "var(--font-body)",
-                fontSize: "1.125rem",
+                fontSize: "var(--font-size-body)",
                 lineHeight: "1.85",
                 ...(verse ? { whiteSpace: "pre-line" as const } : {}),
               }}

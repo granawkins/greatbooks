@@ -107,9 +107,14 @@ export default function BookShell({
   }, [session, bookId, saveProgressNow, onPauseRef]);
 
   useEffect(() => {
-    onChatClickRef.current = () => setChatOpen((o) => !o);
+    onChatClickRef.current = () => {
+      setChatOpen((o) => {
+        if (!o) audioRef.current?.pause();
+        return !o;
+      });
+    };
     return () => { onChatClickRef.current = null; };
-  }, [onChatClickRef]);
+  }, [onChatClickRef, audioRef]);
 
   useEffect(() => {
     onChapterSelectRef.current = (chapterId: number, startMs?: number, autoPlay?: boolean) => {

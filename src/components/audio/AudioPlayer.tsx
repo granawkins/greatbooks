@@ -3,6 +3,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAudioPlayer, type WordTiming } from "@/lib/AudioPlayerContext";
+import { scrollToCenter } from "@/lib/readingCenter";
 import { Scrubber, formatTime, formatTimeRemaining } from "./Scrubber";
 import { CtrlBtn } from "./CtrlBtn";
 import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, ChatIcon } from "./icons";
@@ -12,7 +13,7 @@ import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, ChatIcon } from "./
 function highlightWord(el: HTMLElement | null) {
   if (!el) return;
   el.style.textDecorationLine = "underline";
-  el.style.textDecorationColor = "#dc2626";
+  el.style.textDecorationColor = getComputedStyle(document.documentElement).getPropertyValue("--color-cursor").trim();
   el.style.textDecorationThickness = "3px";
   el.style.textUnderlineOffset = "3px";
 }
@@ -204,7 +205,7 @@ export default function AudioPlayer() {
             }
           }
           activeParaRef.current = i;
-          sd.elements[i]?.scrollIntoView({ behavior: "smooth", block: "center" });
+          if (sd.elements[i]) scrollToCenter(sd.elements[i]!);
         }
         return;
       }
@@ -217,6 +218,19 @@ export default function AudioPlayer() {
       activeWordRef.current = null;
     }
   }, []);
+
+  // ── Reset highlight on resize (reflow may clear inline styles) ──────────
+  useEffect(() => {
+    const handleResize = () => {
+      if (activeWordRef.current) {
+        clearHighlight();
+        activeWordRef.current = null;
+      }
+      activeParaRef.current = null;
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [clearHighlight]);
 
   // ── rAF loop ────────────────────────────────────────────────────────────
 
@@ -240,7 +254,7 @@ export default function AudioPlayer() {
               const r = sd.ranges[i];
               if (r && ms >= r.start_ms && ms < r.end_ms) {
                 activeParaRef.current = i;
-                sd.elements[i]?.scrollIntoView({ behavior: "smooth", block: "center" });
+                if (sd.elements[i]) scrollToCenter(sd.elements[i]!);
                 break;
               }
             }

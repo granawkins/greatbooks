@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { type SegmentBoundary, useAudioPlayer, type WordTiming } from "@/lib/AudioPlayerContext";
+import { getReadingCenterY, scrollToCenter } from "@/lib/readingCenter";
 import { useProgress } from "@/lib/useProgress";
 import { useTopBar } from "@/lib/TopBarContext";
 import { getCoverSmUrl, getCoverLgUrl } from "@/lib/assets";
@@ -16,6 +18,8 @@ import {
   type ChapterData,
 } from "@/components/reader";
 import CourseChoiceModal from "@/components/CourseChoiceModal";
+import { ViewModeToggle, FontSizeControls } from "@/components/audio/PersistentPlayerBar";
+import { ChatIcon } from "@/components/audio/icons";
 import type { Annotation } from "@/components/reader/types";
 import { ChapterNav } from "@/components/reader/ChapterNav";
 
@@ -84,6 +88,107 @@ const metaLineStyle = {
   color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.85,
 } as const;
 
+// ── Reading mode intro modal ──────────────────────────────────────────
+
+function BookmarkIcon({ size = 20, filled = true }: { size?: number; filled?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 20" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={filled ? 0 : 2.5} aria-hidden>
+      <path d="M2 0h12a2 2 0 0 1 2 2v18l-8-4-8 4V2a2 2 0 0 1 2-2z" />
+    </svg>
+  );
+}
+
+function ReadingModeIntroModal({ onClose }: { onClose: () => void }) {
+  const rowStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 14,
+    padding: "14px 16px",
+    borderRadius: "var(--radius)",
+    border: "1px solid var(--color-border)",
+  };
+  const iconWrap: React.CSSProperties = {
+    flexShrink: 0,
+    width: 28,
+    height: 28,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  };
+
+  return createPortal(
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 400,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        backgroundColor: "rgba(0,0,0,0.5)", padding: "1rem",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "var(--color-bg)",
+          border: "1px solid var(--color-border)",
+          borderRadius: "var(--radius-lg)",
+          padding: "20px",
+          maxWidth: 340,
+          width: "100%",
+          fontFamily: "var(--font-ui)",
+          color: "var(--color-text)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
+        <div style={rowStyle}>
+          <div style={{ ...iconWrap, color: "var(--color-cursor)", opacity: 0.7 }}>
+            <BookmarkIcon size={18} filled />
+          </div>
+          <div>
+            <p style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600 }}>Tracks your place</p>
+            <p style={{ margin: "4px 0 0", fontSize: "0.82rem", lineHeight: 1.5, color: "var(--color-text-secondary)" }}>
+              Your position updates to the sentence at the center of the screen when you stop scrolling.
+            </p>
+          </div>
+        </div>
+
+        <div style={rowStyle}>
+          <div style={{ ...iconWrap, color: "var(--color-cursor)", opacity: 0.3 }}>
+            <BookmarkIcon size={18} filled={false} />
+          </div>
+          <div>
+            <p style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600 }}>Tap to pause</p>
+            <p style={{ margin: "4px 0 0", fontSize: "0.82rem", lineHeight: 1.5, color: "var(--color-text-secondary)" }}>
+              Tap the bookmark to browse freely without updating your position. Tap again to resume.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={onClose}
+          style={{
+            marginTop: 4,
+            padding: "10px",
+            border: "none",
+            borderRadius: "var(--radius)",
+            backgroundColor: "var(--color-accent)",
+            color: "var(--color-bg)",
+            fontFamily: "var(--font-ui)",
+            fontSize: "0.9rem",
+            fontWeight: 500,
+            cursor: "pointer",
+          }}
+        >
+          Got it
+        </button>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // ── ChapterView ─────────────────────────────────────────────────────────
 
 export default function ChapterView({
@@ -104,7 +209,7 @@ export default function ChapterView({
   const scrollToBottom = searchParams.get("scroll") === "bottom";
   const autoplay = searchParams.get("autoplay") === "1";
 
-  const { session, loadSession, wordTimingsRef, scrollDataRef, audioRef } = useAudioPlayer();
+  const { session, loadSession, wordTimingsRef, scrollDataRef, audioRef, viewMode, onChatClickRef } = useAudioPlayer();
   const { saveProgressNow } = useProgress(bookId);
   const { setScrolled } = useTopBar();
 
@@ -112,6 +217,16 @@ export default function ChapterView({
   const heroRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialScrollDone = useRef(false);
+
+  // ── Restore font size from localStorage ──────────────────────────────
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("greatbooks-font-size");
+      if (stored) {
+        document.documentElement.style.setProperty("--font-size-body", `${stored}px`);
+      }
+    } catch {}
+  }, []);
 
   // ── Annotations ───────────────────────────────────────────────────────
 
@@ -193,8 +308,8 @@ export default function ChapterView({
     }
     if (scrollTargetBlockIdx < 0) return;
     const el = paraRefsMap.current[chapterNum]?.[scrollTargetBlockIdx];
-    if (el) el.scrollIntoView({ block: "center", behavior: "instant" });
-  }, [scrollTargetBlockIdx, chapterNum, scrollToBottom]);
+    if (el) scrollToCenter(el, "instant", viewMode === "text");
+  }, [scrollTargetBlockIdx, chapterNum, scrollToBottom, viewMode]);
 
   // ── Audio integration ─────────────────────────────────────────────────
 
@@ -263,6 +378,195 @@ export default function ChapterView({
     return () => { scrollDataRef.current = null; };
   }, [session?.bookId, session?.chapterId, bookId, chapterNum, paraRanges, scrollDataRef]);
 
+  // ── Reading mode: scroll-based progress tracking ─────────────────────
+
+  const [bookmarkActive, setBookmarkActive] = useState(true);
+  const [showIntroModal, setShowIntroModal] = useState(false);
+  const isTextMode = viewMode === "text";
+  // Don't bookmark until the user has scrolled at least once in reading mode
+  const hasScrolledRef = useRef(false);
+
+  // When switching to text mode, scroll to the current audio position
+  const prevViewMode = useRef(viewMode);
+  const programmaticScrollRef = useRef(false);
+  useEffect(() => {
+    if (prevViewMode.current !== "text" && viewMode === "text") {
+      hasScrolledRef.current = false; // reset on each switch
+      const audioMs = audioRef.current ? Math.floor(audioRef.current.currentTime * 1000) : 0;
+      if (audioMs > 0) {
+        const refs = paraRefsMap.current[chapterNum];
+        if (refs) {
+          for (let i = 0; i < blocks.length; i++) {
+            const block = blocks[i];
+            if (block.type !== "paragraph") continue;
+            for (const seg of block.segments) {
+              if (seg.audio_start_ms != null && seg.audio_end_ms != null &&
+                  audioMs >= seg.audio_start_ms && audioMs < seg.audio_end_ms) {
+                const el = refs[i];
+                if (el) {
+                  programmaticScrollRef.current = true;
+                  scrollToCenter(el, "instant", true);
+                  requestAnimationFrame(() => { programmaticScrollRef.current = false; });
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    prevViewMode.current = viewMode;
+  }, [viewMode, audioRef, chapterNum, blocks]);
+
+  // Show intro modal on first switch to reading mode
+  const introShownRef = useRef(false);
+  useEffect(() => {
+    if (!isTextMode || introShownRef.current) return;
+    try {
+      if (!localStorage.getItem("greatbooks-reading-intro-seen")) {
+        setShowIntroModal(true);
+        localStorage.setItem("greatbooks-reading-intro-seen", "1");
+        introShownRef.current = true;
+      }
+    } catch {}
+  }, [isTextMode]);
+
+  // Helper: set progress + seek audio to a given ms, flash the bookmark word
+  const applyBookmark = useCallback((ms: number, blockIdx?: number, segIdx?: number) => {
+    saveProgressNow(chapterNum, ms);
+    if (audioRef.current) {
+      audioRef.current.currentTime = ms / 1000;
+    }
+    // Flash the first word of the bookmarked segment
+    if (blockIdx != null && segIdx != null) {
+      const block = blocks[blockIdx];
+      if (block?.type === "paragraph") {
+        const seg = block.segments[segIdx];
+        const firstTs = seg?.word_timestamps?.[0];
+        if (firstTs) {
+          const charStart = block.charOffsets[segIdx] + firstTs.char_start;
+          const wordEl = document.getElementById(`w-${chapterNum}-${blockIdx}-${charStart}`);
+          if (wordEl) {
+            const cursorColor = getComputedStyle(document.documentElement).getPropertyValue("--color-cursor").trim();
+            wordEl.style.transition = "text-decoration-color 0.15s";
+            wordEl.style.textDecorationLine = "underline";
+            wordEl.style.textDecorationColor = cursorColor;
+            wordEl.style.textDecorationThickness = "3px";
+            wordEl.style.textUnderlineOffset = "3px";
+            setTimeout(() => {
+              wordEl.style.transition = "text-decoration-color 0.6s";
+              wordEl.style.textDecorationColor = "transparent";
+              setTimeout(() => {
+                wordEl.style.textDecorationLine = "";
+                wordEl.style.textDecorationColor = "";
+                wordEl.style.textDecorationThickness = "";
+                wordEl.style.textUnderlineOffset = "";
+                wordEl.style.transition = "";
+              }, 600);
+            }, 300);
+          }
+        }
+      }
+    }
+  }, [chapterNum, blocks, saveProgressNow, audioRef]);
+
+  // Shared: find the centered segment and update progress + audio position
+  const updatePositionFromScroll = useCallback(() => {
+    // Check top/bottom edges first
+    const atTop = window.scrollY <= 5;
+    const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 5;
+
+    if (atTop) {
+      // Set to beginning of chapter
+      const firstSeg = chapterData.segments.find(s => s.audio_start_ms != null);
+      if (firstSeg) applyBookmark(firstSeg.audio_start_ms!, 0, 0);
+      return;
+    }
+    if (atBottom) {
+      // Set to end of chapter
+      const lastSeg = [...chapterData.segments].reverse().find(s => s.audio_end_ms != null);
+      if (lastSeg?.audio_end_ms != null) {
+        applyBookmark(lastSeg.audio_end_ms);
+      }
+      return;
+    }
+
+    const centerY = getReadingCenterY(true);
+    const refs = paraRefsMap.current[chapterNum];
+    if (!refs) return;
+
+    let bestBlock = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < refs.length; i++) {
+      const el = refs[i];
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      if (rect.top <= centerY && rect.bottom >= centerY) {
+        bestBlock = i;
+        break;
+      }
+      const dist = Math.min(Math.abs(rect.top - centerY), Math.abs(rect.bottom - centerY));
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestBlock = i;
+      }
+    }
+
+    if (bestBlock < 0) return;
+    const block = blocks[bestBlock];
+    if (!block || block.type !== "paragraph") return;
+
+    const el = refs[bestBlock];
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (centerY - rect.top) / (rect.bottom - rect.top)));
+    const segIdx = Math.min(
+      block.segments.length - 1,
+      Math.floor(ratio * block.segments.length)
+    );
+    const seg = block.segments[segIdx];
+    if (seg?.audio_start_ms != null) {
+      applyBookmark(seg.audio_start_ms, bestBlock, segIdx);
+    }
+  }, [chapterNum, chapterData.segments, blocks, applyBookmark]);
+
+  // Return the paragraph element currently at the reading center (for font resize anchoring)
+  const getCenteredParagraph = useCallback((): HTMLElement | null => {
+    const centerY = getReadingCenterY(true);
+    const refs = paraRefsMap.current[chapterNum];
+    if (!refs) return null;
+    let bestEl: HTMLElement | null = null;
+    let bestDist = Infinity;
+    for (let i = 0; i < refs.length; i++) {
+      const el = refs[i];
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      if (rect.top <= centerY && rect.bottom >= centerY) return el;
+      const dist = Math.min(Math.abs(rect.top - centerY), Math.abs(rect.bottom - centerY));
+      if (dist < bestDist) { bestDist = dist; bestEl = el; }
+    }
+    return bestEl;
+  }, [chapterNum]);
+
+  // On scroll stop, update position (text mode + bookmark active, skip programmatic scrolls)
+  useEffect(() => {
+    if (!isTextMode || !bookmarkActive) return;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const handleScroll = () => {
+      if (programmaticScrollRef.current) return;
+      hasScrolledRef.current = true;
+      clearTimeout(timer);
+      timer = setTimeout(updatePositionFromScroll, 400);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [isTextMode, bookmarkActive, updatePositionFromScroll]);
+
   // ── Source progress modal ─────────────────────────────────────────────
 
   const [showSourceModal, setShowSourceModal] = useState(!!sourceProgress);
@@ -296,8 +600,65 @@ export default function ChapterView({
   return (
     <div
       className="chapter-layout"
-      style={{ paddingBottom: "200px" }}
+      style={{ paddingBottom: isTextMode ? "80px" : "200px" }}
     >
+      {showIntroModal && (
+        <ReadingModeIntroModal onClose={() => setShowIntroModal(false)} />
+      )}
+
+      {/* Floating controls — always visible: font size (left) + chat (center, text mode) + view toggle (right) */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: isTextMode ? 20 : 180,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "100%",
+          maxWidth: "var(--content-max-width)",
+          padding: "0 1.5rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          pointerEvents: "none",
+          zIndex: 60,
+          boxSizing: "border-box",
+        }}
+      >
+        <div style={{ pointerEvents: "auto" }}>
+          <FontSizeControls onResize={getCenteredParagraph} />
+        </div>
+        {isTextMode && (
+          <div style={{ pointerEvents: "auto" }}>
+            <button
+              aria-label="Open chat"
+              onClick={() => onChatClickRef.current?.()}
+              style={{
+                width: 56,
+                height: 56,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "none",
+                borderRadius: "50%",
+                cursor: "pointer",
+                backgroundColor: "var(--color-surface)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                color: "var(--color-text)",
+                padding: 0,
+                transition: "background-color 0.15s",
+              }}
+            >
+              <ChatIcon />
+            </button>
+          </div>
+        )}
+        <div style={{ pointerEvents: "auto" }}>
+          <ViewModeToggle />
+        </div>
+      </div>
+
       {showSourceModal && sourceProgress && (
         <CourseChoiceModal
           title={chapterData.title}
@@ -315,6 +676,37 @@ export default function ChapterView({
           ]}
         />
       )}
+      {/* Bookmark indicator — fixed at vertical center, adjacent to text */}
+      {isTextMode && (
+        <button
+          aria-label={bookmarkActive ? "Pause scroll tracking" : "Resume scroll tracking"}
+          onClick={() => {
+            if (!bookmarkActive) {
+              // Re-enable: immediately update position to current scroll
+              updatePositionFromScroll();
+            }
+            setBookmarkActive((b) => !b);
+          }}
+          className="reading-bookmark"
+          style={{
+            position: "fixed",
+            zIndex: 60,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            color: "var(--color-cursor)",
+            opacity: bookmarkActive ? 0.7 : 0.3,
+            transition: "opacity 0.2s, color 0.2s",
+            padding: 0,
+          }}
+        >
+          <BookmarkIcon size={18} filled={bookmarkActive} />
+        </button>
+      )}
+
       <article className="chapter-text">
         {isFirstChapter && bookMeta.type !== "course" && (
           <div ref={heroRef} style={{ minHeight: 1 }}>
