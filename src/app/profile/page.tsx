@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { useBookDetailsModal } from "@/lib/BookDetailsModalContext";
 import LoginButtons from "@/components/auth/LoginButtons";
 import BookCover from "@/components/BookCover";
 
@@ -36,6 +36,7 @@ type HistoryItem = {
     total_duration_ms: number | null;
     chapter_count: number;
   } | null;
+  course?: { id: string; title: string };
 };
 
 function UserIcon() {
@@ -73,6 +74,7 @@ const labelStyle = {
 export default function ProfilePage() {
   const { user, loading, logout, updatePlaybackSpeed } = useAuth();
   const { setPlaybackSpeed } = useAudioPlayer();
+  const { openBookDetails } = useBookDetailsModal();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [usage, setUsage] = useState<UsageSummary | null>(null);
 
@@ -233,10 +235,10 @@ export default function ProfilePage() {
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-5 gap-y-6">
                   {history.map((item) => (
-                    <Link
-                      key={item.book_id}
-                      href={`/${item.book_id}`}
-                      className="block"
+                    <div
+                      key={item.course ? `${item.course.id}-${item.book_id}` : item.book_id}
+                      onClick={() => openBookDetails(item.course?.id ?? item.book_id)}
+                      style={{ cursor: "pointer", position: "relative" }}
                     >
                       <BookCover
                         bookId={item.book_id}
@@ -244,7 +246,38 @@ export default function ProfilePage() {
                         stats={item.stats}
                         progress={{ chapter_number: item.chapter_number }}
                       />
-                    </Link>
+                      {item.course && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: 32,
+                            left: 0,
+                            right: 0,
+                            display: "flex",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "2px 8px",
+                              borderRadius: "var(--radius)",
+                              backgroundColor: "var(--color-surface)",
+                              border: "1px solid var(--color-border)",
+                              fontFamily: "var(--font-ui)",
+                              fontSize: "0.6875rem",
+                              color: "var(--color-text-secondary)",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              maxWidth: "90%",
+                            }}
+                          >
+                            {item.course.title}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>

@@ -3,12 +3,10 @@
 import { useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
-import Image from "next/image";
 import { type SegmentBoundary, useAudioPlayer, type WordTiming } from "@/lib/AudioPlayerContext";
 import { getReadingCenterY, scrollToCenter } from "@/lib/readingCenter";
 import { useProgress } from "@/lib/useProgress";
 import { useTopBar } from "@/lib/TopBarContext";
-import { getCoverSmUrl, getCoverLgUrl } from "@/lib/assets";
 import { useBookShell } from "@/app/[bookId]/BookShell";
 import {
   ChapterBlocks,
@@ -20,57 +18,7 @@ import {
 import CourseChoiceModal from "@/components/CourseChoiceModal";
 import { FloatingControls } from "@/app/[bookId]/FloatingControls";
 import type { Annotation } from "@/components/reader/types";
-import { ChapterNav } from "@/components/reader/ChapterNav";
-import { ChapterListIcon } from "@/components/audio/icons";
-import { ChapterPicker } from "@/components/ChapterPicker";
-
-// ── Cover image (chapter 1 only) ────────────────────────────────────────
-
-function CoverImage({ bookId, title }: { bookId: string; title: string }) {
-  const [modalOpen, setModalOpen] = useState(false);
-  return (
-    <>
-      <div style={{ display: "flex", justifyContent: "center", padding: "2rem 0 1.5rem" }}>
-        <div
-          onClick={() => setModalOpen(true)}
-          style={{
-            cursor: "pointer",
-            borderRadius: "3px",
-            overflow: "hidden",
-            boxShadow: "4px 6px 16px rgba(0,0,0,0.12), 1px 2px 4px rgba(0,0,0,0.08)",
-          }}
-        >
-          <Image
-            src={getCoverSmUrl(bookId)}
-            alt={`${title} cover`}
-            width={200}
-            height={267}
-            style={{ display: "block" }}
-            priority
-          />
-        </div>
-      </div>
-      {modalOpen && (
-        <div
-          onClick={() => setModalOpen(false)}
-          style={{
-            position: "fixed", inset: 0, zIndex: 300,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            backgroundColor: "rgba(0,0,0,0.7)", cursor: "pointer", padding: "2rem",
-          }}
-        >
-          <Image
-            src={getCoverLgUrl(bookId)}
-            alt={`${title} cover`}
-            width={800}
-            height={1067}
-            style={{ maxWidth: "100%", maxHeight: "90vh", width: "auto", height: "auto", borderRadius: "4px", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}
-          />
-        </div>
-      )}
-    </>
-  );
-}
+import Link from "next/link";
 
 // ── Helper ──────────────────────────────────────────────────────────────
 
@@ -209,8 +157,6 @@ export default function ChapterView({
 }) {
   const { bookId, bookMeta, chapters, setCurrentChapter, cacheChapter } = useBookShell();
   const searchParams = useSearchParams();
-  const [headerPickerOpen, setHeaderPickerOpen] = useState(false);
-  const headerChapterBtnRef = useRef<HTMLDivElement | null>(null);
   const scrollToBottom = searchParams.get("scroll") === "bottom";
   const autoplay = searchParams.get("autoplay") === "1";
 
@@ -252,9 +198,8 @@ export default function ChapterView({
   const isFirstChapter = chapterNum === chapters[0]?.id;
   const layout = bookMeta.layout || "prose";
 
-  // Prev/next
+  // Next chapter
   const chapterIdx = chapters.findIndex((c) => c.id === chapterNum);
-  const prevChapter = chapterIdx > 0 ? { num: chapters[chapterIdx - 1].id, title: chapters[chapterIdx - 1].title } : null;
   const nextChapter = chapterIdx < chapters.length - 1 ? { num: chapters[chapterIdx + 1].id, title: chapters[chapterIdx + 1].title } : null;
 
   // ── Register with BookShell ───────────────────────────────────────────
@@ -679,8 +624,7 @@ export default function ChapterView({
       <article className="chapter-text">
         {isFirstChapter && bookMeta.type !== "course" && (
           <div ref={heroRef} style={{ minHeight: 1 }}>
-            <CoverImage bookId={bookId} title={bookMeta.title} />
-            <div style={{ textAlign: "center", paddingBottom: "1.5rem" }}>
+            <div style={{ textAlign: "center", padding: "2rem 0 1.5rem" }}>
               {bookMeta.author && <p style={metaLineStyle}>by {bookMeta.author}</p>}
               {bookMeta.original_date && <p style={metaLineStyle}>{bookMeta.original_date}</p>}
               {bookMeta.translator && (
@@ -701,51 +645,13 @@ export default function ChapterView({
           </div>
         )}
 
-        <ChapterNav bookId={bookId} prevChapter={prevChapter} nextChapter={nextChapter} />
-
         {chapters.length > 1 && (
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            gap: "0.5rem", margin: "2rem 0",
+          <h2 style={{
+            color: "var(--color-text-secondary)", fontFamily: "var(--font-body)",
+            fontSize: "1.25rem", fontWeight: 400, textAlign: "center", margin: "2rem 0",
           }}>
-            <div ref={headerChapterBtnRef} style={{ position: "relative", flexShrink: 0 }}>
-              <button
-                aria-label="Select chapter"
-                onClick={() => setHeaderPickerOpen((o) => !o)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 24,
-                  height: 24,
-                  border: "none",
-                  background: "none",
-                  cursor: "pointer",
-                  color: "var(--color-text-secondary)",
-                  borderRadius: "var(--radius)",
-                  padding: 0,
-                }}
-                className="hover:text-[var(--color-text)]"
-              >
-                <ChapterListIcon />
-              </button>
-              {headerPickerOpen && (
-                <ChapterPicker
-                  chapters={chapters.map(c => ({ id: c.id, title: c.title }))}
-                  activeChapterId={chapterNum}
-                  onSelect={(id) => { window.location.href = `/${bookId}/${id}`; }}
-                  onClose={() => setHeaderPickerOpen(false)}
-                  containerRef={headerChapterBtnRef}
-                />
-              )}
-            </div>
-            <h2 style={{
-              color: "var(--color-text-secondary)", fontFamily: "var(--font-body)",
-              fontSize: "1.25rem", fontWeight: 400, textAlign: "center", margin: 0,
-            }}>
-              {chapterData.title}
-            </h2>
-          </div>
+            {chapterData.title}
+          </h2>
         )}
 
         {blocks.length === 0 ? (
@@ -767,32 +673,62 @@ export default function ChapterView({
 
         <div ref={bottomRef} />
 
-        {chapterType === "discussion" && nextChapter && (
-          <div style={{ display: "flex", justifyContent: "center", margin: "2rem 0" }}>
-            <a
-              href={`/${bookId}/${nextChapter.num}`}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.875rem 2rem",
-                backgroundColor: "var(--color-accent)",
-                color: "var(--color-bg)",
-                borderRadius: "var(--radius-lg)",
-                fontFamily: "var(--font-ui)",
-                fontSize: "1rem",
-                fontWeight: 500,
-                textDecoration: "none",
-                transition: "opacity 0.15s",
-              }}
-              className="hover:opacity-90"
-            >
-              Continue to {nextChapter.title}
-            </a>
-          </div>
+        {nextChapter && (
+          <nav
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: chapterType === "discussion" ? "center" : "flex-end",
+              padding: "0.75rem 0",
+              borderTop: "1px solid var(--color-border)",
+              margin: "1.5rem 0",
+              fontFamily: "var(--font-ui)",
+              fontSize: "0.8125rem",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            {chapterType === "discussion" ? (
+              <Link
+                href={`/${bookId}/${nextChapter.num}`}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.875rem 2rem",
+                  backgroundColor: "var(--color-accent)",
+                  color: "var(--color-bg)",
+                  borderRadius: "var(--radius-lg)",
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "1rem",
+                  fontWeight: 500,
+                  textDecoration: "none",
+                  transition: "opacity 0.15s",
+                }}
+                className="hover:opacity-90"
+              >
+                Continue to {nextChapter.title}
+              </Link>
+            ) : (
+              <Link
+                href={`/${bookId}/${nextChapter.num}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.375rem",
+                  textDecoration: "none",
+                  color: "var(--color-text-secondary)",
+                  transition: "color 0.15s",
+                }}
+                className="hover:text-[var(--color-text)]"
+              >
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {nextChapter.title}
+                </span>
+                <span style={{ flexShrink: 0, fontSize: "0.75rem" }}>&rarr;</span>
+              </Link>
+            )}
+          </nav>
         )}
-
-        <ChapterNav bookId={bookId} prevChapter={prevChapter} nextChapter={nextChapter} />
         <div ref={setMarginEl} className="chapter-margin" />
       </article>
     </div>

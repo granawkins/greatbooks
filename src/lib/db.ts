@@ -492,6 +492,21 @@ export const db = {
     return rows.map((r) => r.book_id);
   },
 
+  /** Get distinct source books for a course up to a given chapter number, ordered by first appearance */
+  getCourseSourceBooksUpTo: (courseId: string, upToChapter: number): { book_id: string; title: string; author: string }[] => {
+    return connection
+      .prepare(`
+        SELECT DISTINCT b.id as book_id, b.title, b.author, MIN(cc.number) as first_appearance
+        FROM chapters cc
+        JOIN chapters sc ON cc.source_chapter_id = sc.id
+        JOIN books b ON sc.book_id = b.id
+        WHERE cc.book_id = ? AND cc.number <= ?
+        GROUP BY b.id
+        ORDER BY first_appearance
+      `)
+      .all(courseId, upToChapter) as { book_id: string; title: string; author: string; first_appearance: number }[];
+  },
+
   /** Find courses that contain chapters from the given book */
   getCoursesForBook: (bookId: string): { course_id: string; course_title: string }[] => {
     return connection

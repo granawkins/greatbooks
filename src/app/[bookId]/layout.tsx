@@ -15,6 +15,20 @@ export default async function BookLayout({
   const chapters = db.getChapters(bookId);
   if (chapters.length === 0) notFound();
 
+  // For courses, resolve source book titles per chapter
+  const isCourse = book.type === "course";
+  const chaptersData = chapters.map((c) => {
+    const nav: { id: number; title: string; sourceBookTitle?: string } = { id: c.number, title: c.title };
+    if (isCourse) {
+      const source = db.getSourceBookInfo(bookId, c.number);
+      if (source) {
+        const sourceBook = db.getBook(source.bookId);
+        if (sourceBook) nav.sourceBookTitle = sourceBook.title;
+      }
+    }
+    return nav;
+  });
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)" }}>
       <BookShell
@@ -29,7 +43,7 @@ export default async function BookLayout({
           layout: book.layout || "prose",
           type: book.type || "book",
         }}
-        chapters={chapters.map((c) => ({ id: c.number, title: c.title }))}
+        chapters={chaptersData}
       >
         {children}
       </BookShell>
