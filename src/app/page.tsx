@@ -67,6 +67,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
       recentBookIds={recentBookIds}
       courseForBook={courseForBook}
       courseBooks={courseBooks}
+      isLoggedIn={!!userId}
     />
   );
 }

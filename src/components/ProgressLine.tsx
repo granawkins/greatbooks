@@ -1,4 +1,4 @@
-const CHARS_PER_PAGE = 1500;
+const CHARS_PER_PAGE = 2200;
 
 function formatHours(ms: number): string {
   const hours = Math.round(ms / 3600000);
