@@ -61,7 +61,7 @@ Covers are referenced in the frontend as `https://storage.googleapis.com/greatbo
 
 ### Code changes
 ```bash
-ssh greatbooks "cd ~/greatbooks && git pull && npm install && npm run build && pm2 restart greatbooks"
+ssh greatbooks "cd ~/greatbooks && git pull && npm run build && pm2 reload greatbooks"
 ```
 
 ### Database updates (checkpoint WAL first)
