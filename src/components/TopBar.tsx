@@ -29,8 +29,9 @@ export default function TopBar() {
   // Close dropdown when scroll state changes
   useEffect(() => { setDropdownOpen(false); }, [scrolled]);
 
-  const showBookNav = bookNav && scrolled;
-  const activeChapterTitle = showBookNav
+  const showBookTitle = !!bookNav;
+  const showChapterNav = bookNav && scrolled && bookNav.chapters.length > 1;
+  const activeChapterTitle = showChapterNav
     ? bookNav.chapters.find((c) => c.id === bookNav.activeChapterId)?.title ?? ""
     : "";
 
@@ -76,11 +77,11 @@ export default function TopBar() {
             <Image
               src="/logo-v2.png"
               alt="Great Books"
-              width={showBookNav ? 26 : 32}
-              height={showBookNav ? 26 : 32}
+              width={showBookTitle ? 26 : 32}
+              height={showBookTitle ? 26 : 32}
               style={{ display: "block", flexShrink: 0 }}
             />
-            {!showBookNav && (
+            {!showBookTitle && (
               <span style={{
                 fontFamily: "var(--font-ui)",
                 fontSize: "1.125rem",
@@ -92,66 +93,66 @@ export default function TopBar() {
             )}
           </Link>
 
-          {/* Book nav — appears when scrolled on a book page */}
-          {showBookNav && (
+          {/* Book title — always visible on book/course pages */}
+          {showBookTitle && (
             <>
               <span style={{ color: "var(--color-border)", margin: "0 0.25rem", fontSize: "0.875rem", flexShrink: 0 }}>/</span>
               <span style={{ fontFamily: "var(--font-ui)", fontSize: "0.875rem", fontWeight: 500, color: "var(--color-text-secondary)", flexShrink: 0 }}>
                 {bookNav.title}
               </span>
+            </>
+          )}
 
-              {bookNav.chapters.length > 1 && (
-                <>
-                  <span style={{ color: "var(--color-border)", margin: "0 0.25rem", fontSize: "0.875rem", flexShrink: 0 }}>/</span>
-                  {/* Chapter list button + picker */}
-                  <div ref={chapterBtnRef} style={{ position: "relative", flexShrink: 0 }}>
-                    <button
-                      aria-label="Select chapter"
-                      onClick={() => setDropdownOpen((o) => !o)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: 24,
-                        height: 24,
-                        border: "none",
-                        background: "none",
-                        cursor: "pointer",
-                        color: "var(--color-text-secondary)",
-                        borderRadius: "var(--radius)",
-                        padding: 0,
-                      }}
-                      className="hover:text-[var(--color-text)]"
-                    >
-                      <ChapterListIcon />
-                    </button>
-                    {dropdownOpen && (
-                      <ChapterPicker
-                        chapters={bookNav.chapters}
-                        activeChapterId={bookNav.activeChapterId}
-                        onSelect={bookNav.onChapterSelect}
-                        onClose={closeDropdown}
-                        containerRef={chapterBtnRef}
-                      />
-                    )}
-                  </div>
-                  <span
-                    style={{
-                      fontFamily: "var(--font-ui)",
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                      color: "var(--color-text-secondary)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      minWidth: 0,
-                      marginLeft: "0.125rem",
-                    }}
-                  >
-                    {activeChapterTitle}
-                  </span>
-                </>
-              )}
+          {/* Chapter nav — appears when chapter title has scrolled out of view */}
+          {showChapterNav && (
+            <>
+              <span style={{ color: "var(--color-border)", margin: "0 0.25rem", fontSize: "0.875rem", flexShrink: 0 }}>/</span>
+              <div ref={chapterBtnRef} style={{ position: "relative", flexShrink: 0 }}>
+                <button
+                  aria-label="Select chapter"
+                  onClick={() => setDropdownOpen((o) => !o)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 24,
+                    height: 24,
+                    border: "none",
+                    background: "none",
+                    cursor: "pointer",
+                    color: "var(--color-text-secondary)",
+                    borderRadius: "var(--radius)",
+                    padding: 0,
+                  }}
+                  className="hover:text-[var(--color-text)]"
+                >
+                  <ChapterListIcon />
+                </button>
+                {dropdownOpen && (
+                  <ChapterPicker
+                    chapters={bookNav.chapters}
+                    activeChapterId={bookNav.activeChapterId}
+                    onSelect={bookNav.onChapterSelect}
+                    onClose={closeDropdown}
+                    containerRef={chapterBtnRef}
+                  />
+                )}
+              </div>
+              <span
+                style={{
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  color: "var(--color-text-secondary)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  minWidth: 0,
+                  marginLeft: "0.125rem",
+                }}
+              >
+                {activeChapterTitle}
+              </span>
             </>
           )}
         </div>
