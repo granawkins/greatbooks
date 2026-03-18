@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { Storage } from "@google-cloud/storage";
 import { getAuthUserId } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { audioLimitMs } from "@/lib/tiers";
 
 const storage = new Storage();
 const bucket = storage.bucket("greatbooks-assets");
@@ -13,6 +15,19 @@ export async function GET(
   const userId = await getAuthUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Tier-based audio limit check
+  const tier = db.getUserTier(userId);
+  const limit = audioLimitMs(tier);
+  if (limit !== Infinity) {
+    const used = db.getMonthlyAudioUsageMs(userId);
+    if (used >= limit) {
+      return NextResponse.json(
+        { error: "audio_limit_reached", used, limit },
+        { status: 403 }
+      );
+    }
   }
 
   const { path: segments } = await params;

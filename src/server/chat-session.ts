@@ -10,6 +10,7 @@ import { logCost } from "../lib/costLog";
 import { buildSystemPrompt } from "../lib/chatContext";
 import type { MessageRow } from "../lib/db";
 import Database from "better-sqlite3";
+import { type Tier, resolveUserTier, TIER_LIMITS, costToCredits, currentMonth } from "../lib/tiers";
 
 const TEXT_MODEL = "gemini-2.5-flash";
 const VOICE_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025";
@@ -72,6 +73,45 @@ export function createChatSession(opts: ChatSessionOptions) {
     }
   }
 
+  // ── Tier & credit helpers ───────────────────────────────────────────────
+
+  function getUserTier(): Tier {
+    const user = roDb.prepare("SELECT email, tier, tier_expires_at FROM users WHERE id = ?")
+      .get(userId) as { email: string | null; tier: string; tier_expires_at: string | null } | undefined;
+    if (!user) return "anonymous";
+    return resolveUserTier(user);
+  }
+
+  function getMonthlyCreditUsage(): number {
+    const month = currentMonth();
+    const row = roDb.prepare(
+      `SELECT COALESCE(SUM(credits_used), 0) as total
+       FROM messages
+       WHERE user_id = ? AND created_at >= ? AND created_at < date(?, '+1 month')`
+    ).get(userId, `${month}-01`, `${month}-01`) as { total: number };
+    return Math.round(row.total * 100) / 100;
+  }
+
+  function setMessageCredits(messageId: number, credits: number) {
+    db.prepare("UPDATE messages SET credits_used = ? WHERE id = ?").run(credits, messageId);
+  }
+
+  function checkCredits(): { allowed: boolean; creditsUsed: number; creditsLimit: number } {
+    const tier = getUserTier();
+    const limit = TIER_LIMITS[tier].creditsPerMonth;
+    if (limit === Infinity) return { allowed: true, creditsUsed: 0, creditsLimit: Infinity };
+    const used = getMonthlyCreditUsage();
+    return { allowed: used < limit, creditsUsed: used, creditsLimit: limit };
+  }
+
+  function sendCreditsUpdate() {
+    const tier = getUserTier();
+    const limit = TIER_LIMITS[tier].creditsPerMonth;
+    const used = getMonthlyCreditUsage();
+    // JSON doesn't support Infinity — use -1 as "unlimited"
+    send(clientWs, { type: "credits_update", creditsUsed: used, creditsLimit: limit === Infinity ? -1 : limit });
+  }
+
   // ── Send history on connect ─────────────────────────────────────────────
 
   function sendHistory() {
@@ -82,6 +122,18 @@ export function createChatSession(opts: ChatSessionOptions) {
   // ── Text chat ───────────────────────────────────────────────────────────
 
   async function handleTextMessage(text: string) {
+    // Check credits before processing
+    const creditCheck = checkCredits();
+    if (!creditCheck.allowed) {
+      send(clientWs, {
+        type: "error",
+        message: "credits_exhausted",
+        creditsUsed: creditCheck.creditsUsed,
+        creditsLimit: creditCheck.creditsLimit === Infinity ? -1 : creditCheck.creditsLimit,
+      });
+      return;
+    }
+
     // Insert user message (client already shows it optimistically)
     insertMessage("user", text);
 
@@ -162,19 +214,23 @@ export function createChatSession(opts: ChatSessionOptions) {
       updateMessage(assistantMsg.id, accumulated, "completed");
       send(clientWs, { type: "stream_end", messageId: assistantMsg.id });
 
+      const costUsd = promptTokens * INPUT_COST_PER_TOKEN + outputTokens * OUTPUT_COST_PER_TOKEN;
       logCost({
         api: "llm",
         provider: "google",
         model: TEXT_MODEL,
         input_units: promptTokens + outputTokens,
         input_unit_type: "tokens",
-        cost_usd:
-          promptTokens * INPUT_COST_PER_TOKEN +
-          outputTokens * OUTPUT_COST_PER_TOKEN,
+        cost_usd: costUsd,
         entity_type: "user",
         entity_id: userId,
         meta: { book_id: bookId, prompt_tokens: promptTokens, output_tokens: outputTokens },
       });
+
+      // Record credits used on this message
+      const credits = costToCredits(costUsd);
+      setMessageCredits(assistantMsg.id, credits);
+      sendCreditsUpdate();
     } catch (err) {
       console.error("[chat] generateReply error:", err);
       updateMessage(assistantMsg.id, "", "error");
@@ -205,6 +261,18 @@ export function createChatSession(opts: ChatSessionOptions) {
   async function startVoice() {
     if (voiceSession) {
       send(clientWs, { type: "voice_ready" }); // already active
+      return;
+    }
+
+    // Check credits before starting voice
+    const creditCheck = checkCredits();
+    if (!creditCheck.allowed) {
+      send(clientWs, {
+        type: "error",
+        message: "credits_exhausted",
+        creditsUsed: creditCheck.creditsUsed,
+        creditsLimit: creditCheck.creditsLimit === Infinity ? -1 : creditCheck.creditsLimit,
+      });
       return;
     }
 
@@ -339,6 +407,13 @@ export function createChatSession(opts: ChatSessionOptions) {
           },
         });
       }
+      // Log voice credits on a tracking message
+      if (cost.costUsd > 0) {
+        const credits = costToCredits(cost.costUsd);
+        const trackMsg = insertMessage("assistant", "[voice session]", "completed", VOICE_MODEL);
+        setMessageCredits(trackMsg.id, credits);
+        sendCreditsUpdate();
+      }
       voiceStats = null;
     }
 
@@ -376,8 +451,9 @@ export function createChatSession(opts: ChatSessionOptions) {
     }
   }
 
-  // Send history immediately
+  // Send history + initial credit state on connect
   sendHistory();
+  sendCreditsUpdate();
 
   return { handleClientMessage, handleClose };
 }

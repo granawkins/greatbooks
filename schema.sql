@@ -45,6 +45,8 @@ CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT,
   playback_speed REAL DEFAULT 1.0,
+  tier TEXT DEFAULT 'basic',              -- 'basic', 'plus', 'premium' (anonymous resolved at read time)
+  tier_expires_at TEXT,                   -- expiration datetime for paid tiers (NULL = no expiry)
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -67,6 +69,7 @@ CREATE TABLE IF NOT EXISTS messages (
   text TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'completed',  -- user: always 'completed'; assistant: 'pending'|'streaming'|'completed'|'error'
   model TEXT,                                  -- which model generated this (NULL for user messages)
+  credits_used REAL DEFAULT 0,                   -- AI credits consumed by this message
   created_at TEXT DEFAULT (datetime('now'))
 );
 
