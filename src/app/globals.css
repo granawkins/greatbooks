@@ -89,6 +89,11 @@ body::before {
   animation: fadeIn 0.25s ease-out;
 }
 
+.chapter-layout--positioning {
+  animation: none;
+  opacity: 0;
+}
+
 .chapter-text {
   max-width: var(--content-max-width);
   margin: 0 auto;
