@@ -217,7 +217,7 @@ export default function ChapterView({
   const paraRefsMap = useRef<Record<number, (HTMLElement | null)[]>>({});
   const heroRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const initialScrollDone = useRef(false);
+  const initialScrollDone = useRef<number | null>(null);
 
   // ── Restore font size from localStorage ──────────────────────────────
   useEffect(() => {
@@ -278,12 +278,21 @@ export default function ChapterView({
 
   // ── Scroll position ───────────────────────────────────────────────────
 
+  // Use live audio position when returning to a chapter with an active session
+  const effectiveAudioMs = useMemo(() => {
+    if (session?.bookId === bookId && session?.chapterId === chapterNum && audioRef.current) {
+      const currentMs = Math.floor(audioRef.current.currentTime * 1000);
+      if (currentMs > 0) return currentMs;
+    }
+    return initialAudioPositionMs;
+  }, [session?.bookId, session?.chapterId, bookId, chapterNum, audioRef, initialAudioPositionMs]);
+
   const scrollTargetBlockIdx = useMemo(() => {
-    if (scrollToBottom || initialAudioPositionMs <= 0) return -1;
+    if (scrollToBottom || effectiveAudioMs <= 0) return -1;
     const segments = chapterData.segments;
     let targetSegIdx = 0;
     for (let i = 0; i < segments.length; i++) {
-      if (segments[i].audio_start_ms != null && segments[i].audio_start_ms! <= initialAudioPositionMs) {
+      if (segments[i].audio_start_ms != null && segments[i].audio_start_ms! <= effectiveAudioMs) {
         targetSegIdx = i;
       }
     }
@@ -296,11 +305,11 @@ export default function ChapterView({
       }
     }
     return blocks.length - 1;
-  }, [chapterData.segments, initialAudioPositionMs, blocks, scrollToBottom]);
+  }, [chapterData.segments, effectiveAudioMs, blocks, scrollToBottom]);
 
   useLayoutEffect(() => {
-    if (initialScrollDone.current) return;
-    initialScrollDone.current = true;
+    if (initialScrollDone.current === chapterNum) return;
+    initialScrollDone.current = chapterNum;
     if (scrollToBottom) {
       bottomRef.current?.scrollIntoView({ block: "end", behavior: "instant" });
       return;
