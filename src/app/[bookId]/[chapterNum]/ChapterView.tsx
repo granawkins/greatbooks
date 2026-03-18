@@ -218,6 +218,7 @@ export default function ChapterView({
   const heroRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialScrollDone = useRef(false);
+  const lastReadSaveRef = useRef<number>(0); // timestamp of last read-mode save
 
   // ── Restore font size from localStorage ──────────────────────────────
   useEffect(() => {
@@ -391,6 +392,7 @@ export default function ChapterView({
   useEffect(() => {
     if (prevViewMode.current !== "text" && viewMode === "text") {
       hasScrolledRef.current = false; // reset on each switch
+      lastReadSaveRef.current = Date.now(); // start tracking read time
       const audioMs = audioRef.current ? Math.floor(audioRef.current.currentTime * 1000) : 0;
       if (audioMs > 0) {
         const refs = paraRefsMap.current[chapterNum];
@@ -432,7 +434,12 @@ export default function ChapterView({
 
   // Helper: set progress + seek audio to a given ms, flash the bookmark word
   const applyBookmark = useCallback((ms: number, blockIdx?: number, segIdx?: number) => {
-    saveProgressNow(chapterNum, ms);
+    const now = Date.now();
+    const elapsed = lastReadSaveRef.current > 0 ? now - lastReadSaveRef.current : 0;
+    // Cap at 30s to avoid counting idle time if bookmark was stale
+    const readDurationMs = Math.min(elapsed, 30000);
+    lastReadSaveRef.current = now;
+    saveProgressNow(chapterNum, ms, "read", readDurationMs);
     if (audioRef.current) {
       audioRef.current.currentTime = ms / 1000;
     }

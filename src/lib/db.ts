@@ -46,6 +46,21 @@ try {
   rwConnection.exec(`ALTER TABLE users ADD COLUMN playback_speed REAL DEFAULT 1.0`);
 } catch { /* column already exists */ }
 
+// Add user_sessions table
+rwConnection.exec(`
+  CREATE TABLE IF NOT EXISTS user_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    book_id TEXT NOT NULL REFERENCES books(id),
+    chapter_number INTEGER NOT NULL,
+    mode TEXT NOT NULL CHECK (mode IN ('listen', 'read')),
+    started_at TEXT NOT NULL DEFAULT (datetime('now')),
+    ended_at TEXT NOT NULL DEFAULT (datetime('now')),
+    duration_ms INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id, started_at);
+`);
+
 // Add source_chapter_id and chapter_type columns to chapters (course support)
 try {
   rwConnection.exec(`ALTER TABLE chapters ADD COLUMN source_chapter_id INTEGER`);
@@ -130,6 +145,17 @@ export type MessageRow = {
   status: "pending" | "streaming" | "completed" | "error";
   model: string | null;
   created_at: string;
+};
+
+export type UserSessionRow = {
+  id: number;
+  user_id: string;
+  book_id: string;
+  chapter_number: number;
+  mode: "listen" | "read";
+  started_at: string;
+  ended_at: string;
+  duration_ms: number;
 };
 
 export type AnnotationRow = {
@@ -377,6 +403,76 @@ export const db = {
       .prepare("DELETE FROM annotations WHERE id = ? AND user_id = ?")
       .run(id, userId);
     return result.changes > 0;
+  },
+
+  // -- Session tracking --
+
+  /** Extend the most recent session if it matches, otherwise create a new one.
+   *  A session is "continuable" if same user/book/chapter/mode and ended < 30s ago. */
+  extendOrCreateSession: (
+    userId: string,
+    bookId: string,
+    chapterNumber: number,
+    mode: "listen" | "read",
+    durationMs: number
+  ): void => {
+    if (durationMs <= 0) return;
+    const SESSION_GAP_SECONDS = 30;
+    const recent = rwConnection
+      .prepare(
+        `SELECT id, ended_at FROM user_sessions
+         WHERE user_id = ? AND book_id = ? AND chapter_number = ? AND mode = ?
+         ORDER BY ended_at DESC LIMIT 1`
+      )
+      .get(userId, bookId, chapterNumber, mode) as
+      | { id: number; ended_at: string }
+      | undefined;
+
+    if (
+      recent &&
+      (Date.now() - new Date(recent.ended_at + "Z").getTime()) / 1000 <
+        SESSION_GAP_SECONDS
+    ) {
+      rwConnection
+        .prepare(
+          `UPDATE user_sessions
+           SET duration_ms = duration_ms + ?, ended_at = datetime('now')
+           WHERE id = ?`
+        )
+        .run(durationMs, recent.id);
+    } else {
+      rwConnection
+        .prepare(
+          `INSERT INTO user_sessions (user_id, book_id, chapter_number, mode, duration_ms)
+           VALUES (?, ?, ?, ?, ?)`
+        )
+        .run(userId, bookId, chapterNumber, mode, durationMs);
+    }
+  },
+
+  /** Get total usage in ms by mode, optionally filtered to a month (YYYY-MM). */
+  getUserUsageSummary: (
+    userId: string,
+    month?: string
+  ): { listen_ms: number; read_ms: number } => {
+    const where = month
+      ? `WHERE user_id = ? AND started_at >= ? AND started_at < date(?, '+1 month')`
+      : `WHERE user_id = ?`;
+    const params = month
+      ? [userId, `${month}-01`, `${month}-01`]
+      : [userId];
+    const rows = rwConnection
+      .prepare(
+        `SELECT mode, COALESCE(SUM(duration_ms), 0) as total_ms
+         FROM user_sessions ${where} GROUP BY mode`
+      )
+      .all(...params) as { mode: string; total_ms: number }[];
+    const result = { listen_ms: 0, read_ms: 0 };
+    for (const row of rows) {
+      if (row.mode === "listen") result.listen_ms = row.total_ms;
+      else if (row.mode === "read") result.read_ms = row.total_ms;
+    }
+    return result;
   },
 
   // -- Course helpers --

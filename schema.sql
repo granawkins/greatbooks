@@ -86,8 +86,21 @@ CREATE TABLE IF NOT EXISTS annotations (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Usage sessions — tracks listening and reading time per user
+CREATE TABLE IF NOT EXISTS user_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  book_id TEXT NOT NULL REFERENCES books(id),
+  chapter_number INTEGER NOT NULL,
+  mode TEXT NOT NULL CHECK (mode IN ('listen', 'read')),
+  started_at TEXT NOT NULL DEFAULT (datetime('now')),
+  ended_at TEXT NOT NULL DEFAULT (datetime('now')),
+  duration_ms INTEGER NOT NULL DEFAULT 0
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_chapters_book ON chapters(book_id);
 CREATE INDEX IF NOT EXISTS idx_segments_chapter ON segments(chapter_id);
 CREATE INDEX IF NOT EXISTS idx_messages_user_book ON messages(user_id, book_id);
 CREATE INDEX IF NOT EXISTS idx_annotations_user_book ON annotations(user_id, book_id, chapter_number);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id, started_at);

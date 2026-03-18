@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { bookId, chapterNumber, audioPositionMs } = body;
+  const { bookId, chapterNumber, audioPositionMs, mode, durationMs } = body;
 
   if (!bookId || chapterNumber == null) {
     return NextResponse.json(
@@ -34,6 +34,11 @@ export async function POST(req: NextRequest) {
   const source = db.getSourceBookInfo(bookId, chapterNumber);
   if (source) {
     db.upsertProgress(userId, source.bookId, source.chapterNumber, audioPositionMs ?? 0);
+  }
+
+  // Track usage session
+  if (mode && durationMs > 0) {
+    db.extendOrCreateSession(userId, bookId, chapterNumber, mode, durationMs);
   }
 
   return NextResponse.json({ ok: true });
