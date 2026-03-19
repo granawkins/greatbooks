@@ -35,6 +35,8 @@ export default function AudioPlayer() {
     onChatClickRef,
     playbackSpeedRef,
     setPlaybackSpeed,
+    audioGateCheckRef,
+    onAudioBlockedRef,
   } = useAudioSession();
 
   const router = useRouter();
@@ -77,6 +79,13 @@ export default function AudioPlayer() {
       return;
     }
 
+    // Check audio gate before playing
+    const blocked = audioGateCheckRef.current?.();
+    if (blocked) {
+      onAudioBlockedRef.current?.(blocked);
+      return;
+    }
+
     const viewing = viewingChapterRef.current;
     if (session && viewing) {
       if (session.bookId !== viewing.bookId || session.chapterId !== viewing.chapterId) {
@@ -85,7 +94,7 @@ export default function AudioPlayer() {
     }
 
     audio.play();
-  }, [audioRef, session, viewingChapterRef, router]);
+  }, [audioRef, session, viewingChapterRef, router, audioGateCheckRef, onAudioBlockedRef]);
 
   const seekTo = useCallback((ms: number) => {
     const audio = audioRef.current;

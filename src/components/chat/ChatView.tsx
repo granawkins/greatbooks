@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { useAuth } from "@/lib/AuthContext";
 import ChatMessage from "./ChatMessage";
 import { useChatSocket } from "./useChatSocket";
 import UpgradeModal from "@/components/UpgradeModal";
@@ -14,7 +13,6 @@ type ChatViewProps = {
 };
 
 export default function ChatView({ bookId, bookTitle, authorName, onClose }: ChatViewProps) {
-  const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -54,8 +52,6 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
             model: null,
           },
         ];
-
-  if (!user) return null;
 
   return (
     <div
