@@ -4,27 +4,10 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAudioSession, type WordTiming } from "@/lib/AudioPlayerContext";
 import { scrollToCenter } from "@/lib/readingCenter";
+import { applyClassById, removeClassById } from "@/components/reader/wordAnnotator";
 import { Scrubber, formatTime, formatTimeRemaining } from "./Scrubber";
 import { CtrlBtn } from "./CtrlBtn";
 import { PlayIcon, PauseIcon, SkipBackIcon, SkipForwardIcon, ChatIcon } from "./icons";
-
-// ── Word highlighting helpers ─────────────────────────────────────────────────
-
-function highlightWord(el: HTMLElement | null) {
-  if (!el) return;
-  el.style.textDecorationLine = "underline";
-  el.style.textDecorationColor = getComputedStyle(document.documentElement).getPropertyValue("--color-cursor").trim();
-  el.style.textDecorationThickness = "3px";
-  el.style.textUnderlineOffset = "3px";
-}
-
-function clearWord(el: HTMLElement | null) {
-  if (!el) return;
-  el.style.textDecorationLine = "";
-  el.style.textDecorationColor = "";
-  el.style.textDecorationThickness = "";
-  el.style.textUnderlineOffset = "";
-}
 
 function findActiveIdx(spans: WordTiming[], ms: number): number {
   let lo = 0, hi = spans.length - 1;
@@ -178,8 +161,8 @@ export default function AudioPlayer() {
     const idx = findActiveIdx(spans, ms);
     const newId = idx >= 0 ? spans[idx].id : null;
     if (newId !== activeWordRef.current) {
-      if (activeWordRef.current) clearWord(document.getElementById(activeWordRef.current));
-      if (newId) highlightWord(document.getElementById(newId));
+      if (activeWordRef.current) removeClassById(activeWordRef.current, "word-active");
+      if (newId) applyClassById(newId, "word-active");
       activeWordRef.current = newId;
     }
   }, [wordTimingsRef]);
@@ -214,7 +197,7 @@ export default function AudioPlayer() {
 
   const clearHighlight = useCallback(() => {
     if (activeWordRef.current) {
-      clearWord(document.getElementById(activeWordRef.current));
+      removeClassById(activeWordRef.current, "word-active");
       activeWordRef.current = null;
     }
   }, []);

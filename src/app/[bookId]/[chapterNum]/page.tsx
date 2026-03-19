@@ -2,7 +2,9 @@ import { db } from "@/lib/db";
 import { getAuthUserId } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import ChapterView from "./ChapterView";
+import ChapterContent from "@/components/reader/ChapterContent";
 import type { Segment } from "@/components/reader";
+import type { WordBoundary } from "@/components/reader/types";
 
 export default async function ChapterPage({
   params,
@@ -12,21 +14,31 @@ export default async function ChapterPage({
   const { bookId, chapterNum: chapterNumStr } = await params;
   const chapterNum = Number(chapterNumStr);
 
+  const book = db.getBook(bookId);
   const chapter = db.getChapter(bookId, chapterNum);
-  if (!chapter) notFound();
+  if (!book || !chapter) notFound();
 
   // Resolve source chapter for segments/audio (course reference chapters)
   const resolved = db.getResolvedChapter(chapter.id);
   const rawSegments = db.getSegments(chapter.id);
-  const segments: Segment[] = rawSegments.map((seg) => ({
-    id: seg.id,
-    sequence: seg.sequence,
-    text: seg.text,
-    segment_type: seg.segment_type,
-    audio_start_ms: seg.audio_start_ms,
-    audio_end_ms: seg.audio_end_ms,
-    word_timestamps: seg.word_timestamps ? JSON.parse(seg.word_timestamps) : null,
-  }));
+
+  // Parse word boundaries from DB (char positions only — no timing data in payload)
+  const wordBoundaries: Record<number, WordBoundary[]> = {};
+  const segments: Segment[] = rawSegments.map((seg) => {
+    if (seg.word_timestamps) {
+      const parsed = JSON.parse(seg.word_timestamps) as { char_start: number; char_end: number }[];
+      wordBoundaries[seg.id] = parsed.map((w) => ({ char_start: w.char_start, char_end: w.char_end }));
+    }
+    return {
+      id: seg.id,
+      sequence: seg.sequence,
+      text: seg.text,
+      segment_type: seg.segment_type,
+      audio_start_ms: seg.audio_start_ms,
+      audio_end_ms: seg.audio_end_ms,
+      word_timestamps: null, // timing loaded lazily client-side
+    };
+  });
 
   // Fetch user-specific data
   const userId = await getAuthUserId();
@@ -89,6 +101,14 @@ export default async function ChapterPage({
       initialAudioPositionMs={audioPositionMs}
       sourceProgress={sourceProgress}
       initialAnnotations={initialAnnotations}
-    />
+    >
+      <ChapterContent
+        segments={segments}
+        wordBoundaries={wordBoundaries}
+        chapterNum={chapterNum}
+        layout={book.layout === "verse" ? "verse" : "prose"}
+        bookId={bookId}
+      />
+    </ChapterView>
   );
 }

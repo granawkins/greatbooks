@@ -41,15 +41,10 @@ export type ListBlock = {
 
 export type Block = ParagraphBlock | HeadingBlock | ListBlock;
 
-export type WordSpan = {
-  start_ms: number;
-  end_ms: number;
-  charStart: number;
-  charEnd: number;
-  segmentSeq: number;
-  segCharStart: number;
-  segCharEnd: number;
-};
+export type WordBoundary = { char_start: number; char_end: number };
+
+// Flat [start_ms, end_ms] pairs for each word in a block
+export type WordTimingArray = [number, number][];
 
 export type Annotation = {
   id: number;
