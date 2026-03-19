@@ -2,11 +2,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { useAudioSession } from "@/lib/AudioPlayerContext";
 import { ChapterListIcon, CloseIcon } from "./icons";
 
 export function ChapterSelector({ isOnBookPage }: { isOnBookPage: boolean }) {
-  const { session, dismiss, onChapterSelectRef } = useAudioPlayer();
+  const { session, dismiss, onChapterSelectRef } = useAudioSession();
   const [chapterListOpen, setChapterListOpen] = useState(false);
   const [chapterList, setChapterList] = useState<{ number: number; title: string }[]>([]);
   const chapterListRef = useRef<HTMLDivElement>(null);

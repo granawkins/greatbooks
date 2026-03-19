@@ -29,12 +29,14 @@ export function WordPopup({
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
       if (popupRef.current?.contains(e.target as Node)) return;
-      if (containerEl?.contains(e.target as Node)) return;
+      // Allow clicks on any word span (supports cross-paragraph selection)
+      const target = e.target as HTMLElement;
+      if (target.closest?.("[id^='w-']")) return;
       onClose();
     };
     document.addEventListener("mousedown", handleMouseDown);
     return () => document.removeEventListener("mousedown", handleMouseDown);
-  }, [containerEl, onClose]);
+  }, [onClose]);
 
   const rect1 = anchorEl.getBoundingClientRect();
   const rect2 = anchorEl2?.getBoundingClientRect();

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
-import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { useAudioSession } from "@/lib/AudioPlayerContext";
 import { useBookDetailsModal } from "@/lib/BookDetailsModalContext";
 import LoginButtons from "@/components/auth/LoginButtons";
 import BookCover from "@/components/BookCover";
@@ -116,7 +116,7 @@ function UsageMeter({ label, used, limit, formatUsed, formatLimit }: {
 
 export default function ProfilePage() {
   const { user, loading, logout, updatePlaybackSpeed } = useAuth();
-  const { setPlaybackSpeed } = useAudioPlayer();
+  const { setPlaybackSpeed } = useAudioSession();
   const { openBookDetails } = useBookDetailsModal();
   const router = useRouter();
   const [history, setHistory] = useState<HistoryItem[]>([]);

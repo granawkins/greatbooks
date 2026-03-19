@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { useAudioSession } from "@/lib/AudioPlayerContext";
 import { useProgress } from "@/lib/useProgress";
 import { useTopBar } from "@/lib/TopBarContext";
 import ChatView from "@/components/chat/ChatView";
@@ -18,6 +18,7 @@ type BookShellContextValue = {
   setCurrentChapter: (num: number) => void;
   cacheChapter: (num: number, data: ChapterData) => void;
   getCachedChapter: (num: number) => ChapterData | undefined;
+  saveProgressNow: (chapterNumber: number, audioPositionMs: number, mode?: import("@/lib/useProgress").ProgressMode, durationMs?: number) => void;
 };
 
 const BookShellContext = createContext<BookShellContextValue | null>(null);
@@ -55,7 +56,7 @@ export default function BookShell({
     onChapterSelectRef,
     viewingChapterRef,
     navigateToChapterRef,
-  } = useAudioPlayer();
+  } = useAudioSession();
   const { setBookNav, updateActiveChapter, clearBookNav, setScrolled } = useTopBar();
 
   const cacheChapter = useCallback((num: number, data: ChapterData) => {
@@ -164,7 +165,7 @@ export default function BookShell({
 
   const ctxValue: BookShellContextValue = {
     bookId, bookMeta, chapters, currentChapter,
-    setCurrentChapter, cacheChapter, getCachedChapter,
+    setCurrentChapter, cacheChapter, getCachedChapter, saveProgressNow,
   };
 
   return (
