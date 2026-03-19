@@ -6,6 +6,8 @@ import BookDetailsModal, { type BookDetails } from "@/components/BookDetailsModa
 type StatsMap = Record<string, { total_chars: number; total_duration_ms: number | null; chapter_count: number }>;
 type ProgressMap = Record<string, { chapter_number: number }>;
 
+type ModalState = { bookId: string; data: BookDetails | null } | null;
+
 type BookDetailsModalContextType = {
   openBookDetails: (bookId: string) => void;
   /** Pre-supply stats/progress so the modal can show them without extra fetches */
@@ -18,7 +20,7 @@ const BookDetailsModalContext = createContext<BookDetailsModalContextType>({
 });
 
 export function BookDetailsModalProvider({ children }: { children: ReactNode }) {
-  const [book, setBook] = useState<BookDetails | null>(null);
+  const [modal, setModal] = useState<ModalState>(null);
   const statsMapRef = useRef<StatsMap>({});
   const progressMapRef = useRef<ProgressMap>({});
 
@@ -29,6 +31,9 @@ export function BookDetailsModalProvider({ children }: { children: ReactNode }) 
 
   const openBookDetails = useCallback(
     async (bookId: string) => {
+      // Show modal immediately with skeleton
+      setModal({ bookId, data: null });
+
       try {
         const res = await fetch(`/api/books/${bookId}`);
         if (!res.ok) return;
@@ -53,9 +58,9 @@ export function BookDetailsModalProvider({ children }: { children: ReactNode }) 
           stats: statsMapRef.current[bookId] ?? null,
           progress: progressMapRef.current[bookId] ?? null,
         };
-        setBook(details);
+        setModal({ bookId, data: details });
       } catch {
-        // silently fail
+        // silently fail — modal stays open with skeleton
       }
     },
     []
@@ -66,8 +71,12 @@ export function BookDetailsModalProvider({ children }: { children: ReactNode }) 
   return (
     <BookDetailsModalContext.Provider value={contextValue}>
       {children}
-      {book && (
-        <BookDetailsModal book={book} onClose={() => setBook(null)} />
+      {modal && (
+        <BookDetailsModal
+          bookId={modal.bookId}
+          book={modal.data}
+          onClose={() => setModal(null)}
+        />
       )}
     </BookDetailsModalContext.Provider>
   );
