@@ -204,3 +204,11 @@ body::before {
 .margin-comment-card.comment-hover .margin-comment-x {
   visibility: visible !important;
 }
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
