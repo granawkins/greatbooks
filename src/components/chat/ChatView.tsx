@@ -28,6 +28,21 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
     }
   }, [chat.messages, chat.partialTranscript, chat.userTranscript]);
 
+  // Lock body scroll while chat is open
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   // Track visual viewport height for mobile keyboard resize
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
 
@@ -55,6 +70,7 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
 
   return (
     <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{
         position: "fixed",
         top: 0,
@@ -70,50 +86,51 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
         flexDirection: "column",
       }}
     >
-      {/* Header: close + credits */}
-      <div style={{ padding: "1rem 1.25rem", flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <button
-          onClick={onClose}
-          aria-label="Close chat"
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            border: "none",
-            backgroundColor: "rgba(255, 255, 255, 0.15)",
-            color: "#ffffff",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "background-color 0.15s",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.25)")}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.15)")}
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M4 4l8 8M12 4l-8 8" />
-          </svg>
-        </button>
-        {chat.creditsLimit > 0 && chat.creditsLimit !== Infinity && (
-          <span
+      {/* Close button — floats over messages, aligned to content width */}
+      <div style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1,
+        pointerEvents: "none",
+      }}>
+        <div style={{
+          maxWidth: "var(--content-max-width)",
+          margin: "0 auto",
+          padding: "1rem 1.5rem",
+        }}>
+          <button
+            onClick={onClose}
+            aria-label="Close chat"
             style={{
-              fontFamily: "var(--font-ui)",
-              fontSize: "0.75rem",
-              color: chat.creditsExhausted ? "rgba(239, 68, 68, 0.9)" : "rgba(255, 255, 255, 0.5)",
-              padding: "4px 10px",
-              borderRadius: 999,
-              backgroundColor: "rgba(255, 255, 255, 0.1)",
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              border: "none",
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
+              color: "#ffffff",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "background-color 0.15s",
+              pointerEvents: "auto",
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.7)")}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.5)")}
           >
-            {Math.round(chat.creditsUsed)}/{chat.creditsLimit} credits
-          </span>
-        )}
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M4 4l8 8M12 4l-8 8" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
       <div
         ref={scrollRef}
+        className="hide-scrollbar"
         style={{
           flex: 1,
           overflowY: "auto",
@@ -121,6 +138,8 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
           width: "100%",
           margin: "0 auto",
           boxSizing: "border-box",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
         }}
       >
         <div
