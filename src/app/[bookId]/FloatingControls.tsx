@@ -1,6 +1,6 @@
 "use client";
 
-import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { useAudioSession, useAudioView } from "@/lib/AudioPlayerContext";
 import { ViewModeToggle, FontSizeControls } from "@/components/audio/PersistentPlayerBar";
 import { ChatIcon } from "@/components/audio/icons";
 
@@ -11,7 +11,8 @@ export function FloatingControls({
   onResize?: () => HTMLElement | null;
   onChat?: () => void;
 } = {}) {
-  const { viewMode, onChatClickRef } = useAudioPlayer();
+  const { onChatClickRef } = useAudioSession();
+  const { viewMode } = useAudioView();
   const isTextMode = viewMode === "text";
   const handleChat = onChat ?? (() => onChatClickRef.current?.());
 

@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import { type SegmentBoundary, useAudioPlayer, type WordTiming } from "@/lib/AudioPlayerContext";
 import { getReadingCenterY, scrollToCenter } from "@/lib/readingCenter";
-import { useProgress } from "@/lib/useProgress";
 import { useTopBar } from "@/lib/TopBarContext";
 import { useBookShell } from "@/app/[bookId]/BookShell";
 import {
@@ -157,14 +156,13 @@ export default function ChapterView({
   sourceProgress?: { bookTitle: string; chapterNumber: number; audioPositionMs: number } | null;
   initialAnnotations?: Annotation[];
 }) {
-  const { bookId, bookMeta, chapters, setCurrentChapter, cacheChapter } = useBookShell();
+  const { bookId, bookMeta, chapters, setCurrentChapter, cacheChapter, saveProgressNow } = useBookShell();
   const searchParams = useSearchParams();
   const scrollToBottom = searchParams.get("scroll") === "bottom";
   const autoplay = searchParams.get("autoplay") === "1";
 
   const { session, loadSession, wordTimingsRef, scrollDataRef, audioRef, viewMode, audioGateCheckRef, onAudioBlockedRef, getSessionListenedMs } = useAudioPlayer();
-  const { user, refreshUsage } = useAuth();
-  const { saveProgressNow } = useProgress(bookId);
+  const { user } = useAuth();
   const { setScrolled } = useTopBar();
   const [upgradeModal, setUpgradeModal] = useState<UpgradeModalVariant | null>(null);
 
@@ -185,10 +183,6 @@ export default function ChapterView({
     } catch {}
   }, []);
 
-  // ── Refresh usage on mount (ensures fresh data after chapter transitions) ──
-  useEffect(() => {
-    refreshUsage();
-  }, [refreshUsage]);
 
   // ── Audio gate check ─────────────────────────────────────────────────
   useEffect(() => {
@@ -201,7 +195,7 @@ export default function ChapterView({
       }
       return null;
     };
-    onAudioBlockedRef.current = (reason) => setUpgradeModal(reason);
+    onAudioBlockedRef.current = (reason: "login" | "audio_limit") => setUpgradeModal(reason);
     return () => {
       audioGateCheckRef.current = null;
       onAudioBlockedRef.current = null;
