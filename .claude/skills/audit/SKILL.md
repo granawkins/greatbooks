@@ -38,18 +38,32 @@ Living reference of the major systems and data flows. Update this section when i
 ### Book page loading
 
 The heaviest page. Data flow:
-1. **Server** (`[bookId]/[chapterNum]/page.tsx`): Queries DB for chapter segments, audio metadata, user progress. Resolves course reference chapters. Parses `word_timestamps` JSON. Passes everything as props to `ChapterView`.
-2. **Client** (`ChapterView.tsx`): Groups segments into blocks, computes word timings, loads audio session into `AudioPlayerContext`, sets up scroll tracking. ~500 lines — the largest client component.
-3. **Audio** (`AudioPlayerContext.tsx` + `AudioPlayer.tsx`): Global context with refs for word highlighting and auto-scroll. rAF loop runs continuously for playback sync. `PersistentPlayerBar` renders in root layout.
-4. **Progress** (`useProgress.ts`): Debounced saves via POST to `/api/progress`. In reading mode, scroll position maps to audio timestamps. `readingCenter.ts` computes visible center accounting for top bar / player bar insets.
-5. **Annotations** (`/api/annotations`): Fetched client-side after mount. Highlights and comments stored per-segment range.
+1. **Server** (`[bookId]/[chapterNum]/page.tsx`): Queries DB for chapter segments, audio metadata, user progress. Parses `word_timestamps` JSON to extract char boundaries (not timing). Passes segments + boundaries to `ChapterContent` (server) and props to `ChapterView` (client).
+2. **Server** (`ChapterContent.tsx`): Groups segments into blocks, renders every word as a `<span id="w-{ch}-{seq}-{charStart}">` using char boundaries. Wraps paragraphs in `InteractiveParagraph` (client). No timing data in the HTML.
+3. **Client** (`ChapterView.tsx`): Wraps `{children}` (server-rendered text). Manages scroll position, audio session, bookmark tracking. Provides `AnnotationProvider` context. ~530 lines.
+4. **Client** (`useWordTimings.ts`): Lazily fetches `/api/.../word-timestamps`, builds flat `[start_ms, end_ms][]` array (~5KB), feeds `wordTimingsRef` for AudioPlayer rAF loop.
+5. **Client** (`InteractiveParagraph.tsx`): Event delegation (one `onClick` per paragraph). Handles selection, click-to-play, annotation CRUD. Cross-paragraph selection via module-level state in `wordAnnotator`.
+6. **Client** (`AnnotationLayer.tsx`): Renders margin comment cards from `AnnotationContext`. Positioned via DOM measurement against anchor spans.
+
+### Reader design choices
+
+1. **Server-rendered word spans, lazy-loaded timing** — `ChapterContent` (server component) renders every word as a `<span>` using char boundaries from the DB. Timing data (`start_ms`/`end_ms`) ships separately as a ~5KB lazy fetch. This cuts the initial HTML payload ~60% while keeping text immediately visible and scrollable.
+
+2. **DB coordinates as universal span IDs** — Span IDs are `w-{chapter}-{segmentSeq}-{charStart}`, derived directly from the database schema. Audio highlighting, annotations, and bookmarks all use the same coordinate system. No mapping layers, no sync issues.
+
+3. **DOM for display, React for data, API for persistence** — Visual changes (highlight classes, audio cursor, selection) are imperative DOM manipulation via `wordAnnotator`. Annotation data lives in React context (`AnnotationContext`) for margin comment cards. API calls are fire-and-forget. Each layer updates independently and optimistically.
+
+4. **Event delegation, not per-word handlers** — Each paragraph has one `onClick` that uses `closest('[id^="w-"]')` to identify the clicked word. Works with server-rendered children, supports cross-paragraph selection via module-level state in `wordAnnotator`.
+
+5. **Word spans include trailing whitespace** — Each `<span>` contains its word plus trailing space/punctuation up to the next word. CSS classes (highlight background, comment underline) naturally cover the gap between words with zero extra markup or styling hacks.
 
 ### Audio system
 
 - One MP3 per chapter, stored in GCS, streamed via `/api/audio/[...path]` (auth-gated proxy).
-- Word-level timestamps on each segment row. Frontend builds `WordTiming[]` and `ScrollData` arrays for the rAF highlight/scroll loop.
-- `AudioPlayerContext` persists across navigation (global provider in root layout). Session includes segment boundaries for skip forward/back.
-- View mode toggle (audio/text) lives in the context. Reading mode pauses audio, collapses player bar with slide transition.
+- Word-level timestamps lazily fetched by `useWordTimings` hook, interpolated into flat `WordTiming[]` for the rAF loop.
+- `AudioPlayerContext` split into `AudioSessionContext` (session + refs, changes rarely) and `AudioViewContext` (viewMode, changes on toggle). Both persist across navigation via root layout.
+- `wordAnnotator.applyClassById` / `removeClassById` used by AudioPlayer rAF loop — CSS class `.word-active` instead of inline styles.
+- `useProgress` is save-only (no fetch on mount). Single instance in BookShell, exposed via BookShellContext.
 
 ### Chat system
 
@@ -68,8 +82,10 @@ The heaviest page. Data flow:
 
 - CSS variables in `globals.css` for theming (light/dark). `--color-cursor` for audio/bookmark highlights.
 - `--font-size-body` CSS variable for adjustable text size (persisted in localStorage).
+- Word span styling via CSS classes in `globals.css`: `.word-active`, `.word-bookmark`, `.ann-highlight`, `.ann-comment`, `.ann-selection`.
 - Floating controls (font size, view toggle, chat button) rendered by `ChapterView`, positioned relative to `--content-max-width` text column.
 - Bookmark icon positioned via CSS class `.reading-bookmark` with desktop/mobile breakpoints.
+- `BookDetailsModalProvider` context value stabilized with refs + useMemo — setting statsMap/progressMap never re-renders consumers.
 
 ---
 

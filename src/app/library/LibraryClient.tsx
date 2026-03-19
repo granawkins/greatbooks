@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import type { BookRow } from "@/lib/db";
 import BookCover from "@/components/BookCover";
-import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { useAudioSession } from "@/lib/AudioPlayerContext";
 import { useBookDetailsModal } from "@/lib/BookDetailsModalContext";
 
 type ProgressMap = Record<string, { chapter_number: number }>;
@@ -18,7 +18,7 @@ export default function LibraryClient({
   statsMap: StatsMap;
   progressMap: ProgressMap;
 }) {
-  const { session } = useAudioPlayer();
+  const { session } = useAudioSession();
   const { openBookDetails, setMaps } = useBookDetailsModal();
   const [search, setSearch] = useState("");
 

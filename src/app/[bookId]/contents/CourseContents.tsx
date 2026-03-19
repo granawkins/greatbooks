@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { useAudioSession } from "@/lib/AudioPlayerContext";
 
 type CourseChapter = {
   number: number;
@@ -25,7 +25,7 @@ export default function CourseContents({
   chapters: CourseChapter[];
   currentChapter: number | null;
 }) {
-  const { session } = useAudioPlayer();
+  const { session } = useAudioSession();
 
   return (
     <div

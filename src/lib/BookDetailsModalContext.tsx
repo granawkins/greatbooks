@@ -1,10 +1,12 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import BookDetailsModal, { type BookDetails } from "@/components/BookDetailsModal";
 
 type StatsMap = Record<string, { total_chars: number; total_duration_ms: number | null; chapter_count: number }>;
 type ProgressMap = Record<string, { chapter_number: number }>;
+
+type ModalState = { bookId: string; data: BookDetails | null } | null;
 
 type BookDetailsModalContextType = {
   openBookDetails: (bookId: string) => void;
@@ -18,17 +20,20 @@ const BookDetailsModalContext = createContext<BookDetailsModalContextType>({
 });
 
 export function BookDetailsModalProvider({ children }: { children: ReactNode }) {
-  const [book, setBook] = useState<BookDetails | null>(null);
-  const [statsMap, setStatsMap] = useState<StatsMap>({});
-  const [progressMap, setProgressMap] = useState<ProgressMap>({});
+  const [modal, setModal] = useState<ModalState>(null);
+  const statsMapRef = useRef<StatsMap>({});
+  const progressMapRef = useRef<ProgressMap>({});
 
   const setMaps = useCallback((stats: StatsMap, progress: ProgressMap) => {
-    setStatsMap(stats);
-    setProgressMap(progress);
+    statsMapRef.current = stats;
+    progressMapRef.current = progress;
   }, []);
 
   const openBookDetails = useCallback(
     async (bookId: string) => {
+      // Show modal immediately with skeleton
+      setModal({ bookId, data: null });
+
       try {
         const res = await fetch(`/api/books/${bookId}`);
         if (!res.ok) return;
@@ -50,22 +55,28 @@ export function BookDetailsModalProvider({ children }: { children: ReactNode }) 
             audio_duration_ms: c.audio_duration_ms,
             chapter_type: c.chapter_type ?? "text",
           })),
-          stats: statsMap[bookId] ?? null,
-          progress: progressMap[bookId] ?? null,
+          stats: statsMapRef.current[bookId] ?? null,
+          progress: progressMapRef.current[bookId] ?? null,
         };
-        setBook(details);
+        setModal({ bookId, data: details });
       } catch {
-        // silently fail
+        // silently fail — modal stays open with skeleton
       }
     },
-    [statsMap, progressMap]
+    []
   );
 
+  const contextValue = useMemo(() => ({ openBookDetails, setMaps }), [openBookDetails, setMaps]);
+
   return (
-    <BookDetailsModalContext.Provider value={{ openBookDetails, setMaps }}>
+    <BookDetailsModalContext.Provider value={contextValue}>
       {children}
-      {book && (
-        <BookDetailsModal book={book} onClose={() => setBook(null)} />
+      {modal && (
+        <BookDetailsModal
+          bookId={modal.bookId}
+          book={modal.data}
+          onClose={() => setModal(null)}
+        />
       )}
     </BookDetailsModalContext.Provider>
   );
