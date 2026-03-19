@@ -234,7 +234,13 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       }
       if (autoPlayRef.current) {
         autoPlayRef.current = false;
-        audio.play().catch(() => {});
+        // Check audio gate before auto-playing
+        const blocked = audioGateCheckRef.current?.();
+        if (blocked) {
+          onAudioBlockedRef.current?.(blocked);
+        } else {
+          audio.play().catch(() => {});
+        }
       }
     };
     audio.addEventListener("canplay", handleCanPlay);
@@ -244,13 +250,6 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
   const loadSession = useCallback(
     (newSession: AudioSession, initialPositionMs?: number, autoPlay?: boolean) => {
-      // Check audio gate before loading
-      const blocked = audioGateCheckRef.current?.();
-      if (blocked) {
-        onAudioBlockedRef.current?.(blocked);
-        return;
-      }
-
       // Reset session listening time tracking
       sessionListenedMsRef.current = 0;
       playStartRef.current = null;

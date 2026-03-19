@@ -114,7 +114,7 @@ export default function ChapterView({
   const autoplay = searchParams.get("autoplay") === "1";
 
   const { session, loadSession, wordTimingsRef, scrollDataRef, audioRef, viewMode, audioGateCheckRef, onAudioBlockedRef, getSessionListenedMs } = useAudioPlayer();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { setScrolled } = useTopBar();
   const [upgradeModal, setUpgradeModal] = useState<UpgradeModalVariant | null>(null);
 
@@ -139,6 +139,9 @@ export default function ChapterView({
   // ── Audio gate check ─────────────────────────────────────────────────
   useEffect(() => {
     audioGateCheckRef.current = () => {
+      // Don't gate while auth is still loading — allow session to load,
+      // gate will re-check once auth resolves
+      if (authLoading) return null;
       if (!user || user.tier === "anonymous") return "login";
       if (user.audioLimitMs !== Infinity) {
         const totalUsed = user.audioUsedMs + getSessionListenedMs();
@@ -148,7 +151,7 @@ export default function ChapterView({
     };
     onAudioBlockedRef.current = (reason: "login" | "audio_limit") => setUpgradeModal(reason);
     return () => { audioGateCheckRef.current = null; onAudioBlockedRef.current = null; };
-  }, [user, audioGateCheckRef, onAudioBlockedRef, getSessionListenedMs]);
+  }, [user, authLoading, audioGateCheckRef, onAudioBlockedRef, getSessionListenedMs]);
 
   // Annotations managed via AnnotationProvider (wraps children in render)
 
