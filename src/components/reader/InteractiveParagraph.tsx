@@ -46,7 +46,7 @@ export default function InteractiveParagraph({
   children, chapterNum, bookId,
 }: Props) {
   const containerRef = useRef<HTMLSpanElement | null>(null);
-  const { audioRef, session, onChapterSelectRef } = useAudioSession();
+  const { audioRef, session, onChapterSelectRef, wordTimingsRef } = useAudioSession();
   const { annotations, addAnnotation, removeAnnotation } = useAnnotations();
 
   const [showCommentInput, setShowCommentInput] = useState(false);
@@ -115,14 +115,26 @@ export default function InteractiveParagraph({
   // ── Actions (operate on module-level selection) ────────────────────────
 
   const handlePlay = useCallback(() => {
-    if (!hasSelection()) return;
+    const range = getSelectionRange();
+    if (!range) return;
+
+    // Find the start_ms for the first word in the selection from word timings
+    const spanId = `w-${chapterNum}-${range.startSeq}-${range.startChar}`;
+    const timings = wordTimingsRef.current;
+    const timing = timings?.find((t) => t.id === spanId);
+    const startMs = timing?.start_ms ?? 0;
+
     if (session && session.chapterId === chapterNum) {
-      audioRef.current?.play().catch(() => {});
+      const audio = audioRef.current;
+      if (audio) {
+        audio.currentTime = startMs / 1000;
+        audio.play().catch(() => {});
+      }
     } else {
-      onChapterSelectRef.current?.(chapterNum);
+      onChapterSelectRef.current?.(chapterNum, startMs, true);
     }
     clearSelection();
-  }, [session, chapterNum, audioRef, onChapterSelectRef]);
+  }, [session, chapterNum, audioRef, onChapterSelectRef, wordTimingsRef]);
 
   const handleHighlight = useCallback(() => {
     const range = getSelectionRange();
