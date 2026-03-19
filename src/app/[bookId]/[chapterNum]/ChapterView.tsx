@@ -162,8 +162,8 @@ export default function ChapterView({
   const scrollToBottom = searchParams.get("scroll") === "bottom";
   const autoplay = searchParams.get("autoplay") === "1";
 
-  const { session, loadSession, wordTimingsRef, scrollDataRef, audioRef, viewMode, audioGateCheckRef, onAudioBlockedRef } = useAudioPlayer();
-  const { user } = useAuth();
+  const { session, loadSession, wordTimingsRef, scrollDataRef, audioRef, viewMode, audioGateCheckRef, onAudioBlockedRef, getSessionListenedMs } = useAudioPlayer();
+  const { user, refreshUsage } = useAuth();
   const { saveProgressNow } = useProgress(bookId);
   const { setScrolled } = useTopBar();
   const [upgradeModal, setUpgradeModal] = useState<UpgradeModalVariant | null>(null);
@@ -185,11 +185,20 @@ export default function ChapterView({
     } catch {}
   }, []);
 
+  // ── Refresh usage on mount (ensures fresh data after chapter transitions) ──
+  useEffect(() => {
+    refreshUsage();
+  }, [refreshUsage]);
+
   // ── Audio gate check ─────────────────────────────────────────────────
   useEffect(() => {
     audioGateCheckRef.current = () => {
       if (!user || user.tier === "anonymous") return "login";
-      if (user.audioLimitMs !== Infinity && user.audioUsedMs >= user.audioLimitMs) return "audio_limit";
+      if (user.audioLimitMs !== Infinity) {
+        // Include client-side session time for accurate mid-playback checks
+        const totalUsed = user.audioUsedMs + getSessionListenedMs();
+        if (totalUsed >= user.audioLimitMs) return "audio_limit";
+      }
       return null;
     };
     onAudioBlockedRef.current = (reason) => setUpgradeModal(reason);
@@ -197,7 +206,7 @@ export default function ChapterView({
       audioGateCheckRef.current = null;
       onAudioBlockedRef.current = null;
     };
-  }, [user, audioGateCheckRef, onAudioBlockedRef]);
+  }, [user, audioGateCheckRef, onAudioBlockedRef, getSessionListenedMs]);
 
   // ── Annotations ───────────────────────────────────────────────────────
 

@@ -69,6 +69,9 @@ type AudioPlayerContextValue = {
   // Returns "login" | "audio_limit" if blocked, or null if allowed
   audioGateCheckRef: MutableRefObject<(() => "login" | "audio_limit" | null) | null>;
   onAudioBlockedRef: MutableRefObject<((reason: "login" | "audio_limit") => void) | null>;
+
+  // Client-side session listening time (ms) — for accurate mid-session gate checks
+  getSessionListenedMs: () => number;
 };
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
@@ -112,6 +115,18 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const onAudioBlockedRef = useRef<((reason: "login" | "audio_limit") => void) | null>(null);
   const playbackSpeedRef = useRef(1);
 
+  // Client-side session listening time tracking
+  const sessionListenedMsRef = useRef(0);
+  const playStartRef = useRef<number | null>(null);
+
+  const getSessionListenedMs = useCallback(() => {
+    let total = sessionListenedMsRef.current;
+    if (playStartRef.current) {
+      total += Date.now() - playStartRef.current;
+    }
+    return total;
+  }, []);
+
   const setPlaybackSpeed = useCallback((speed: number) => {
     playbackSpeedRef.current = speed;
     const audio = audioRef.current;
@@ -129,7 +144,40 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     return () => audio.removeEventListener("pause", handlePause);
   }, []);
 
-  // Periodic progress save every 5s while playing
+  // Track play/pause for session listening time
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onPlay = () => { playStartRef.current = Date.now(); };
+    const onPause = () => {
+      if (playStartRef.current) {
+        sessionListenedMsRef.current += Date.now() - playStartRef.current;
+        playStartRef.current = null;
+      }
+    };
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    return () => {
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+    };
+  }, []);
+
+  // Handle audio load errors (e.g. 403 from audio limit) — show upgrade modal
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const handleError = () => {
+      const blocked = audioGateCheckRef.current?.();
+      if (blocked) {
+        onAudioBlockedRef.current?.(blocked);
+      }
+    };
+    audio.addEventListener("error", handleError);
+    return () => audio.removeEventListener("error", handleError);
+  }, []);
+
+  // Periodic progress save every 5s while playing + enforce audio limit
   useEffect(() => {
     if (!session) return;
     const audio = audioRef.current;
@@ -137,6 +185,12 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(() => {
       if (!audio.paused) {
         onPauseRef.current?.(Math.floor(audio.currentTime * 1000));
+        // Enforce audio limit during playback
+        const blocked = audioGateCheckRef.current?.();
+        if (blocked) {
+          audio.pause();
+          onAudioBlockedRef.current?.(blocked);
+        }
       }
     }, 5000);
     return () => clearInterval(interval);
@@ -173,6 +227,10 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         onAudioBlockedRef.current?.(blocked);
         return;
       }
+
+      // Reset session listening time tracking
+      sessionListenedMsRef.current = 0;
+      playStartRef.current = null;
 
       const audio = audioRef.current;
       if (audio) {
@@ -216,6 +274,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     setViewMode,
     audioGateCheckRef,
     onAudioBlockedRef,
+    getSessionListenedMs,
   };
 
   return (
