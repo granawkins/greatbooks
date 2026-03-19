@@ -4,22 +4,23 @@ import { useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback, typ
 import { useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import { type SegmentBoundary, useAudioPlayer } from "@/lib/AudioPlayerContext";
-import { getReadingCenterY, scrollToCenter } from "@/lib/readingCenter";
+import { scrollToCenter } from "@/lib/readingCenter";
 import { useTopBar } from "@/lib/TopBarContext";
 import { useBookShell } from "@/app/[bookId]/BookShell";
 import { groupIntoBlocks, paraTimeRange, type ChapterData } from "@/components/reader";
 import { useWordTimings } from "@/components/reader/useWordTimings";
+import { useScrollTracking } from "@/lib/useScrollTracking";
 import { AnnotationLayer } from "@/components/reader/AnnotationLayer";
 import { AnnotationProvider } from "@/components/reader/AnnotationContext";
-import { applyClassById, removeClassById, findFirstSpanInSegment } from "@/components/reader/wordAnnotator";
 import CourseChoiceModal from "@/components/CourseChoiceModal";
 import { FloatingControls } from "@/app/[bookId]/FloatingControls";
 import type { Annotation } from "@/components/reader/types";
+import { getReadingCenterY } from "@/lib/readingCenter";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import UpgradeModal, { type UpgradeModalVariant } from "@/components/UpgradeModal";
 
-// ── Helper ──────────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────
 
 function sourceName(url: string): string {
   try {
@@ -35,8 +36,6 @@ const metaLineStyle = {
   fontFamily: "var(--font-body)", fontSize: "1.125rem",
   color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.85,
 } as const;
-
-// ── Reading mode intro modal ──────────────────────────────────────────
 
 function BookmarkIcon({ size = 20, filled = true }: { size?: number; filled?: boolean }) {
   return (
@@ -92,13 +91,8 @@ function ReadingModeIntroModal({ onClose }: { onClose: () => void }) {
 // ── ChapterView ─────────────────────────────────────────────────────────
 
 export default function ChapterView({
-  chapterNum,
-  chapterData,
-  chapterType = "text",
-  initialAudioPositionMs,
-  sourceProgress,
-  initialAnnotations = [],
-  children,
+  chapterNum, chapterData, chapterType = "text",
+  initialAudioPositionMs, sourceProgress, initialAnnotations = [], children,
 }: {
   chapterNum: number;
   chapterData: ChapterData;
@@ -122,13 +116,13 @@ export default function ChapterView({
   const heroRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialScrollDone = useRef<number | null>(null);
-  const lastReadSaveRef = useRef<number>(0);
   const [scrollReady, setScrollReady] = useState(false);
 
   const segments = chapterData.segments;
   const layout = bookMeta.layout || "prose";
+  const blocks = useMemo(() => groupIntoBlocks(segments, layout), [segments, layout]);
 
-  // ── Restore font size from localStorage ──────────────────────────────
+  // ── Restore font size ──────────────────────────────────────────────────
   useEffect(() => {
     try {
       const stored = localStorage.getItem("greatbooks-font-size");
@@ -136,11 +130,9 @@ export default function ChapterView({
     } catch {}
   }, []);
 
-  // ── Audio gate check ─────────────────────────────────────────────────
+  // ── Audio gate ─────────────────────────────────────────────────────────
   useEffect(() => {
     audioGateCheckRef.current = () => {
-      // Don't gate while auth is still loading — allow session to load,
-      // gate will re-check once auth resolves
       if (authLoading) return null;
       if (!user || user.tier === "anonymous") return "login";
       if (user.audioLimitMs !== Infinity) {
@@ -153,18 +145,12 @@ export default function ChapterView({
     return () => { audioGateCheckRef.current = null; onAudioBlockedRef.current = null; };
   }, [user, authLoading, audioGateCheckRef, onAudioBlockedRef, getSessionListenedMs]);
 
-  // Annotations managed via AnnotationProvider (wraps children in render)
-
+  // ── Register with BookShell ────────────────────────────────────────────
   const isFirstChapter = chapterNum === chapters[0]?.id;
   const chapterIdx = chapters.findIndex((c) => c.id === chapterNum);
   const nextChapter = chapterIdx < chapters.length - 1 ? { num: chapters[chapterIdx + 1].id, title: chapters[chapterIdx + 1].title } : null;
 
-  // ── Register with BookShell ───────────────────────────────────────────
-  useEffect(() => {
-    setCurrentChapter(chapterNum);
-    cacheChapter(chapterNum, chapterData);
-  }, [chapterNum, chapterData, setCurrentChapter, cacheChapter]);
-
+  useEffect(() => { setCurrentChapter(chapterNum); cacheChapter(chapterNum, chapterData); }, [chapterNum, chapterData, setCurrentChapter, cacheChapter]);
   useEffect(() => {
     if (!isFirstChapter || bookMeta.type === "course") { setScrolled(true); return; }
     const observer = new IntersectionObserver(([entry]) => setScrolled(!entry.isIntersecting), { threshold: 0 });
@@ -172,10 +158,7 @@ export default function ChapterView({
     return () => observer.disconnect();
   }, [isFirstChapter, setScrolled, bookMeta.type]);
 
-  // ── Blocks (for scroll data + time ranges) ────────────────────────────
-  const blocks = useMemo(() => groupIntoBlocks(segments, layout), [segments, layout]);
-
-  // ── Collect block refs from data-block-idx attributes ─────────────────
+  // ── Block refs (from server-rendered data-block-idx) ───────────────────
   const blockRefsRef = useRef<(HTMLElement | null)[]>([]);
   useEffect(() => {
     const container = textContainerRef.current;
@@ -189,15 +172,11 @@ export default function ChapterView({
     blockRefsRef.current = refs;
   });
 
-  // ── Lazy word timings ─────────────────────────────────────────────────
+  // ── Word timings (lazy) ────────────────────────────────────────────────
   const { allTimings } = useWordTimings(bookId, chapterNum, segments, layout);
+  const paraRanges = useMemo(() => blocks.map((b) => (b.type === "paragraph" ? paraTimeRange(b) : null)), [blocks]);
 
-  const paraRanges = useMemo(
-    () => blocks.map((b) => (b.type === "paragraph" ? paraTimeRange(b) : null)),
-    [blocks]
-  );
-
-  // ── Scroll position ───────────────────────────────────────────────────
+  // ── Initial scroll position ────────────────────────────────────────────
   const [effectiveAudioMs, setEffectiveAudioMs] = useState(initialAudioPositionMs);
   useEffect(() => {
     if (session?.bookId === bookId && session?.chapterId === chapterNum && audioRef.current) {
@@ -235,18 +214,14 @@ export default function ChapterView({
     setScrollReady(true);
   }, [scrollTargetBlockIdx, chapterNum, scrollToBottom, viewMode]);
 
-  // ── Audio integration ─────────────────────────────────────────────────
-
+  // ── Audio session ──────────────────────────────────────────────────────
   const segmentBoundaries = useMemo((): SegmentBoundary[] => {
-    return segments
-      .filter((s) => s.audio_start_ms != null && s.audio_end_ms != null)
+    return segments.filter((s) => s.audio_start_ms != null && s.audio_end_ms != null)
       .map((s) => ({ start_ms: s.audio_start_ms!, end_ms: s.audio_end_ms! }))
       .sort((a, b) => a.start_ms - b.start_ms);
   }, [segments]);
 
-  const audioSrc = chapterData.audio_file
-    ? `/api/audio/${chapterData.audio_file.replace(/^data\//, "")}`
-    : null;
+  const audioSrc = chapterData.audio_file ? `/api/audio/${chapterData.audio_file.replace(/^data\//, "")}` : null;
 
   useEffect(() => {
     if (!chapterData.audio_file || !audioSrc) return;
@@ -260,7 +235,7 @@ export default function ChapterView({
 
   useEffect(() => { saveProgressNow(chapterNum, initialAudioPositionMs); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Feed word timings to AudioPlayer rAF loop
+  // Feed word timings + scroll data to AudioPlayer
   useEffect(() => {
     if (session?.bookId !== bookId || session?.chapterId !== chapterNum) return;
     wordTimingsRef.current = allTimings.length > 0 ? allTimings : null;
@@ -273,149 +248,25 @@ export default function ChapterView({
     return () => { scrollDataRef.current = null; };
   }, [session?.bookId, session?.chapterId, bookId, chapterNum, paraRanges, scrollDataRef]);
 
-  // ── Reading mode: scroll-based progress tracking ─────────────────────
-
-  const [bookmarkActive, setBookmarkActive] = useState(true);
-  const [showIntroModal, setShowIntroModal] = useState(false);
-  const isTextMode = viewMode === "text";
-  const hasScrolledRef = useRef(false);
-  const prevViewMode = useRef(viewMode);
-  const programmaticScrollRef = useRef(false);
-
-  useEffect(() => {
-    if (prevViewMode.current !== "text" && viewMode === "text") {
-      hasScrolledRef.current = false;
-      lastReadSaveRef.current = Date.now();
-      const audioMs = audioRef.current ? Math.floor(audioRef.current.currentTime * 1000) : 0;
-      if (audioMs > 0) {
-        const refs = blockRefsRef.current;
-        for (let i = 0; i < blocks.length; i++) {
-          const block = blocks[i];
-          if (block.type !== "paragraph") continue;
-          for (const seg of block.segments) {
-            if (seg.audio_start_ms != null && seg.audio_end_ms != null &&
-                audioMs >= seg.audio_start_ms && audioMs < seg.audio_end_ms) {
-              const el = refs[i];
-              if (el) {
-                programmaticScrollRef.current = true;
-                scrollToCenter(el, "instant", true);
-                requestAnimationFrame(() => { programmaticScrollRef.current = false; });
-              }
-              break;
-            }
-          }
-        }
-      }
-    }
-    prevViewMode.current = viewMode;
-  }, [viewMode, audioRef, chapterNum, blocks]);
-
-  const introShownRef = useRef(false);
-  useEffect(() => {
-    if (!isTextMode || introShownRef.current) return;
-    try {
-      if (!localStorage.getItem("greatbooks-reading-intro-seen")) {
-        setShowIntroModal(true);
-        localStorage.setItem("greatbooks-reading-intro-seen", "1");
-        introShownRef.current = true;
-      }
-    } catch {}
-  }, [isTextMode]);
-
-  const applyBookmark = useCallback((ms: number, seg?: { sequence: number; audio_start_ms: number | null }) => {
-    const now = Date.now();
-    const elapsed = lastReadSaveRef.current > 0 ? now - lastReadSaveRef.current : 0;
-    const readDurationMs = Math.min(elapsed, 30000);
-    lastReadSaveRef.current = now;
-    saveProgressNow(chapterNum, ms, "read", readDurationMs);
-    if (audioRef.current) audioRef.current.currentTime = ms / 1000;
-    // Flash the first word of the bookmarked segment
-    if (seg) {
-      const span = findFirstSpanInSegment(chapterNum, seg.sequence);
-      console.log("[bookmark]", { seq: seg.sequence, spanId: span?.id, spanText: span?.textContent?.slice(0, 20) });
-      if (span) {
-        applyClassById(span.id, "word-bookmark");
-        setTimeout(() => {
-          applyClassById(span.id, "fading");
-          setTimeout(() => {
-            removeClassById(span.id, "word-bookmark");
-            removeClassById(span.id, "fading");
-          }, 600);
-        }, 300);
-      }
-    }
-  }, [chapterNum, saveProgressNow, audioRef]);
-
-  const updatePositionFromScroll = useCallback(() => {
-    const atTop = window.scrollY <= 5;
-    const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 5;
-
-    if (atTop) {
-      const firstSeg = segments.find(s => s.audio_start_ms != null);
-      if (firstSeg) applyBookmark(firstSeg.audio_start_ms!, firstSeg);
-      return;
-    }
-    if (atBottom) {
-      const lastSeg = [...segments].reverse().find(s => s.audio_end_ms != null);
-      if (lastSeg?.audio_end_ms != null) applyBookmark(lastSeg.audio_end_ms, lastSeg);
-      return;
-    }
-
-    const centerY = getReadingCenterY(true);
-    const refs = blockRefsRef.current;
-    let bestBlock = -1;
-    let bestDist = Infinity;
-    for (let i = 0; i < refs.length; i++) {
-      const el = refs[i];
-      if (!el) continue;
-      const rect = el.getBoundingClientRect();
-      if (rect.top <= centerY && rect.bottom >= centerY) { bestBlock = i; break; }
-      const dist = Math.min(Math.abs(rect.top - centerY), Math.abs(rect.bottom - centerY));
-      if (dist < bestDist) { bestDist = dist; bestBlock = i; }
-    }
-
-    if (bestBlock < 0) return;
-    const block = blocks[bestBlock];
-    if (!block || block.type !== "paragraph") return;
-
-    const el = refs[bestBlock];
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (centerY - rect.top) / (rect.bottom - rect.top)));
-    const segIdx = Math.min(block.segments.length - 1, Math.floor(ratio * block.segments.length));
-    const seg = block.segments[segIdx];
-    if (seg?.audio_start_ms != null) applyBookmark(seg.audio_start_ms, seg);
-  }, [segments, blocks, applyBookmark]);
+  // ── Scroll tracking (bookmark, reading mode) ───────────────────────────
+  const {
+    bookmarkActive, setBookmarkActive, showIntroModal, setShowIntroModal,
+    updatePositionFromScroll, isTextMode,
+  } = useScrollTracking({
+    chapterNum, segments, blocks, blockRefsRef, viewMode, audioRef, saveProgressNow,
+  });
 
   const getCenteredParagraph = useCallback((): HTMLElement | null => {
     const centerY = getReadingCenterY(true);
-    const refs = blockRefsRef.current;
-    let bestEl: HTMLElement | null = null;
-    let bestDist = Infinity;
-    for (const el of refs) {
+    for (const el of blockRefsRef.current) {
       if (!el) continue;
       const rect = el.getBoundingClientRect();
       if (rect.top <= centerY && rect.bottom >= centerY) return el;
-      const dist = Math.min(Math.abs(rect.top - centerY), Math.abs(rect.bottom - centerY));
-      if (dist < bestDist) { bestDist = dist; bestEl = el; }
     }
-    return bestEl;
+    return null;
   }, []);
 
-  useEffect(() => {
-    if (!isTextMode || !bookmarkActive) return;
-    let timer: ReturnType<typeof setTimeout>;
-    const handleScroll = () => {
-      if (programmaticScrollRef.current) return;
-      hasScrolledRef.current = true;
-      clearTimeout(timer);
-      timer = setTimeout(updatePositionFromScroll, 400);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => { clearTimeout(timer); window.removeEventListener("scroll", handleScroll); };
-  }, [isTextMode, bookmarkActive, updatePositionFromScroll]);
-
-  // ── Source progress modal ─────────────────────────────────────────────
+  // ── Source progress modal ──────────────────────────────────────────────
   const [showSourceModal, setShowSourceModal] = useState(!!sourceProgress);
   const handleCarryOver = useCallback(() => {
     if (!sourceProgress) return;
@@ -425,12 +276,13 @@ export default function ChapterView({
     saveProgressNow(chapterNum, sourceProgress.audioPositionMs);
   }, [sourceProgress, audioRef, saveProgressNow, chapterNum]);
 
-  // ── Render ────────────────────────────────────────────────────────────
   const [marginEl, setMarginEl] = useState<HTMLDivElement | null>(null);
   const formatTime = (ms: number) => {
-    const totalSec = Math.floor(ms / 1000);
-    return `${Math.floor(totalSec / 60)}:${(totalSec % 60).toString().padStart(2, "0")}`;
+    const s = Math.floor(ms / 1000);
+    return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
   };
+
+  // ── Render ─────────────────────────────────────────────────────────────
 
   return (
     <AnnotationProvider initial={initialAnnotations}>
@@ -488,9 +340,7 @@ export default function ChapterView({
 
         <div ref={textContainerRef}>
           {children ?? (
-            <p className="text-sm text-center py-16" style={{ color: "var(--color-text-secondary)" }}>
-              No text available for this chapter.
-            </p>
+            <p className="text-sm text-center py-16" style={{ color: "var(--color-text-secondary)" }}>No text available for this chapter.</p>
           )}
         </div>
 
@@ -518,11 +368,8 @@ export default function ChapterView({
       </article>
 
       <AnnotationLayer
-        blocks={blocks}
-        bookId={bookId}
-        chapterNum={chapterNum}
-        marginEl={marginEl}
-        textContainerRef={textContainerRef}
+        blocks={blocks} bookId={bookId} chapterNum={chapterNum}
+        marginEl={marginEl} textContainerRef={textContainerRef}
       />
 
       {upgradeModal && <UpgradeModal variant={upgradeModal} onClose={() => setUpgradeModal(null)} />}
