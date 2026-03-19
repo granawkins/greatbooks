@@ -7,7 +7,7 @@ import type { BookRow } from "@/lib/db";
 import BookCover from "@/components/BookCover";
 import ProgressLine from "@/components/ProgressLine";
 import { getCoverSmUrl } from "@/lib/assets";
-import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { useAudioSession } from "@/lib/AudioPlayerContext";
 import { useBookDetailsModal } from "@/lib/BookDetailsModalContext";
 
 type ProgressMap = Record<string, { chapter_number: number; audio_position_ms: number; updated_at: string }>;
@@ -42,7 +42,7 @@ export default function HomeClient(props: HomeProps) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, courseForBook, books, isLoggedIn }: HomeProps) {
-  const { session } = useAudioPlayer();
+  const { session } = useAudioSession();
   const { openBookDetails, setMaps } = useBookDetailsModal();
 
   useEffect(() => {
@@ -478,7 +478,7 @@ function VariantA({ courses, progressMap, statsMap, courseBooks, recentBookIds, 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 function VariantB({ courses, progressMap, statsMap, courseBooks, recentBookIds, courseForBook, books, isLoggedIn }: HomeProps) {
-  const { session } = useAudioPlayer();
+  const { session } = useAudioSession();
   const { openBookDetails, setMaps } = useBookDetailsModal();
 
   useEffect(() => {

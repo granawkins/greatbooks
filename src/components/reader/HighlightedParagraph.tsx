@@ -6,7 +6,7 @@ import type { ParagraphBlock, Annotation, WordSpan } from "./types";
 import { buildWordSpans } from "./blockGrouping";
 import { WordPopup } from "./WordPopup";
 import { setCommentHover } from "./commentHover";
-import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { useAudioSession } from "@/lib/AudioPlayerContext";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -255,7 +255,7 @@ export function HighlightedParagraph({
 }) {
   const spans = useMemo(() => buildWordSpans(para), [para]);
   const text = para.text;
-  const { audioRef, session, onChapterSelectRef } = useAudioPlayer();
+  const { audioRef, session, onChapterSelectRef } = useAudioSession();
 
   // ── Selection state ───────────────────────────────────────────────────
   const [anchor, setAnchor] = useState<SelectionAnchor | null>(null);

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { useAudioSession, useAudioView } from "@/lib/AudioPlayerContext";
 import AudioPlayer from "./AudioPlayer";
 import { CloseIcon } from "./icons";
 
@@ -42,7 +42,8 @@ function PlusIcon() {
 }
 
 export function ViewModeToggle() {
-  const { session, viewMode, setViewMode, audioRef } = useAudioPlayer();
+  const { session, audioRef } = useAudioSession();
+  const { viewMode, setViewMode } = useAudioView();
   if (!session) return null;
 
   const handleSetMode = (mode: typeof viewMode) => {
@@ -96,7 +97,7 @@ const DEFAULT_FONT_SIZE = 18;
  * to keep anchored at the reading center, or null.
  */
 export function FontSizeControls({ onResize }: { onResize?: () => HTMLElement | null }) {
-  const { session } = useAudioPlayer();
+  const { session } = useAudioSession();
   if (!session) return null;
 
   const getCurrent = (): number => {
@@ -185,7 +186,8 @@ export function FontSizeControls({ onResize }: { onResize?: () => HTMLElement | 
 }
 
 export default function PersistentPlayerBar() {
-  const { session, dismiss, viewMode } = useAudioPlayer();
+  const { session, dismiss } = useAudioSession();
+  const { viewMode } = useAudioView();
   const pathname = usePathname();
   if (!session) return null;
 

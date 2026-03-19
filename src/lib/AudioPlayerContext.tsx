@@ -7,8 +7,8 @@ import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   type ReactNode,
-  type MutableRefObject,
 } from "react";
 
 export type SegmentBoundary = { start_ms: number; end_ms: number };
@@ -35,52 +35,75 @@ export type ScrollData = {
 
 export type ViewMode = "audio" | "text";
 
-type AudioPlayerContextValue = {
+// ── AudioSessionContext ──────────────────────────────────────────────────────
+
+type AudioSessionContextValue = {
   session: AudioSession | null;
-  audioRef: MutableRefObject<HTMLAudioElement | null>;
+  audioRef: React.RefObject<HTMLAudioElement | null>;
 
   loadSession: (session: AudioSession, initialPositionMs?: number, autoPlay?: boolean) => void;
   dismiss: () => void;
 
   // Data refs — the book page populates these, the player reads them imperatively
-  wordTimingsRef: MutableRefObject<WordTiming[] | null>;
-  scrollDataRef: MutableRefObject<ScrollData | null>;
+  wordTimingsRef: React.RefObject<WordTiming[] | null>;
+  scrollDataRef: React.RefObject<ScrollData | null>;
 
   // What book/chapter the user is currently viewing (set synchronously, no async deps)
-  viewingChapterRef: MutableRefObject<{ bookId: string; chapterId: number } | null>;
+  viewingChapterRef: React.RefObject<{ bookId: string; chapterId: number } | null>;
 
   // Navigate to a chapter within the current book page (set by BookPage)
-  navigateToChapterRef: MutableRefObject<((chapterId: number) => void) | null>;
+  navigateToChapterRef: React.RefObject<((chapterId: number) => void) | null>;
 
   // Sparse callbacks — only fired on discrete events, never at 60fps
-  onPauseRef: MutableRefObject<((ms: number) => void) | null>;
-  onChatClickRef: MutableRefObject<(() => void) | null>;
-  onChapterSelectRef: MutableRefObject<((chapterId: number, startMs?: number, autoPlay?: boolean) => void) | null>;
+  onPauseRef: React.RefObject<((ms: number) => void) | null>;
+  onChatClickRef: React.RefObject<(() => void) | null>;
+  onChapterSelectRef: React.RefObject<((chapterId: number, startMs?: number, autoPlay?: boolean) => void) | null>;
 
   // Playback speed — stored as ref so it can be applied on audio init
-  playbackSpeedRef: MutableRefObject<number>;
+  playbackSpeedRef: React.RefObject<number>;
   setPlaybackSpeed: (speed: number) => void;
-
-  // View mode — audio (full player) or text (scroll-based progress)
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
 
   // Audio gating — set by consumer to handle blocked audio (e.g. show upgrade modal)
   // Returns "login" | "audio_limit" if blocked, or null if allowed
-  audioGateCheckRef: MutableRefObject<(() => "login" | "audio_limit" | null) | null>;
-  onAudioBlockedRef: MutableRefObject<((reason: "login" | "audio_limit") => void) | null>;
+  audioGateCheckRef: React.RefObject<(() => "login" | "audio_limit" | null) | null>;
+  onAudioBlockedRef: React.RefObject<((reason: "login" | "audio_limit") => void) | null>;
 
   // Client-side session listening time (ms) — for accurate mid-session gate checks
   getSessionListenedMs: () => number;
 };
 
-const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
+const AudioSessionContext = createContext<AudioSessionContextValue | null>(null);
 
-export function useAudioPlayer() {
-  const ctx = useContext(AudioPlayerContext);
-  if (!ctx) throw new Error("useAudioPlayer must be used within AudioPlayerProvider");
+export function useAudioSession() {
+  const ctx = useContext(AudioSessionContext);
+  if (!ctx) throw new Error("useAudioSession must be used within AudioPlayerProvider");
   return ctx;
 }
+
+// ── AudioViewContext ─────────────────────────────────────────────────────────
+
+type AudioViewContextValue = {
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
+};
+
+const AudioViewContext = createContext<AudioViewContextValue | null>(null);
+
+export function useAudioView() {
+  const ctx = useContext(AudioViewContext);
+  if (!ctx) throw new Error("useAudioView must be used within AudioPlayerProvider");
+  return ctx;
+}
+
+// ── Combined hook (backward compatibility) ───────────────────────────────────
+
+export function useAudioPlayer() {
+  const sessionCtx = useAudioSession();
+  const viewCtx = useAudioView();
+  return { ...sessionCtx, ...viewCtx };
+}
+
+// ── Provider ─────────────────────────────────────────────────────────────────
 
 export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -256,7 +279,8 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     setSession(null);
   }, []);
 
-  const value: AudioPlayerContextValue = {
+  // Memoize context values to prevent unnecessary re-renders
+  const sessionValue = useMemo<AudioSessionContextValue>(() => ({
     session,
     audioRef,
     loadSession,
@@ -270,17 +294,22 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     onChapterSelectRef,
     playbackSpeedRef,
     setPlaybackSpeed,
-    viewMode,
-    setViewMode,
     audioGateCheckRef,
     onAudioBlockedRef,
     getSessionListenedMs,
-  };
+  }), [session, loadSession, dismiss, setPlaybackSpeed, getSessionListenedMs]);
+
+  const viewValue = useMemo<AudioViewContextValue>(() => ({
+    viewMode,
+    setViewMode,
+  }), [viewMode, setViewMode]);
 
   return (
-    <AudioPlayerContext.Provider value={value}>
-      <audio ref={audioRef} preload="auto" style={{ display: "none" }} />
-      {children}
-    </AudioPlayerContext.Provider>
+    <AudioSessionContext.Provider value={sessionValue}>
+      <AudioViewContext.Provider value={viewValue}>
+        <audio ref={audioRef} preload="auto" style={{ display: "none" }} />
+        {children}
+      </AudioViewContext.Provider>
+    </AudioSessionContext.Provider>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useAudioPlayer, type WordTiming } from "@/lib/AudioPlayerContext";
+import { useAudioSession, type WordTiming } from "@/lib/AudioPlayerContext";
 import { scrollToCenter } from "@/lib/readingCenter";
 import { Scrubber, formatTime, formatTimeRemaining } from "./Scrubber";
 import { CtrlBtn } from "./CtrlBtn";
@@ -52,7 +52,7 @@ export default function AudioPlayer() {
     onChatClickRef,
     playbackSpeedRef,
     setPlaybackSpeed,
-  } = useAudioPlayer();
+  } = useAudioSession();
 
   const router = useRouter();
   const pathname = usePathname();

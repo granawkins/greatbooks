@@ -2,11 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { useAudioPlayer } from "@/lib/AudioPlayerContext";
+import { useAudioSession } from "@/lib/AudioPlayerContext";
 
 export default function PlaybackSpeedSync() {
   const { user, loading } = useAuth();
-  const { playbackSpeedRef } = useAudioPlayer();
+  const { playbackSpeedRef } = useAudioSession();
   const initialized = useRef(false);
 
   useEffect(() => {
