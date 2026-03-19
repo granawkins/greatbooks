@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { playVoiceReady, playVoiceStopped } from "@/lib/soundEffects";
 
 export type VoiceState = "idle" | "connecting" | "active";
 
@@ -176,10 +177,12 @@ export function useChatSocket({ bookId }: UseChatSocketOptions) {
 
           case "voice_ready":
             setVoiceState("active");
+            playVoiceReady();
             break;
 
           case "voice_stopped":
             setVoiceState("idle");
+            playVoiceStopped();
             break;
 
           case "audio":
