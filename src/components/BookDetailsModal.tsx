@@ -172,9 +172,7 @@ export default function BookDetailsModal({
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "center",
-          backgroundColor: "transparent",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
+          backgroundColor: "rgba(0,0,0,0.3)",
           padding: "1rem",
           overflowY: "auto",
         }}
@@ -189,17 +187,18 @@ export default function BookDetailsModal({
             marginTop: "3rem",
             marginBottom: "3rem",
             overflow: "hidden",
+            position: "relative",
             animation: "slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         >
-          {/* Close button — always visible */}
+          {/* Close button — inside card */}
           <button
             onClick={onClose}
             aria-label="Close"
             style={{
               position: "absolute",
-              top: "0.75rem",
-              right: "0.75rem",
+              top: "0.5rem",
+              right: "0.5rem",
               width: 32,
               height: 32,
               display: "flex",

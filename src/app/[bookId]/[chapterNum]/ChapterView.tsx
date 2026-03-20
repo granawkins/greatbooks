@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback, typ
 import { useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import { type SegmentBoundary, useAudioPlayer } from "@/lib/AudioPlayerContext";
-import { scrollToCenter } from "@/lib/readingCenter";
+import { scrollToCenter, getReadingCenterY } from "@/lib/readingCenter";
 import { useTopBar } from "@/lib/TopBarContext";
 import { useBookShell } from "@/app/[bookId]/BookShell";
 import { groupIntoBlocks, paraTimeRange, type ChapterData } from "@/components/reader";
@@ -15,27 +15,11 @@ import { AnnotationProvider } from "@/components/reader/AnnotationContext";
 import CourseChoiceModal from "@/components/CourseChoiceModal";
 import { FloatingControls } from "@/app/[bookId]/FloatingControls";
 import type { Annotation } from "@/components/reader/types";
-import { getReadingCenterY } from "@/lib/readingCenter";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import UpgradeModal, { type UpgradeModalVariant } from "@/components/UpgradeModal";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
-
-function sourceName(url: string): string {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, "");
-    if (host.includes("classics.mit.edu")) return "Internet Classics Archive";
-    if (host.includes("gutenberg.org")) return "Project Gutenberg";
-    if (host.includes("perseus.tufts.edu")) return "Perseus Digital Library";
-    return host;
-  } catch { return "Source"; }
-}
-
-const metaLineStyle = {
-  fontFamily: "var(--font-body)", fontSize: "1.125rem",
-  color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.85,
-} as const;
 
 function BookmarkIcon({ size = 20, filled = true }: { size?: number; filled?: boolean }) {
   return (
@@ -232,16 +216,6 @@ export default function ChapterView({
     chapterNum, segments, blocks, blockRefsRef, viewMode, audioRef, saveProgressNow,
   });
 
-  const getCenteredParagraph = useCallback((): HTMLElement | null => {
-    const centerY = getReadingCenterY(true);
-    for (const el of blockRefsRef.current) {
-      if (!el) continue;
-      const rect = el.getBoundingClientRect();
-      if (rect.top <= centerY && rect.bottom >= centerY) return el;
-    }
-    return null;
-  }, []);
-
   // ── Source progress modal ──────────────────────────────────────────────
   const [showSourceModal, setShowSourceModal] = useState(!!sourceProgress);
   const handleCarryOver = useCallback(() => {
@@ -266,7 +240,7 @@ export default function ChapterView({
       style={{ paddingBottom: isTextMode ? "80px" : "200px" }}>
 
       {showIntroModal && <ReadingModeIntroModal onClose={() => setShowIntroModal(false)} />}
-      <FloatingControls onResize={getCenteredParagraph} />
+      <FloatingControls />
 
       {showSourceModal && sourceProgress && (
         <CourseChoiceModal
@@ -291,20 +265,18 @@ export default function ChapterView({
       <article className="chapter-text">
         {isFirstChapter && bookMeta.type !== "course" && (
           <div ref={heroRef} style={{ minHeight: 1 }}>
-            <div style={{ textAlign: "center", padding: "2rem 0 1.5rem" }}>
-              {bookMeta.author && <p style={metaLineStyle}>by {bookMeta.author}</p>}
-              {bookMeta.original_date && <p style={metaLineStyle}>{bookMeta.original_date}</p>}
-              {bookMeta.translator && (
-                <p style={metaLineStyle}>Translated by {bookMeta.translator}{bookMeta.translation_date ? ` in ${bookMeta.translation_date}` : ""}</p>
-              )}
-              {bookMeta.source_url && (
-                <p style={metaLineStyle}>
-                  <a href={bookMeta.source_url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-text-secondary)" }} className="hover:underline">
-                    Source: {sourceName(bookMeta.source_url)}
-                  </a>
-                </p>
-              )}
-            </div>
+            <h1 style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "2rem",
+              fontWeight: 400,
+              color: "var(--color-text)",
+              textAlign: "center",
+              margin: 0,
+              padding: "2rem 0 1.5rem",
+              lineHeight: 1.2,
+            }}>
+              {bookMeta.title}
+            </h1>
           </div>
         )}
 

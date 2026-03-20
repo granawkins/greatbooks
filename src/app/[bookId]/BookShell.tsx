@@ -51,6 +51,7 @@ export default function BookShell({
   const {
     session,
     audioRef,
+    dismiss,
     onPauseRef,
     onChatClickRef,
     onChapterSelectRef,
@@ -63,6 +64,14 @@ export default function BookShell({
     cache.current[num] = data;
   }, []);
   const getCachedChapter = useCallback((num: number) => cache.current[num], []);
+
+  // ── Dismiss audio when leaving this book ─────────────────────────────
+  const dismissRef = useRef(dismiss);
+  useEffect(() => { dismissRef.current = dismiss; }, [dismiss]);
+
+  useEffect(() => {
+    return () => { dismissRef.current(); };
+  }, [bookId]);
 
   // ── TopBar ────────────────────────────────────────────────────────────
 
