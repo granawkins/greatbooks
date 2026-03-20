@@ -1,0 +1,80 @@
+module.exports=[85148,(e,t,r)=>{t.exports=e.x("better-sqlite3-90e2652d1716b047",()=>require("better-sqlite3-90e2652d1716b047"))},18622,(e,t,r)=>{t.exports=e.x("next/dist/compiled/next-server/app-page-turbo.runtime.prod.js",()=>require("next/dist/compiled/next-server/app-page-turbo.runtime.prod.js"))},56704,(e,t,r)=>{t.exports=e.x("next/dist/server/app-render/work-async-storage.external.js",()=>require("next/dist/server/app-render/work-async-storage.external.js"))},32319,(e,t,r)=>{t.exports=e.x("next/dist/server/app-render/work-unit-async-storage.external.js",()=>require("next/dist/server/app-render/work-unit-async-storage.external.js"))},24725,(e,t,r)=>{t.exports=e.x("next/dist/server/app-render/after-task-async-storage.external.js",()=>require("next/dist/server/app-render/after-task-async-storage.external.js"))},14747,(e,t,r)=>{t.exports=e.x("path",()=>require("path"))},24361,(e,t,r)=>{t.exports=e.x("util",()=>require("util"))},874,(e,t,r)=>{t.exports=e.x("buffer",()=>require("buffer"))},88947,(e,t,r)=>{t.exports=e.x("stream",()=>require("stream"))},54799,(e,t,r)=>{t.exports=e.x("crypto",()=>require("crypto"))},70406,(e,t,r)=>{t.exports=e.x("next/dist/compiled/@opentelemetry/api",()=>require("next/dist/compiled/@opentelemetry/api"))},93695,(e,t,r)=>{t.exports=e.x("next/dist/shared/lib/no-fallback-error.external.js",()=>require("next/dist/shared/lib/no-fallback-error.external.js"))},43793,e=>{"use strict";var t=e.i(85148);let r=e.i(14747).default.join(process.cwd(),"greatbooks.db"),a=new t.default(r,{readonly:!0});a.pragma("foreign_keys = ON");let s=new t.default(r);s.pragma("foreign_keys = ON"),s.pragma("busy_timeout = 5000"),s.exec(`
+  CREATE TABLE IF NOT EXISTS annotations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    book_id TEXT NOT NULL,
+    chapter_number INTEGER NOT NULL,
+    start_segment_seq INTEGER NOT NULL,
+    start_char INTEGER NOT NULL,
+    end_segment_seq INTEGER NOT NULL,
+    end_char INTEGER NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('highlight', 'comment')),
+    color TEXT DEFAULT 'yellow',
+    comment_text TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_annotations_user_book ON annotations(user_id, book_id, chapter_number);
+`);try{s.exec("ALTER TABLE books ADD COLUMN type TEXT DEFAULT 'book'")}catch{}try{s.exec("ALTER TABLE users ADD COLUMN playback_speed REAL DEFAULT 1.0")}catch{}s.exec(`
+  CREATE TABLE IF NOT EXISTS user_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    book_id TEXT NOT NULL REFERENCES books(id),
+    chapter_number INTEGER NOT NULL,
+    mode TEXT NOT NULL CHECK (mode IN ('listen', 'read')),
+    started_at TEXT NOT NULL DEFAULT (datetime('now')),
+    ended_at TEXT NOT NULL DEFAULT (datetime('now')),
+    duration_ms INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id, started_at);
+`);try{s.exec("ALTER TABLE chapters ADD COLUMN source_chapter_id INTEGER")}catch{}try{s.exec("ALTER TABLE chapters ADD COLUMN chapter_type TEXT DEFAULT 'text'")}catch{}e.s(["db",0,{getBooks:e=>e?a.prepare("SELECT * FROM books WHERE type = ?").all(e):a.prepare("SELECT * FROM books").all(),getBook:e=>a.prepare("SELECT * FROM books WHERE id = ?").get(e),getChapters:e=>a.prepare("SELECT * FROM chapters WHERE book_id = ? ORDER BY number").all(e),getChapter:(e,t)=>a.prepare("SELECT * FROM chapters WHERE book_id = ? AND number = ?").get(e,t),getSegments:e=>{let t=a.prepare("SELECT source_chapter_id FROM chapters WHERE id = ?").get(e),r=t?.source_chapter_id??e;return a.prepare("SELECT * FROM segments WHERE chapter_id = ? ORDER BY sequence").all(r)},getSourceBookInfo:(e,t)=>{let r=a.prepare("SELECT source_chapter_id FROM chapters WHERE book_id = ? AND number = ?").get(e,t);if(!r?.source_chapter_id)return null;let s=a.prepare("SELECT book_id, number FROM chapters WHERE id = ?").get(r.source_chapter_id);return s?{bookId:s.book_id,chapterNumber:s.number}:null},getResolvedChapter:e=>{let t=a.prepare("SELECT * FROM chapters WHERE id = ?").get(e);if(t){if(t.source_chapter_id){let e=a.prepare("SELECT * FROM chapters WHERE id = ?").get(t.source_chapter_id);if(e)return{...t,audio_file:e.audio_file,audio_duration_ms:e.audio_duration_ms}}return t}},upsertUser:e=>{s.prepare("INSERT OR IGNORE INTO users (id) VALUES (?)").run(e)},getUser:e=>a.prepare("SELECT * FROM users WHERE id = ?").get(e),getUserByEmail:e=>a.prepare("SELECT * FROM users WHERE email = ?").get(e),updateUserEmail:(e,t)=>{s.prepare("UPDATE users SET email = ? WHERE id = ?").run(t,e)},updatePlaybackSpeed:(e,t)=>{s.prepare("UPDATE users SET playback_speed = ? WHERE id = ?").run(t,e)},getProgress:e=>a.prepare("SELECT * FROM user_progress WHERE user_id = ? ORDER BY updated_at DESC").all(e),getProgressWithBooks:e=>a.prepare(`SELECT p.*, b.title, b.author, b.type
+         FROM user_progress p
+         JOIN books b ON p.book_id = b.id
+         WHERE p.user_id = ?
+         ORDER BY p.updated_at DESC`).all(e),upsertProgress:(e,t,r,a)=>{s.prepare(`INSERT INTO user_progress (user_id, book_id, chapter_number, audio_position_ms, updated_at)
+         VALUES (?, ?, ?, ?, datetime('now'))
+         ON CONFLICT (user_id, book_id) DO UPDATE SET
+           chapter_number = excluded.chapter_number,
+           audio_position_ms = excluded.audio_position_ms,
+           updated_at = excluded.updated_at`).run(e,t,r,a)},getMessages:(e,t)=>a.prepare("SELECT * FROM messages WHERE user_id = ? AND book_id = ? ORDER BY id").all(e,t),insertMessage:(e,t,r,a,o="completed",i=null)=>s.prepare("INSERT INTO messages (user_id, book_id, role, text, status, model) VALUES (?, ?, ?, ?, ?, ?) RETURNING *").get(e,t,r,a,o,i),getBookStats:()=>a.prepare(`SELECT c.book_id,
+                COUNT(*) as chapter_count,
+                SUM(COALESCE(c.audio_duration_ms, src.audio_duration_ms)) as total_duration_ms,
+                COALESCE(SUM(
+                  (SELECT SUM(LENGTH(s.text)) FROM segments s
+                   WHERE s.chapter_id = COALESCE(c.source_chapter_id, c.id)
+                   AND s.segment_type = 'text')
+                ), 0) as total_chars,
+                SUM(CASE WHEN c.chapter_type = 'discussion' THEN 1 ELSE 0 END) as discussion_count
+         FROM chapters c
+         LEFT JOIN chapters src ON c.source_chapter_id = src.id
+         GROUP BY c.book_id`).all(),updateMessage:(e,t,r)=>{s.prepare("UPDATE messages SET text = ?, status = ? WHERE id = ?").run(t,r,e)},getAnnotations:(e,t,r)=>s.prepare("SELECT * FROM annotations WHERE user_id = ? AND book_id = ? AND chapter_number = ? ORDER BY id").all(e,t,r),insertAnnotation:(e,t,r,a,o,i,n,d,u="yellow",p=null)=>s.prepare(`INSERT INTO annotations
+          (user_id, book_id, chapter_number, start_segment_seq, start_char, end_segment_seq, end_char, type, color, comment_text)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`).get(e,t,r,a,o,i,n,d,u,p),updateAnnotationComment:(e,t,r)=>s.prepare("UPDATE annotations SET comment_text = ? WHERE id = ? AND user_id = ?").run(r,e,t).changes>0,deleteAnnotation:(e,t)=>s.prepare("DELETE FROM annotations WHERE id = ? AND user_id = ?").run(e,t).changes>0,extendOrCreateSession:(e,t,r,a,o)=>{if(o<=0)return;let i=s.prepare(`SELECT id, ended_at FROM user_sessions
+         WHERE user_id = ? AND book_id = ? AND chapter_number = ? AND mode = ?
+         ORDER BY ended_at DESC LIMIT 1`).get(e,t,r,a);i&&(Date.now()-new Date(i.ended_at+"Z").getTime())/1e3<30?s.prepare(`UPDATE user_sessions
+           SET duration_ms = duration_ms + ?, ended_at = datetime('now')
+           WHERE id = ?`).run(o,i.id):s.prepare(`INSERT INTO user_sessions (user_id, book_id, chapter_number, mode, duration_ms)
+           VALUES (?, ?, ?, ?, ?)`).run(e,t,r,a,o)},getUserUsageSummary:(e,t)=>{let r=t?[e,`${t}-01`,`${t}-01`]:[e],a=s.prepare(`SELECT mode, COALESCE(SUM(duration_ms), 0) as total_ms
+         FROM user_sessions ${t?"WHERE user_id = ? AND started_at >= ? AND started_at < date(?, '+1 month')":"WHERE user_id = ?"} GROUP BY mode`).all(...r),o={listen_ms:0,read_ms:0};for(let e of a)"listen"===e.mode?o.listen_ms=e.total_ms:"read"===e.mode&&(o.read_ms=e.total_ms);return o},getCourseBookIds:e=>a.prepare(`
+        SELECT sc.book_id, MIN(cc.number) as first_appearance
+        FROM chapters cc
+        JOIN chapters sc ON cc.source_chapter_id = sc.id
+        WHERE cc.book_id = ?
+        GROUP BY sc.book_id
+        ORDER BY first_appearance
+      `).all(e).map(e=>e.book_id),getCoursesForBook:e=>a.prepare(`
+        SELECT DISTINCT b.id as course_id, b.title as course_title
+        FROM books b
+        JOIN chapters cc ON cc.book_id = b.id
+        JOIN chapters sc ON cc.source_chapter_id = sc.id
+        WHERE b.type = 'course' AND sc.book_id = ?
+      `).all(e),getEnrolledCourseForBook:(e,t)=>{let r=a.prepare(`
+        SELECT b.id as course_id, b.title as course_title, up.chapter_number
+        FROM books b
+        JOIN chapters cc ON cc.book_id = b.id
+        JOIN chapters sc ON cc.source_chapter_id = sc.id
+        JOIN user_progress up ON up.book_id = b.id AND up.user_id = ?
+        WHERE b.type = 'course' AND sc.book_id = ?
+        LIMIT 1
+      `).get(e,t);return r?{courseId:r.course_id,courseTitle:r.course_title,currentCourseChapter:r.chapter_number}:null}}])},30450,e=>{"use strict";var t=e.i(47909),r=e.i(74017),a=e.i(96250),s=e.i(59756),o=e.i(61916),i=e.i(74677),n=e.i(69741),d=e.i(16795),u=e.i(87718),p=e.i(95169),E=e.i(47587),c=e.i(66012),l=e.i(70101),_=e.i(26937),R=e.i(10372),T=e.i(93695);e.i(52474);var h=e.i(220),N=e.i(89171),m=e.i(79832),g=e.i(43793),O=e.i(54799);async function b(e){let{searchParams:t}=new URL(e.url),r=t.get("returnTo")||"/",a=await (0,m.getAuthUserId)();a||(a=O.default.randomUUID(),g.db.upsertUser(a));let s=process.env.GOOGLE_CLIENT_ID;if(!s)return N.NextResponse.json({error:"Google OAuth not configured"},{status:500});let o=(0,m.getBaseUrl)(e),i=new URLSearchParams({client_id:s,redirect_uri:`${o}/api/auth/google-callback`,response_type:"code",scope:"email",state:Buffer.from(JSON.stringify({userId:a,returnTo:r})).toString("base64url"),access_type:"online",prompt:"select_account"});return N.NextResponse.redirect(`https://accounts.google.com/o/oauth2/auth?${i.toString()}`)}e.s(["GET",()=>b],11615);var C=e.i(11615);let L=new t.AppRouteRouteModule({definition:{kind:r.RouteKind.APP_ROUTE,page:"/api/auth/login/route",pathname:"/api/auth/login",filename:"route",bundlePath:""},distDir:".next",relativeProjectDir:"",resolvedPagePath:"[project]/src/app/api/auth/login/route.ts",nextConfigOutput:"",userland:C}),{workAsyncStorage:x,workUnitAsyncStorage:A,serverHooks:S}=L;function U(){return(0,a.patchFetch)({workAsyncStorage:x,workUnitAsyncStorage:A})}async function I(e,t,a){L.isDev&&(0,s.addRequestMeta)(e,"devRequestTimingInternalsEnd",process.hrtime.bigint());let N="/api/auth/login/route";N=N.replace(/\/index$/,"")||"/";let m=await L.prepare(e,t,{srcPage:N,multiZoneDraftMode:!1});if(!m)return t.statusCode=400,t.end("Bad Request"),null==a.waitUntil||a.waitUntil.call(a,Promise.resolve()),null;let{buildId:g,params:O,nextConfig:b,parsedUrl:C,isDraftMode:x,prerenderManifest:A,routerServerContext:S,isOnDemandRevalidate:U,revalidateOnlyGenerated:I,resolvedPathname:k,clientReferenceManifest:f,serverActionsManifest:D}=m,y=(0,n.normalizeAppPath)(N),v=!!(A.dynamicRoutes[y]||A.routes[k]),M=async()=>((null==S?void 0:S.render404)?await S.render404(e,t,C,!1):t.end("This page could not be found"),null);if(v&&!x){let e=!!A.routes[k],t=A.dynamicRoutes[y];if(t&&!1===t.fallback&&!e){if(b.experimental.adapterPath)return await M();throw new T.NoFallbackError}}let w=null;!v||L.isDev||x||(w="/index"===(w=k)?"/":w);let F=!0===L.isDev||!v,H=v&&!F;D&&f&&(0,i.setManifestsSingleton)({page:N,clientReferenceManifest:f,serverActionsManifest:D});let P=e.method||"GET",q=(0,o.getTracer)(),B=q.getActiveScopeSpan(),W={params:O,prerenderManifest:A,renderOpts:{experimental:{authInterrupts:!!b.experimental.authInterrupts},cacheComponents:!!b.cacheComponents,supportsDynamicResponse:F,incrementalCache:(0,s.getRequestMeta)(e,"incrementalCache"),cacheLifeProfiles:b.cacheLife,waitUntil:a.waitUntil,onClose:e=>{t.on("close",e)},onAfterTaskError:void 0,onInstrumentationRequestError:(t,r,a,s)=>L.onRequestError(e,t,a,s,S)},sharedContext:{buildId:g}},G=new d.NodeNextRequest(e),X=new d.NodeNextResponse(t),j=u.NextRequestAdapter.fromNodeNextRequest(G,(0,u.signalFromNodeResponse)(t));try{let i=async e=>L.handle(j,W).finally(()=>{if(!e)return;e.setAttributes({"http.status_code":t.statusCode,"next.rsc":!1});let r=q.getRootSpanAttributes();if(!r)return;if(r.get("next.span_type")!==p.BaseServerSpan.handleRequest)return void console.warn(`Unexpected root span type '${r.get("next.span_type")}'. Please report this Next.js issue https://github.com/vercel/next.js`);let a=r.get("next.route");if(a){let t=`${P} ${a}`;e.setAttributes({"next.route":a,"http.route":a,"next.span_name":t}),e.updateName(t)}else e.updateName(`${P} ${N}`)}),n=!!(0,s.getRequestMeta)(e,"minimalMode"),d=async s=>{var o,d;let u=async({previousCacheEntry:r})=>{try{if(!n&&U&&I&&!r)return t.statusCode=404,t.setHeader("x-nextjs-cache","REVALIDATED"),t.end("This page could not be found"),null;let o=await i(s);e.fetchMetrics=W.renderOpts.fetchMetrics;let d=W.renderOpts.pendingWaitUntil;d&&a.waitUntil&&(a.waitUntil(d),d=void 0);let u=W.renderOpts.collectedTags;if(!v)return await (0,c.sendResponse)(G,X,o,W.renderOpts.pendingWaitUntil),null;{let e=await o.blob(),t=(0,l.toNodeOutgoingHttpHeaders)(o.headers);u&&(t[R.NEXT_CACHE_TAGS_HEADER]=u),!t["content-type"]&&e.type&&(t["content-type"]=e.type);let r=void 0!==W.renderOpts.collectedRevalidate&&!(W.renderOpts.collectedRevalidate>=R.INFINITE_CACHE)&&W.renderOpts.collectedRevalidate,a=void 0===W.renderOpts.collectedExpire||W.renderOpts.collectedExpire>=R.INFINITE_CACHE?void 0:W.renderOpts.collectedExpire;return{value:{kind:h.CachedRouteKind.APP_ROUTE,status:o.status,body:Buffer.from(await e.arrayBuffer()),headers:t},cacheControl:{revalidate:r,expire:a}}}}catch(t){throw(null==r?void 0:r.isStale)&&await L.onRequestError(e,t,{routerKind:"App Router",routePath:N,routeType:"route",revalidateReason:(0,E.getRevalidateReason)({isStaticGeneration:H,isOnDemandRevalidate:U})},!1,S),t}},p=await L.handleResponse({req:e,nextConfig:b,cacheKey:w,routeKind:r.RouteKind.APP_ROUTE,isFallback:!1,prerenderManifest:A,isRoutePPREnabled:!1,isOnDemandRevalidate:U,revalidateOnlyGenerated:I,responseGenerator:u,waitUntil:a.waitUntil,isMinimalMode:n});if(!v)return null;if((null==p||null==(o=p.value)?void 0:o.kind)!==h.CachedRouteKind.APP_ROUTE)throw Object.defineProperty(Error(`Invariant: app-route received invalid cache entry ${null==p||null==(d=p.value)?void 0:d.kind}`),"__NEXT_ERROR_CODE",{value:"E701",enumerable:!1,configurable:!0});n||t.setHeader("x-nextjs-cache",U?"REVALIDATED":p.isMiss?"MISS":p.isStale?"STALE":"HIT"),x&&t.setHeader("Cache-Control","private, no-cache, no-store, max-age=0, must-revalidate");let T=(0,l.fromNodeOutgoingHttpHeaders)(p.value.headers);return n&&v||T.delete(R.NEXT_CACHE_TAGS_HEADER),!p.cacheControl||t.getHeader("Cache-Control")||T.get("Cache-Control")||T.set("Cache-Control",(0,_.getCacheControlHeader)(p.cacheControl)),await (0,c.sendResponse)(G,X,new Response(p.value.body,{headers:T,status:p.value.status||200})),null};B?await d(B):await q.withPropagatedContext(e.headers,()=>q.trace(p.BaseServerSpan.handleRequest,{spanName:`${P} ${N}`,kind:o.SpanKind.SERVER,attributes:{"http.method":P,"http.target":e.url}},d))}catch(t){if(t instanceof T.NoFallbackError||await L.onRequestError(e,t,{routerKind:"App Router",routePath:y,routeType:"route",revalidateReason:(0,E.getRevalidateReason)({isStaticGeneration:H,isOnDemandRevalidate:U})},!1,S),v)throw t;return await (0,c.sendResponse)(G,X,new Response(null,{status:500})),null}}e.s(["handler",()=>I,"patchFetch",()=>U,"routeModule",()=>L,"serverHooks",()=>S,"workAsyncStorage",()=>x,"workUnitAsyncStorage",()=>A],30450)}];
+
+//# sourceMappingURL=%5Broot-of-the-server%5D__d5a6b208._.js.map

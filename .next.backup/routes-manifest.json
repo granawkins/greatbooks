@@ -1,0 +1,217 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/annotations/[id]",
+      "regex": "^/api/annotations/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/annotations/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/audio/[...path]",
+      "regex": "^/api/audio/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/audio/(?<nxtPpath>.+?)(?:/)?$"
+    },
+    {
+      "page": "/api/books/[bookId]",
+      "regex": "^/api/books/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPbookId": "nxtPbookId"
+      },
+      "namedRegex": "^/api/books/(?<nxtPbookId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/books/[bookId]/chapters/[chapterNum]",
+      "regex": "^/api/books/([^/]+?)/chapters/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPbookId": "nxtPbookId",
+        "nxtPchapterNum": "nxtPchapterNum"
+      },
+      "namedRegex": "^/api/books/(?<nxtPbookId>[^/]+?)/chapters/(?<nxtPchapterNum>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/[bookId]",
+      "regex": "^/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPbookId": "nxtPbookId"
+      },
+      "namedRegex": "^/(?<nxtPbookId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/[bookId]/contents",
+      "regex": "^/([^/]+?)/contents(?:/)?$",
+      "routeKeys": {
+        "nxtPbookId": "nxtPbookId"
+      },
+      "namedRegex": "^/(?<nxtPbookId>[^/]+?)/contents(?:/)?$"
+    },
+    {
+      "page": "/[bookId]/[chapterNum]",
+      "regex": "^/([^/]+?)/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPbookId": "nxtPbookId",
+        "nxtPchapterNum": "nxtPchapterNum"
+      },
+      "namedRegex": "^/(?<nxtPbookId>[^/]+?)/(?<nxtPchapterNum>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/api/annotations",
+      "regex": "^/api/annotations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/annotations(?:/)?$"
+    },
+    {
+      "page": "/api/auth/google-callback",
+      "regex": "^/api/auth/google\\-callback(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/google\\-callback(?:/)?$"
+    },
+    {
+      "page": "/api/auth/login",
+      "regex": "^/api/auth/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/login(?:/)?$"
+    },
+    {
+      "page": "/api/auth/logout",
+      "regex": "^/api/auth/logout(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/logout(?:/)?$"
+    },
+    {
+      "page": "/api/auth/magic-link",
+      "regex": "^/api/auth/magic\\-link(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/magic\\-link(?:/)?$"
+    },
+    {
+      "page": "/api/auth/me",
+      "regex": "^/api/auth/me(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/me(?:/)?$"
+    },
+    {
+      "page": "/api/auth/verify",
+      "regex": "^/api/auth/verify(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/verify(?:/)?$"
+    },
+    {
+      "page": "/api/books",
+      "regex": "^/api/books(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/books(?:/)?$"
+    },
+    {
+      "page": "/api/chat/token",
+      "regex": "^/api/chat/token(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/chat/token(?:/)?$"
+    },
+    {
+      "page": "/api/progress",
+      "regex": "^/api/progress(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/progress(?:/)?$"
+    },
+    {
+      "page": "/api/user/history",
+      "regex": "^/api/user/history(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/user/history(?:/)?$"
+    },
+    {
+      "page": "/api/user/usage",
+      "regex": "^/api/user/usage(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/user/usage(?:/)?$"
+    },
+    {
+      "page": "/auth-callback",
+      "regex": "^/auth\\-callback(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth\\-callback(?:/)?$"
+    },
+    {
+      "page": "/favicon.ico",
+      "regex": "^/favicon\\.ico(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/favicon\\.ico(?:/)?$"
+    },
+    {
+      "page": "/library",
+      "regex": "^/library(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/library(?:/)?$"
+    },
+    {
+      "page": "/profile",
+      "regex": "^/profile(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/profile(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}
