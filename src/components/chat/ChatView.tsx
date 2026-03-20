@@ -43,16 +43,20 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  // Track visual viewport height for mobile keyboard resize
-  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  // Track visual viewport for mobile keyboard resize
+  const [viewport, setViewport] = useState<{ height: number; offsetTop: number } | null>(null);
 
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const onResize = () => setViewportHeight(vv.height);
+    const onResize = () => setViewport({ height: vv.height, offsetTop: vv.offsetTop });
     onResize();
     vv.addEventListener("resize", onResize);
-    return () => vv.removeEventListener("resize", onResize);
+    vv.addEventListener("scroll", onResize);
+    return () => {
+      vv.removeEventListener("resize", onResize);
+      vv.removeEventListener("scroll", onResize);
+    };
   }, []);
 
   const displayMessages =
@@ -73,11 +77,10 @@ export default function ChatView({ bookId, bookTitle, authorName, onClose }: Cha
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{
         position: "fixed",
-        top: 0,
+        top: viewport != null ? viewport.offsetTop : 0,
         left: 0,
         right: 0,
-        bottom: 0,
-        ...(viewportHeight != null ? { height: viewportHeight } : {}),
+        ...(viewport != null ? { height: viewport.height } : { bottom: 0 }),
         zIndex: 100,
         backgroundColor: "rgba(0, 0, 0, 0.5)",
         backdropFilter: "blur(8px)",

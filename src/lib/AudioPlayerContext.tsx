@@ -62,6 +62,7 @@ type AudioSessionContextValue = {
   // Playback speed — stored as ref so it can be applied on audio init
   playbackSpeedRef: React.RefObject<number>;
   setPlaybackSpeed: (speed: number) => void;
+  persistSpeedRef: React.RefObject<((speed: number) => void) | null>;
 
   // Audio gating — set by consumer to handle blocked audio (e.g. show upgrade modal)
   // Returns "login" | "audio_limit" if blocked, or null if allowed
@@ -150,10 +151,15 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     return total;
   }, []);
 
+  // Persist callback — set externally by PlaybackSpeedSync once auth is available
+  const persistSpeedRef = useRef<((speed: number) => void) | null>(null);
+
   const setPlaybackSpeed = useCallback((speed: number) => {
     playbackSpeedRef.current = speed;
     const audio = audioRef.current;
     if (audio) audio.playbackRate = speed;
+    // Persist to DB if available
+    persistSpeedRef.current?.(speed);
   }, []);
 
   // Save progress on any pause (user-initiated, loadSession, dismiss, ended)
@@ -293,6 +299,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     onChapterSelectRef,
     playbackSpeedRef,
     setPlaybackSpeed,
+    persistSpeedRef,
     audioGateCheckRef,
     onAudioBlockedRef,
     getSessionListenedMs,

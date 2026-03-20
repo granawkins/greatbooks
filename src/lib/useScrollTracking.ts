@@ -102,7 +102,8 @@ export function useScrollTracking({
   // Find centered segment and update position
   const updatePositionFromScroll = useCallback(() => {
     const atTop = window.scrollY <= 5;
-    const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 5;
+    const vh = window.visualViewport?.height ?? window.innerHeight;
+    const atBottom = window.scrollY + vh >= document.documentElement.scrollHeight - 5;
 
     if (atTop) {
       const firstSeg = segments.find(s => s.audio_start_ms != null);
