@@ -63,7 +63,7 @@ export default function AudioPlayer() {
 
   // Sync speed index from the context's playback speed ref on session load
   useEffect(() => {
-    const speed = playbackSpeedRef.current;
+    const speed = playbackSpeedRef.current ?? 1;
     const idx = SPEEDS.indexOf(speed);
     setSpeedIdx(idx >= 0 ? idx : 1);
   }, [session, playbackSpeedRef]);
@@ -145,7 +145,8 @@ export default function AudioPlayer() {
 
   const activeWordRef = useRef<string | null>(null);
   const activeParaRef = useRef<number | null>(null);
-  const autoScrollRef = useRef(true);
+  const followModeRef = useRef<"FOLLOWING" | "USER_OVERRIDDEN" | "RECENTER_PENDING">("RECENTER_PENDING");
+  const userOverrideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [speedHovered, setSpeedHovered] = useState(false);
   const [playHovered, setPlayHovered] = useState(false);
@@ -177,32 +178,29 @@ export default function AudioPlayer() {
   }, [wordTimingsRef]);
 
   const updateScroll = useCallback((ms: number) => {
-    if (!autoScrollRef.current) return;
     const sd = scrollDataRef.current;
     if (!sd) return;
+    if (followModeRef.current === "USER_OVERRIDDEN") return;
     for (let i = 0; i < sd.ranges.length; i++) {
       const r = sd.ranges[i];
       if (r && ms >= r.start_ms && ms < r.end_ms) {
-        if (i !== activeParaRef.current) {
-          if (activeParaRef.current !== null) {
-            const prevEl = sd.elements[activeParaRef.current];
-            if (prevEl) {
-              const rect = prevEl.getBoundingClientRect();
-              const vh = window.visualViewport?.height ?? window.innerHeight;
-              // Account for topbar and player bar occlusion
-              const topBar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height") || "52");
-              const playerBar = document.querySelector<HTMLElement>("[data-player-bar]");
-              const bottomInset = playerBar ? playerBar.getBoundingClientRect().height : 0;
-              const visible = rect.bottom > topBar && rect.top < (vh - bottomInset);
-              if (!visible) {
-                autoScrollRef.current = false;
-                activeParaRef.current = i;
-                return;
-              }
-            }
-          }
+        const el = sd.elements[i];
+        if (!el) return;
+        if (followModeRef.current === "RECENTER_PENDING" || i !== activeParaRef.current) {
           activeParaRef.current = i;
-          if (sd.elements[i]) scrollToCenter(sd.elements[i]!);
+          scrollToCenter(el, "instant");
+          followModeRef.current = "FOLLOWING";
+          return;
+        }
+        if (followModeRef.current === "FOLLOWING") {
+          const rect = el.getBoundingClientRect();
+          const vh = window.visualViewport?.height ?? window.innerHeight;
+          const topBar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height") || "52");
+          const player = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--player-height") || "172");
+          const visible = rect.bottom > topBar && rect.top < (vh - player);
+          if (!visible) {
+            scrollToCenter(el, "instant");
+          }
         }
         return;
       }
@@ -243,19 +241,8 @@ export default function AudioPlayer() {
         const dur = session?.durationMs ?? 0;
 
         if (wasPaused) {
-          autoScrollRef.current = true;
+          followModeRef.current = "RECENTER_PENDING";
           activeParaRef.current = null;
-          const sd = scrollDataRef.current;
-          if (sd) {
-            for (let i = 0; i < sd.ranges.length; i++) {
-              const r = sd.ranges[i];
-              if (r && ms >= r.start_ms && ms < r.end_ms) {
-                activeParaRef.current = i;
-                if (sd.elements[i]) scrollToCenter(sd.elements[i]!);
-                break;
-              }
-            }
-          }
         }
 
         updateScrubber(ms, dur);
@@ -273,6 +260,43 @@ export default function AudioPlayer() {
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
   }, [audioRef, session, scrollDataRef, updateScrubber, updateHighlight, updateScroll, clearHighlight]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const audio = audioRef.current;
+      if (!audio || audio.paused) return;
+      followModeRef.current = "USER_OVERRIDDEN";
+      if (userOverrideTimerRef.current) clearTimeout(userOverrideTimerRef.current);
+      userOverrideTimerRef.current = setTimeout(() => {
+        followModeRef.current = "RECENTER_PENDING";
+      }, 2000);
+    };
+    window.addEventListener("wheel", onScroll, { passive: true });
+    window.addEventListener("touchmove", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("wheel", onScroll);
+      window.removeEventListener("touchmove", onScroll);
+      if (userOverrideTimerRef.current) clearTimeout(userOverrideTimerRef.current);
+    };
+  }, [audioRef]);
+
+  useEffect(() => {
+    const onViewportChange = () => {
+      const audio = audioRef.current;
+      if (!audio || audio.paused) return;
+      followModeRef.current = "RECENTER_PENDING";
+    };
+    window.addEventListener("resize", onViewportChange);
+    document.addEventListener("visibilitychange", onViewportChange);
+    window.visualViewport?.addEventListener("resize", onViewportChange);
+    window.visualViewport?.addEventListener("scroll", onViewportChange);
+    return () => {
+      window.removeEventListener("resize", onViewportChange);
+      document.removeEventListener("visibilitychange", onViewportChange);
+      window.visualViewport?.removeEventListener("resize", onViewportChange);
+      window.visualViewport?.removeEventListener("scroll", onViewportChange);
+    };
+  }, [audioRef]);
 
   useEffect(() => {
     const ms = session?.initialPositionMs ?? 0;

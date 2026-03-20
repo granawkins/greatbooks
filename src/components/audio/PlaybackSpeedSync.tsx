@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useAudioSession } from "@/lib/AudioPlayerContext";
 
 export default function PlaybackSpeedSync() {
   const { user, loading, updatePlaybackSpeed } = useAuth();
   const { playbackSpeedRef, persistSpeedRef } = useAudioSession();
-  const initialized = useRef(false);
 
   // Wire up the persist callback so speed changes auto-save to DB
   useEffect(() => {
@@ -18,10 +17,11 @@ export default function PlaybackSpeedSync() {
   }, [persistSpeedRef, updatePlaybackSpeed]);
 
   useEffect(() => {
-    if (loading || initialized.current) return;
-    const speed = user?.playback_speed ?? 1;
-    playbackSpeedRef.current = speed;
-    initialized.current = true;
+    if (loading) return;
+    if (playbackSpeedRef.current != null) return;
+    // Hydrate from DB once, when we actually have an authenticated user.
+    if (!user?.id) return;
+    playbackSpeedRef.current = user.playback_speed;
   }, [loading, user, playbackSpeedRef]);
 
   return null;

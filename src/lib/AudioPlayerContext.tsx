@@ -60,7 +60,7 @@ type AudioSessionContextValue = {
   onChapterSelectRef: React.RefObject<((chapterId: number, startMs?: number, autoPlay?: boolean) => void) | null>;
 
   // Playback speed — stored as ref so it can be applied on audio init
-  playbackSpeedRef: React.RefObject<number>;
+  playbackSpeedRef: React.RefObject<number | null>;
   setPlaybackSpeed: (speed: number) => void;
   persistSpeedRef: React.RefObject<((speed: number) => void) | null>;
 
@@ -137,7 +137,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const onChapterSelectRef = useRef<((chapterId: number) => void) | null>(null);
   const audioGateCheckRef = useRef<(() => "login" | "audio_limit" | null) | null>(null);
   const onAudioBlockedRef = useRef<((reason: "login" | "audio_limit") => void) | null>(null);
-  const playbackSpeedRef = useRef(1);
+  const playbackSpeedRef = useRef<number | null>(null);
 
   // Client-side session listening time tracking
   const sessionListenedMsRef = useRef(0);
@@ -235,7 +235,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         if (initialMsRef.current > 0) {
           audio.currentTime = initialMsRef.current / 1000;
         }
-        audio.playbackRate = playbackSpeedRef.current;
+        audio.playbackRate = playbackSpeedRef.current ?? 1;
         seekedRef.current = true;
       }
       if (autoPlayRef.current) {

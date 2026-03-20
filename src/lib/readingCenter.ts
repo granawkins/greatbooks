@@ -11,19 +11,16 @@ function getViewportHeight(): number {
   return window.visualViewport?.height ?? window.innerHeight;
 }
 
-/** Measure the actual player bar height from the DOM. Returns 0 if not mounted. */
-function getPlayerBarHeight(): number {
-  const bar = document.querySelector<HTMLElement>("[data-player-bar]");
-  if (!bar) return 0;
-  return bar.getBoundingClientRect().height;
+function getInsetVar(name: "--topbar-height" | "--player-height", fallback: number): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name);
+  const parsed = parseFloat(raw || String(fallback));
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 /** Returns the Y coordinate (in viewport pixels) of the visible reading center. */
 export function getReadingCenterY(isTextMode: boolean): number {
-  const topInset = parseFloat(
-    getComputedStyle(document.documentElement).getPropertyValue("--topbar-height") || "52"
-  );
-  const bottomInset = isTextMode ? 0 : getPlayerBarHeight();
+  const topInset = getInsetVar("--topbar-height", 52);
+  const bottomInset = isTextMode ? 0 : getInsetVar("--player-height", 172);
   return topInset + (getViewportHeight() - topInset - bottomInset) / 2;
 }
 

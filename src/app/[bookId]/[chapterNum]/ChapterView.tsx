@@ -10,6 +10,7 @@ import { useBookShell } from "@/app/[bookId]/BookShell";
 import { groupIntoBlocks, paraTimeRange, type ChapterData } from "@/components/reader";
 import { useWordTimings } from "@/components/reader/useWordTimings";
 import { useScrollTracking } from "@/lib/useScrollTracking";
+import { useReadingPositionController } from "@/lib/useReadingPositionController";
 import { AnnotationLayer } from "@/components/reader/AnnotationLayer";
 import { AnnotationProvider } from "@/components/reader/AnnotationContext";
 import CourseChoiceModal from "@/components/CourseChoiceModal";
@@ -107,14 +108,6 @@ export default function ChapterView({
   const layout = bookMeta.layout || "prose";
   const blocks = useMemo(() => groupIntoBlocks(segments, layout), [segments, layout]);
 
-  // ── Restore font size ──────────────────────────────────────────────────
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("greatbooks-font-size");
-      if (stored) document.documentElement.style.setProperty("--font-size-body", `${stored}px`);
-    } catch {}
-  }, []);
-
   // ── Audio gate ─────────────────────────────────────────────────────────
   useEffect(() => {
     audioGateCheckRef.current = () => {
@@ -161,18 +154,35 @@ export default function ChapterView({
   const { allTimings } = useWordTimings(bookId, chapterNum, segments, layout);
   const paraRanges = useMemo(() => blocks.map((b) => (b.type === "paragraph" ? paraTimeRange(b) : null)), [blocks]);
 
+  const getInitialTarget = useCallback((): HTMLElement | null => {
+    if (scrollToBottom) return bottomRef.current;
+    if (initialScrollBlockIdx >= 0) {
+      return document.querySelector<HTMLElement>(`[data-block-idx="${initialScrollBlockIdx}"]`);
+    }
+    return null;
+  }, [scrollToBottom, initialScrollBlockIdx]);
+
+  const { stabilize: stabilizeInitialPosition } = useReadingPositionController({
+    enabled: scrollReady,
+    isTextMode: viewMode === "text",
+    getTarget: getInitialTarget,
+  });
+
   // ── Initial scroll position (target computed server-side) ──────────────
   useLayoutEffect(() => {
     if (initialScrollDone.current === chapterNum) return;
     initialScrollDone.current = chapterNum;
-    if (scrollToBottom) {
-      bottomRef.current?.scrollIntoView({ block: "end", behavior: "instant" });
-    } else if (initialScrollBlockIdx >= 0) {
-      const el = document.querySelector<HTMLElement>(`[data-block-idx="${initialScrollBlockIdx}"]`);
-      if (el) scrollToCenter(el, "instant", viewMode === "text");
+    const el = getInitialTarget();
+    if (el) {
+      if (scrollToBottom) {
+        el.scrollIntoView({ block: "end", behavior: "instant" });
+      } else {
+        scrollToCenter(el, "instant", viewMode === "text");
+      }
+      stabilizeInitialPosition();
     }
     setScrollReady(true);
-  }, [initialScrollBlockIdx, chapterNum, scrollToBottom, viewMode]);
+  }, [chapterNum, getInitialTarget, scrollToBottom, viewMode, stabilizeInitialPosition]);
 
   // ── Audio session ──────────────────────────────────────────────────────
   const segmentBoundaries = useMemo((): SegmentBoundary[] => {
