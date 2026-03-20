@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { useTopBar, type TopBarBookNav } from "@/lib/TopBarContext";
 import { useBookDetailsModal } from "@/lib/BookDetailsModalContext";
 import { useAuth } from "@/lib/AuthContext";
 import { ViewModeToggle, FontSizeControls } from "@/components/audio/PersistentPlayerBar";
+import { useAudioSession } from "@/lib/AudioPlayerContext";
 
 function HamburgerIcon() {
   return (
@@ -43,7 +45,9 @@ function ChapterSelector({ bookNav }: { bookNav: TopBarBookNav }) {
   useEffect(() => {
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (ref.current?.contains(target) || listRef.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -58,9 +62,23 @@ function ChapterSelector({ bookNav }: { bookNav: TopBarBookNav }) {
     }
   }, [open]);
 
+  // Compute dropdown position from the button
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!open || !btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const dropdownWidth = Math.min(260, window.innerWidth - 32);
+    // Clamp left so the dropdown doesn't overflow the right edge
+    const left = Math.min(rect.left, window.innerWidth - dropdownWidth - 16);
+    setDropdownPos({ top: rect.bottom + 4, left: Math.max(16, left) });
+  }, [open]);
+
   return (
-    <div ref={ref} style={{ position: "relative", minWidth: 0, overflow: "hidden", flex: 1 }}>
+    <div ref={ref} style={{ position: "relative", minWidth: 0, flex: 1 }}>
       <button
+        ref={btnRef}
         onClick={() => setOpen((v) => !v)}
         onTouchEnd={(e) => { e.preventDefault(); setOpen((v) => !v); }}
         style={{
@@ -89,13 +107,13 @@ function ChapterSelector({ bookNav }: { bookNav: TopBarBookNav }) {
         <span style={{ flexShrink: 0, display: "flex" }}><ChevronDownIcon /></span>
       </button>
 
-      {open && (
+      {open && dropdownPos && createPortal(
         <div
           ref={listRef}
           style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
+            position: "fixed",
+            top: dropdownPos.top,
+            left: dropdownPos.left,
             minWidth: 260,
             maxWidth: "calc(100vw - 3rem)",
             maxHeight: "min(400px, 60vh)",
@@ -141,7 +159,8 @@ function ChapterSelector({ bookNav }: { bookNav: TopBarBookNav }) {
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -153,6 +172,7 @@ function MenuDropdown({ bookNav }: { bookNav: TopBarBookNav | null }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  const { session } = useAudioSession();
   const { openBookDetails } = useBookDetailsModal();
   const onBookPage = !!bookNav;
 
@@ -231,10 +251,14 @@ function MenuDropdown({ bookNav }: { bookNav: TopBarBookNav | null }) {
           {/* Book controls — only on book pages */}
           {onBookPage && bookNav && (
             <>
-              <div style={sectionLabelStyle}>Mode</div>
-              <div style={{ padding: "0 16px 8px" }}>
-                <ViewModeToggle showLabels />
-              </div>
+              {session && (
+                <>
+                  <div style={sectionLabelStyle}>Mode</div>
+                  <div style={{ padding: "0 16px 8px" }}>
+                    <ViewModeToggle showLabels />
+                  </div>
+                </>
+              )}
               <div style={sectionLabelStyle}>Text size</div>
               <div style={{ padding: "0 16px 8px" }}>
                 <FontSizeControls />

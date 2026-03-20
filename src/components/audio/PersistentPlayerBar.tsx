@@ -105,8 +105,6 @@ const DEFAULT_FONT_SIZE = 18;
  * to keep anchored at the reading center, or null.
  */
 export function FontSizeControls({ onResize, label }: { onResize?: () => HTMLElement | null; label?: string }) {
-  const { session } = useAudioSession();
-  if (!session) return null;
 
   const getCurrent = (): number => {
     try {

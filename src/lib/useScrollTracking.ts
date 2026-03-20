@@ -99,7 +99,9 @@ export function useScrollTracking({
     }
   }, [chapterNum, saveProgressNow, audioRef]);
 
-  // Find centered segment and update position
+  // Find the segment at the center of the page and bookmark it.
+  // Algorithm: find the line at center Y, find the last word span on that line,
+  // determine which segment it belongs to, highlight the first word of that segment.
   const updatePositionFromScroll = useCallback(() => {
     const atTop = window.scrollY <= 5;
     const vh = window.visualViewport?.height ?? window.innerHeight;
@@ -117,27 +119,49 @@ export function useScrollTracking({
     }
 
     const centerY = getReadingCenterY();
+
+    // Find the nearest paragraph block to the center line
     const refs = blockRefsRef.current;
-    let bestBlock = -1;
+    let bestBlockIdx = -1;
     let bestDist = Infinity;
     for (let i = 0; i < refs.length; i++) {
-      const el = refs[i];
-      if (!el) continue;
-      const rect = el.getBoundingClientRect();
-      if (rect.top <= centerY && rect.bottom >= centerY) { bestBlock = i; break; }
+      if (!refs[i] || blocks[i]?.type !== "paragraph") continue;
+      const rect = refs[i]!.getBoundingClientRect();
+      if (rect.top <= centerY && rect.bottom >= centerY) { bestBlockIdx = i; bestDist = 0; break; }
       const dist = Math.min(Math.abs(rect.top - centerY), Math.abs(rect.bottom - centerY));
-      if (dist < bestDist) { bestDist = dist; bestBlock = i; }
+      if (dist < bestDist) { bestDist = dist; bestBlockIdx = i; }
     }
+    if (bestBlockIdx < 0) return;
+    const targetBlock = refs[bestBlockIdx]!;
 
-    if (bestBlock < 0) return;
-    const block = blocks[bestBlock];
-    if (!block || block.type !== "paragraph") return;
-    const el = refs[bestBlock];
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (centerY - rect.top) / (rect.bottom - rect.top)));
-    const segIdx = Math.min(block.segments.length - 1, Math.floor(ratio * block.segments.length));
-    const seg = block.segments[segIdx];
+    // Find the last word span on the center line by scanning all spans in this block.
+    // Word spans have ids like "w-{chapter}-{sequence}-{charStart}".
+    const spans = targetBlock.querySelectorAll<HTMLElement>("span[id^='w-']");
+    let lastSpanOnLine: HTMLElement | null = null;
+    for (const span of spans) {
+      const rect = span.getBoundingClientRect();
+      if (rect.top <= centerY && rect.bottom >= centerY) {
+        lastSpanOnLine = span;
+      }
+    }
+    // If center line doesn't intersect any span (e.g. between lines), find closest
+    if (!lastSpanOnLine) {
+      let closestDist = Infinity;
+      for (const span of spans) {
+        const rect = span.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        const dist = Math.abs(mid - centerY);
+        if (dist < closestDist) { closestDist = dist; lastSpanOnLine = span; }
+      }
+    }
+    if (!lastSpanOnLine) return;
+
+    // Parse the segment sequence from the span id: "w-{chapter}-{sequence}-{charStart}"
+    const parts = lastSpanOnLine.id.split("-");
+    if (parts.length < 4) return;
+    const seq = parseInt(parts[2], 10);
+    const block = blocks[bestBlockIdx];
+    const seg = block.type === "paragraph" ? block.segments.find((s: Segment) => s.sequence === seq) : undefined;
     if (seg?.audio_start_ms != null) applyBookmark(seg.audio_start_ms, seg);
   }, [segments, blocks, applyBookmark, blockRefsRef]);
 

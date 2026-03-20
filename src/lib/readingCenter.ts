@@ -11,13 +11,13 @@ function getViewportHeight(): number {
   return window.visualViewport?.height ?? window.innerHeight;
 }
 
-/** Reading center: 40% from top of viewport. */
+/** Reading center: dead center of viewport (50%). */
 export function getReadingCenterY(): number {
-  return getViewportHeight() * 0.4;
+  return getViewportHeight() * 0.5;
 }
 
 /**
- * Scroll an element to the reading center (40% from top).
+ * Scroll an element to the reading center (50% from top).
  */
 export function scrollToCenter(
   el: HTMLElement,
@@ -28,8 +28,9 @@ export function scrollToCenter(
   window.scrollBy({ top: elTarget - getReadingCenterY(), behavior });
 }
 
-/** Is the element within the reading zone (20%–60% from top of viewport)?
- *  When it leaves this zone, we scroll to re-center it at 40%. */
+/** Is the element within the reading zone?
+ *  Asymmetric (20%–60%) to offset the audio player bar at the bottom.
+ *  When it leaves this zone, we scroll to re-center it at 50%. */
 export function isInReadingZone(el: HTMLElement): boolean {
   const vh = getViewportHeight();
   const rect = el.getBoundingClientRect();
