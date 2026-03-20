@@ -59,9 +59,10 @@ function ChapterSelector({ bookNav }: { bookNav: TopBarBookNav }) {
   }, [open]);
 
   return (
-    <div ref={ref} style={{ position: "relative", minWidth: 0 }}>
+    <div ref={ref} style={{ position: "relative", minWidth: 0, overflow: "hidden", flex: 1 }}>
       <button
         onClick={() => setOpen((v) => !v)}
+        onTouchEnd={(e) => { e.preventDefault(); setOpen((v) => !v); }}
         style={{
           fontFamily: "var(--font-ui)",
           fontSize: "0.9375rem",
@@ -77,14 +78,15 @@ function ChapterSelector({ bookNav }: { bookNav: TopBarBookNav }) {
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
           minWidth: 0,
+          maxWidth: "100%",
           display: "flex",
           alignItems: "center",
           gap: 4,
         }}
         className="hover:text-[var(--color-text)] hover:border-[var(--color-text-secondary)]"
       >
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{chapterLabel}</span>
-        <ChevronDownIcon />
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{chapterLabel}</span>
+        <span style={{ flexShrink: 0, display: "flex" }}><ChevronDownIcon /></span>
       </button>
 
       {open && (
@@ -315,7 +317,7 @@ export default function TopBar() {
         }}
       >
         {/* Left side */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0, flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0, flex: 1, overflow: "hidden" }}>
           <Link
             href="/"
             style={{
