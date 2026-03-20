@@ -7,7 +7,7 @@ import { type SegmentBoundary, useAudioPlayer } from "@/lib/AudioPlayerContext";
 import { scrollToCenter, getReadingCenterY } from "@/lib/readingCenter";
 import { useTopBar } from "@/lib/TopBarContext";
 import { useBookShell } from "@/app/[bookId]/BookShell";
-import { groupIntoBlocks, paraTimeRange, type ChapterData } from "@/components/reader";
+import { groupIntoBlocks, type ChapterData } from "@/components/reader";
 import { useWordTimings } from "@/components/reader/useWordTimings";
 import { useScrollTracking } from "@/lib/useScrollTracking";
 import { AnnotationLayer } from "@/components/reader/AnnotationLayer";
@@ -76,15 +76,16 @@ function ReadingModeIntroModal({ onClose }: { onClose: () => void }) {
 
 export default function ChapterView({
   chapterNum, chapterData, chapterType = "text",
-  initialAudioPositionMs, initialScrollBlockIdx = -1, sourceProgress, initialAnnotations = [], children,
+  initialAudioPositionMs, initialWordSpanId, sourceProgress, initialAnnotations = [], playbackSpeed = 1, children,
 }: {
   chapterNum: number;
   chapterData: ChapterData;
   chapterType?: "text" | "discussion";
   initialAudioPositionMs: number;
-  initialScrollBlockIdx?: number;
+  initialWordSpanId?: string | null;
   sourceProgress?: { bookTitle: string; chapterNumber: number; audioPositionMs: number } | null;
   initialAnnotations?: Annotation[];
+  playbackSpeed?: number;
   children?: ReactNode;
 }) {
   const { bookId, bookMeta, chapters, setCurrentChapter, cacheChapter, saveProgressNow } = useBookShell();
@@ -92,7 +93,7 @@ export default function ChapterView({
   const scrollToBottom = searchParams.get("scroll") === "bottom";
   const autoplay = searchParams.get("autoplay") === "1";
 
-  const { session, loadSession, wordTimingsRef, scrollDataRef, audioRef, viewMode, audioGateCheckRef, onAudioBlockedRef, getSessionListenedMs } = useAudioPlayer();
+  const { session, loadSession, wordTimingsRef, audioRef, viewMode, playbackSpeedRef, audioGateCheckRef, onAudioBlockedRef, getSessionListenedMs } = useAudioPlayer();
   const { user, loading: authLoading } = useAuth();
   const { setScrolled } = useTopBar();
   const [upgradeModal, setUpgradeModal] = useState<UpgradeModalVariant | null>(null);
@@ -106,14 +107,6 @@ export default function ChapterView({
   const segments = chapterData.segments;
   const layout = bookMeta.layout || "prose";
   const blocks = useMemo(() => groupIntoBlocks(segments, layout), [segments, layout]);
-
-  // ── Restore font size ──────────────────────────────────────────────────
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("greatbooks-font-size");
-      if (stored) document.documentElement.style.setProperty("--font-size-body", `${stored}px`);
-    } catch {}
-  }, []);
 
   // ── Audio gate ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -159,20 +152,24 @@ export default function ChapterView({
 
   // ── Word timings (lazy) ────────────────────────────────────────────────
   const { allTimings } = useWordTimings(bookId, chapterNum, segments, layout);
-  const paraRanges = useMemo(() => blocks.map((b) => (b.type === "paragraph" ? paraTimeRange(b) : null)), [blocks]);
 
   // ── Initial scroll position (target computed server-side) ──────────────
   useLayoutEffect(() => {
     if (initialScrollDone.current === chapterNum) return;
     initialScrollDone.current = chapterNum;
+    // Restore font size BEFORE computing scroll position
+    try {
+      const stored = localStorage.getItem("greatbooks-font-size");
+      if (stored) document.documentElement.style.setProperty("--font-size-body", `${stored}px`);
+    } catch {}
     if (scrollToBottom) {
       bottomRef.current?.scrollIntoView({ block: "end", behavior: "instant" });
-    } else if (initialScrollBlockIdx >= 0) {
-      const el = document.querySelector<HTMLElement>(`[data-block-idx="${initialScrollBlockIdx}"]`);
-      if (el) scrollToCenter(el, "instant", viewMode === "text");
+    } else if (initialWordSpanId) {
+      const el = document.getElementById(initialWordSpanId);
+      if (el) scrollToCenter(el, "instant");
     }
     setScrollReady(true);
-  }, [initialScrollBlockIdx, chapterNum, scrollToBottom, viewMode]);
+  }, [initialWordSpanId, chapterNum, scrollToBottom]);
 
   // ── Audio session ──────────────────────────────────────────────────────
   const segmentBoundaries = useMemo((): SegmentBoundary[] => {
@@ -186,6 +183,8 @@ export default function ChapterView({
   useEffect(() => {
     if (!chapterData.audio_file || !audioSrc) return;
     if (session?.bookId === bookId && session?.chapterId === chapterNum) return;
+    // Set playback speed from server prop before loading session (avoids race with auth fetch)
+    playbackSpeedRef.current = playbackSpeed;
     loadSession({
       bookId, bookTitle: bookMeta.title, chapterTitle: chapterData.title,
       chapterId: chapterNum, src: audioSrc, durationMs: chapterData.audio_duration_ms ?? 0,
@@ -202,11 +201,6 @@ export default function ChapterView({
     return () => { wordTimingsRef.current = null; };
   }, [session?.bookId, session?.chapterId, bookId, chapterNum, allTimings, wordTimingsRef]);
 
-  useEffect(() => {
-    if (session?.bookId !== bookId || session?.chapterId !== chapterNum) return;
-    scrollDataRef.current = { ranges: paraRanges, elements: blockRefsRef.current };
-    return () => { scrollDataRef.current = null; };
-  }, [session?.bookId, session?.chapterId, bookId, chapterNum, paraRanges, scrollDataRef]);
 
   // ── Scroll tracking (bookmark, reading mode) ───────────────────────────
   const {
@@ -237,7 +231,7 @@ export default function ChapterView({
   return (
     <AnnotationProvider initial={initialAnnotations}>
     <div className={scrollReady ? "chapter-layout" : "chapter-layout chapter-layout--positioning"}
-      style={{ paddingBottom: isTextMode ? "80px" : "200px" }}>
+      style={{ paddingBottom: "200px" }}>
 
       {showIntroModal && <ReadingModeIntroModal onClose={() => setShowIntroModal(false)} />}
       <FloatingControls />
@@ -257,7 +251,7 @@ export default function ChapterView({
         <button aria-label={bookmarkActive ? "Pause scroll tracking" : "Resume scroll tracking"}
           onClick={() => { if (!bookmarkActive) updatePositionFromScroll(); setBookmarkActive((b) => !b); }}
           className="reading-bookmark"
-          style={{ position: "fixed", top: getReadingCenterY(true), transform: "translateY(-50%)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "none", cursor: "pointer", color: "var(--color-cursor)", opacity: bookmarkActive ? 0.7 : 0.3, transition: "opacity 0.2s, color 0.2s", padding: 0 }}>
+          style={{ position: "fixed", top: getReadingCenterY(), transform: "translateY(-50%)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "none", cursor: "pointer", color: "var(--color-cursor)", opacity: bookmarkActive ? 0.7 : 0.3, transition: "opacity 0.2s, color 0.2s", padding: 0 }}>
           <BookmarkIcon size={18} filled={bookmarkActive} />
         </button>
       )}

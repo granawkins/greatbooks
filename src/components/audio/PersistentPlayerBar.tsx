@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAudioSession, useAudioView } from "@/lib/AudioPlayerContext";
 import AudioPlayer from "./AudioPlayer";
 import { CloseIcon } from "./icons";
+import { getReadingCenterY } from "@/lib/readingCenter";
 
 function HeadphonesIcon() {
   return (
@@ -123,10 +124,7 @@ export function FontSizeControls({ onResize, label }: { onResize?: () => HTMLEle
     const anchor = onResize?.() ?? null;
     let anchorOffsetFromCenter = 0;
     if (anchor) {
-      const centerY = parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue("--topbar-height") || "52"
-      );
-      const readingCenter = centerY + (window.innerHeight - centerY) / 2;
+      const readingCenter = getReadingCenterY();
       const rect = anchor.getBoundingClientRect();
       anchorOffsetFromCenter = rect.top - readingCenter;
     }
@@ -137,10 +135,7 @@ export function FontSizeControls({ onResize, label }: { onResize?: () => HTMLEle
 
     // 3. Scroll so anchor is back at the same offset from center
     if (anchor) {
-      const centerY = parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue("--topbar-height") || "52"
-      );
-      const readingCenter = centerY + (window.innerHeight - centerY) / 2;
+      const readingCenter = getReadingCenterY();
       const newRect = anchor.getBoundingClientRect();
       const drift = newRect.top - readingCenter - anchorOffsetFromCenter;
       if (Math.abs(drift) > 1) {
