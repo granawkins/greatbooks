@@ -43,7 +43,8 @@ export default function HistoryPage() {
   }, [user?.email]);
 
   return (
-    <>
+    <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)" }}>
+      <div style={{ maxWidth: "var(--content-max-width)", margin: "0 auto", padding: "2.5rem 1.5rem" }}>
       <h1 style={sectionHeadingStyle}>History</h1>
 
       {loading ? (
@@ -107,6 +108,7 @@ export default function HistoryPage() {
           ))}
         </div>
       )}
-    </>
+      </div>
+    </div>
   );
 }

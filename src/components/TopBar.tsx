@@ -257,13 +257,13 @@ function MenuDropdown({ bookNav }: { bookNav: TopBarBookNav | null }) {
               <div style={{ padding: "8px 16px 2px", fontFamily: "var(--font-ui)", fontSize: "0.75rem", color: "var(--color-text-secondary)", opacity: 0.7 }}>
                 {user.email}
               </div>
-              <Link href="/profile#history" onClick={() => setOpen(false)} style={itemStyle} className="hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]">
+              <Link href="/history" onClick={() => setOpen(false)} style={itemStyle} className="hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]">
                 History
               </Link>
-              <Link href="/profile#billing" onClick={() => setOpen(false)} style={itemStyle} className="hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]">
+              <Link href="/billing" onClick={() => setOpen(false)} style={itemStyle} className="hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]">
                 Billing
               </Link>
-              <Link href="/profile" onClick={() => setOpen(false)} style={itemStyle} className="hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]">
+              <Link href="/settings" onClick={() => setOpen(false)} style={itemStyle} className="hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]">
                 Settings
               </Link>
             </>
