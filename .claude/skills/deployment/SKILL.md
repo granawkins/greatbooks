@@ -74,11 +74,9 @@ ssh greatbooks "pm2 start greatbooks"
 
 ### Pull database from remote
 ```bash
-ssh greatbooks "cd ~/greatbooks && sqlite3 greatbooks.db 'PRAGMA wal_checkpoint(TRUNCATE);'"
-rm -f greatbooks.db-wal greatbooks.db-shm
-scp greatbooks:~/greatbooks/greatbooks.db greatbooks.db
+./db_sync.sh
 ```
-Note: you MUST delete local `-wal` and `-shm` files before replacing the `.db`, otherwise SQLite will try to apply the old WAL to the new file and report "database disk image is malformed".
+Checkpoints WAL on remote, removes local WAL/SHM, downloads via rsync (with progress bar, bandwidth cap), and verifies integrity. See `db_sync.sh` in project root.
 
 ### Data files (audio, covers)
 

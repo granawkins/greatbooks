@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback, typ
 import { useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import { type SegmentBoundary, useAudioPlayer } from "@/lib/AudioPlayerContext";
-import { scrollToCenter } from "@/lib/readingCenter";
+import { scrollToCenter, getReadingCenterY } from "@/lib/readingCenter";
 import { useTopBar } from "@/lib/TopBarContext";
 import { useBookShell } from "@/app/[bookId]/BookShell";
 import { groupIntoBlocks, paraTimeRange, type ChapterData } from "@/components/reader";
@@ -15,27 +15,11 @@ import { AnnotationProvider } from "@/components/reader/AnnotationContext";
 import CourseChoiceModal from "@/components/CourseChoiceModal";
 import { FloatingControls } from "@/app/[bookId]/FloatingControls";
 import type { Annotation } from "@/components/reader/types";
-import { getReadingCenterY } from "@/lib/readingCenter";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import UpgradeModal, { type UpgradeModalVariant } from "@/components/UpgradeModal";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
-
-function sourceName(url: string): string {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, "");
-    if (host.includes("classics.mit.edu")) return "Internet Classics Archive";
-    if (host.includes("gutenberg.org")) return "Project Gutenberg";
-    if (host.includes("perseus.tufts.edu")) return "Perseus Digital Library";
-    return host;
-  } catch { return "Source"; }
-}
-
-const metaLineStyle = {
-  fontFamily: "var(--font-body)", fontSize: "1.125rem",
-  color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.85,
-} as const;
 
 function BookmarkIcon({ size = 20, filled = true }: { size?: number; filled?: boolean }) {
   return (
@@ -92,12 +76,13 @@ function ReadingModeIntroModal({ onClose }: { onClose: () => void }) {
 
 export default function ChapterView({
   chapterNum, chapterData, chapterType = "text",
-  initialAudioPositionMs, sourceProgress, initialAnnotations = [], children,
+  initialAudioPositionMs, initialScrollBlockIdx = -1, sourceProgress, initialAnnotations = [], children,
 }: {
   chapterNum: number;
   chapterData: ChapterData;
   chapterType?: "text" | "discussion";
   initialAudioPositionMs: number;
+  initialScrollBlockIdx?: number;
   sourceProgress?: { bookTitle: string; chapterNumber: number; audioPositionMs: number } | null;
   initialAnnotations?: Annotation[];
   children?: ReactNode;
@@ -160,7 +145,7 @@ export default function ChapterView({
 
   // ── Block refs (from server-rendered data-block-idx) ───────────────────
   const blockRefsRef = useRef<(HTMLElement | null)[]>([]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = textContainerRef.current;
     if (!container) return;
     const els = container.querySelectorAll<HTMLElement>("[data-block-idx]");
@@ -176,43 +161,18 @@ export default function ChapterView({
   const { allTimings } = useWordTimings(bookId, chapterNum, segments, layout);
   const paraRanges = useMemo(() => blocks.map((b) => (b.type === "paragraph" ? paraTimeRange(b) : null)), [blocks]);
 
-  // ── Initial scroll position ────────────────────────────────────────────
-  const [effectiveAudioMs, setEffectiveAudioMs] = useState(initialAudioPositionMs);
-  useEffect(() => {
-    if (session?.bookId === bookId && session?.chapterId === chapterNum && audioRef.current) {
-      const currentMs = Math.floor(audioRef.current.currentTime * 1000);
-      if (currentMs > 0) setEffectiveAudioMs(currentMs);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const scrollTargetBlockIdx = useMemo(() => {
-    if (scrollToBottom || effectiveAudioMs <= 0) return -1;
-    let targetSegIdx = 0;
-    for (let i = 0; i < segments.length; i++) {
-      if (segments[i].audio_start_ms != null && segments[i].audio_start_ms! <= effectiveAudioMs) targetSegIdx = i;
-    }
-    let segCount = 0;
-    for (let bi = 0; bi < blocks.length; bi++) {
-      const block = blocks[bi];
-      if (block.type === "paragraph") {
-        if (segCount + block.segments.length > targetSegIdx) return bi;
-        segCount += block.segments.length;
-      }
-    }
-    return blocks.length - 1;
-  }, [segments, effectiveAudioMs, blocks, scrollToBottom]);
-
+  // ── Initial scroll position (target computed server-side) ──────────────
   useLayoutEffect(() => {
     if (initialScrollDone.current === chapterNum) return;
     initialScrollDone.current = chapterNum;
     if (scrollToBottom) {
       bottomRef.current?.scrollIntoView({ block: "end", behavior: "instant" });
-    } else if (scrollTargetBlockIdx >= 0) {
-      const el = blockRefsRef.current[scrollTargetBlockIdx];
+    } else if (initialScrollBlockIdx >= 0) {
+      const el = document.querySelector<HTMLElement>(`[data-block-idx="${initialScrollBlockIdx}"]`);
       if (el) scrollToCenter(el, "instant", viewMode === "text");
     }
     setScrollReady(true);
-  }, [scrollTargetBlockIdx, chapterNum, scrollToBottom, viewMode]);
+  }, [initialScrollBlockIdx, chapterNum, scrollToBottom, viewMode]);
 
   // ── Audio session ──────────────────────────────────────────────────────
   const segmentBoundaries = useMemo((): SegmentBoundary[] => {
@@ -256,16 +216,6 @@ export default function ChapterView({
     chapterNum, segments, blocks, blockRefsRef, viewMode, audioRef, saveProgressNow,
   });
 
-  const getCenteredParagraph = useCallback((): HTMLElement | null => {
-    const centerY = getReadingCenterY(true);
-    for (const el of blockRefsRef.current) {
-      if (!el) continue;
-      const rect = el.getBoundingClientRect();
-      if (rect.top <= centerY && rect.bottom >= centerY) return el;
-    }
-    return null;
-  }, []);
-
   // ── Source progress modal ──────────────────────────────────────────────
   const [showSourceModal, setShowSourceModal] = useState(!!sourceProgress);
   const handleCarryOver = useCallback(() => {
@@ -290,7 +240,7 @@ export default function ChapterView({
       style={{ paddingBottom: isTextMode ? "80px" : "200px" }}>
 
       {showIntroModal && <ReadingModeIntroModal onClose={() => setShowIntroModal(false)} />}
-      <FloatingControls onResize={getCenteredParagraph} />
+      <FloatingControls />
 
       {showSourceModal && sourceProgress && (
         <CourseChoiceModal
@@ -307,7 +257,7 @@ export default function ChapterView({
         <button aria-label={bookmarkActive ? "Pause scroll tracking" : "Resume scroll tracking"}
           onClick={() => { if (!bookmarkActive) updatePositionFromScroll(); setBookmarkActive((b) => !b); }}
           className="reading-bookmark"
-          style={{ position: "fixed", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "none", cursor: "pointer", color: "var(--color-cursor)", opacity: bookmarkActive ? 0.7 : 0.3, transition: "opacity 0.2s, color 0.2s", padding: 0 }}>
+          style={{ position: "fixed", top: getReadingCenterY(true), transform: "translateY(-50%)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "none", cursor: "pointer", color: "var(--color-cursor)", opacity: bookmarkActive ? 0.7 : 0.3, transition: "opacity 0.2s, color 0.2s", padding: 0 }}>
           <BookmarkIcon size={18} filled={bookmarkActive} />
         </button>
       )}
@@ -315,20 +265,18 @@ export default function ChapterView({
       <article className="chapter-text">
         {isFirstChapter && bookMeta.type !== "course" && (
           <div ref={heroRef} style={{ minHeight: 1 }}>
-            <div style={{ textAlign: "center", padding: "2rem 0 1.5rem" }}>
-              {bookMeta.author && <p style={metaLineStyle}>by {bookMeta.author}</p>}
-              {bookMeta.original_date && <p style={metaLineStyle}>{bookMeta.original_date}</p>}
-              {bookMeta.translator && (
-                <p style={metaLineStyle}>Translated by {bookMeta.translator}{bookMeta.translation_date ? ` in ${bookMeta.translation_date}` : ""}</p>
-              )}
-              {bookMeta.source_url && (
-                <p style={metaLineStyle}>
-                  <a href={bookMeta.source_url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-text-secondary)" }} className="hover:underline">
-                    Source: {sourceName(bookMeta.source_url)}
-                  </a>
-                </p>
-              )}
-            </div>
+            <h1 style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "2rem",
+              fontWeight: 400,
+              color: "var(--color-text)",
+              textAlign: "center",
+              margin: 0,
+              padding: "2rem 0 1.5rem",
+              lineHeight: 1.2,
+            }}>
+              {bookMeta.title}
+            </h1>
           </div>
         )}
 
