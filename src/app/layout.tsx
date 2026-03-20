@@ -36,8 +36,8 @@ export const metadata: Metadata = {
   },
 };
 
-// Inline script to set dark class before first paint (prevents flash)
-const themeScript = `(function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")}catch(e){}})()`;
+// Inline script to set theme + typography before first paint (prevents flash/jitter)
+const prePaintScript = `(function(){try{var d=document.documentElement;var t=localStorage.getItem("theme");if(t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches))d.classList.add("dark");var fs=localStorage.getItem("greatbooks-font-size");if(fs){var n=parseInt(fs,10);if(!isNaN(n))d.style.setProperty("--font-size-body",n+"px");}}catch(e){}})()`;
 
 export default function RootLayout({
   children,
@@ -47,7 +47,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: prePaintScript }} />
       </head>
       <body className={`${cormorant.variable} ${dmSans.variable} antialiased`}>
         <ThemeProvider />

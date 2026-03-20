@@ -227,6 +227,8 @@ export default function PersistentPlayerBar() {
         WebkitBackdropFilter: "blur(16px)",
         borderTop: "1px solid var(--color-border)",
         padding: "8px 24px 16px",
+        minHeight: "var(--player-height)",
+        boxSizing: "border-box",
       }}
     >
       <div className="mx-auto" style={{ maxWidth: "28rem" }}>
