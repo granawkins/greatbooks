@@ -121,12 +121,15 @@ export default function ProfilePage() {
   const router = useRouter();
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
+  const { refreshUsage } = useAuth();
+
   useEffect(() => {
+    refreshUsage();
     fetch("/api/user/history", { credentials: "include" })
       .then((r) => r.json())
       .then(setHistory)
       .catch(() => {});
-  }, []);
+  }, [refreshUsage]);
 
   const currentSpeed = user?.playback_speed ?? 1;
   const tier = user?.tier ?? "anonymous";

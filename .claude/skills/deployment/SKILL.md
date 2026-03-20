@@ -72,6 +72,14 @@ scp greatbooks.db greatbooks:~/greatbooks/greatbooks.db
 ssh greatbooks "pm2 start greatbooks"
 ```
 
+### Pull database from remote
+```bash
+ssh greatbooks "cd ~/greatbooks && sqlite3 greatbooks.db 'PRAGMA wal_checkpoint(TRUNCATE);'"
+rm -f greatbooks.db-wal greatbooks.db-shm
+scp greatbooks:~/greatbooks/greatbooks.db greatbooks.db
+```
+Note: you MUST delete local `-wal` and `-shm` files before replacing the `.db`, otherwise SQLite will try to apply the old WAL to the new file and report "database disk image is malformed".
+
 ### Data files (audio, covers)
 
 Audio and cover images are served from GCS, not the server filesystem. After generating new audio or covers locally, upload to GCS:
