@@ -92,12 +92,13 @@ function ReadingModeIntroModal({ onClose }: { onClose: () => void }) {
 
 export default function ChapterView({
   chapterNum, chapterData, chapterType = "text",
-  initialAudioPositionMs, sourceProgress, initialAnnotations = [], children,
+  initialAudioPositionMs, initialScrollBlockIdx = -1, sourceProgress, initialAnnotations = [], children,
 }: {
   chapterNum: number;
   chapterData: ChapterData;
   chapterType?: "text" | "discussion";
   initialAudioPositionMs: number;
+  initialScrollBlockIdx?: number;
   sourceProgress?: { bookTitle: string; chapterNumber: number; audioPositionMs: number } | null;
   initialAnnotations?: Annotation[];
   children?: ReactNode;
@@ -160,7 +161,7 @@ export default function ChapterView({
 
   // ── Block refs (from server-rendered data-block-idx) ───────────────────
   const blockRefsRef = useRef<(HTMLElement | null)[]>([]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = textContainerRef.current;
     if (!container) return;
     const els = container.querySelectorAll<HTMLElement>("[data-block-idx]");
@@ -176,43 +177,18 @@ export default function ChapterView({
   const { allTimings } = useWordTimings(bookId, chapterNum, segments, layout);
   const paraRanges = useMemo(() => blocks.map((b) => (b.type === "paragraph" ? paraTimeRange(b) : null)), [blocks]);
 
-  // ── Initial scroll position ────────────────────────────────────────────
-  const [effectiveAudioMs, setEffectiveAudioMs] = useState(initialAudioPositionMs);
-  useEffect(() => {
-    if (session?.bookId === bookId && session?.chapterId === chapterNum && audioRef.current) {
-      const currentMs = Math.floor(audioRef.current.currentTime * 1000);
-      if (currentMs > 0) setEffectiveAudioMs(currentMs);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const scrollTargetBlockIdx = useMemo(() => {
-    if (scrollToBottom || effectiveAudioMs <= 0) return -1;
-    let targetSegIdx = 0;
-    for (let i = 0; i < segments.length; i++) {
-      if (segments[i].audio_start_ms != null && segments[i].audio_start_ms! <= effectiveAudioMs) targetSegIdx = i;
-    }
-    let segCount = 0;
-    for (let bi = 0; bi < blocks.length; bi++) {
-      const block = blocks[bi];
-      if (block.type === "paragraph") {
-        if (segCount + block.segments.length > targetSegIdx) return bi;
-        segCount += block.segments.length;
-      }
-    }
-    return blocks.length - 1;
-  }, [segments, effectiveAudioMs, blocks, scrollToBottom]);
-
+  // ── Initial scroll position (target computed server-side) ──────────────
   useLayoutEffect(() => {
     if (initialScrollDone.current === chapterNum) return;
     initialScrollDone.current = chapterNum;
     if (scrollToBottom) {
       bottomRef.current?.scrollIntoView({ block: "end", behavior: "instant" });
-    } else if (scrollTargetBlockIdx >= 0) {
-      const el = blockRefsRef.current[scrollTargetBlockIdx];
+    } else if (initialScrollBlockIdx >= 0) {
+      const el = document.querySelector<HTMLElement>(`[data-block-idx="${initialScrollBlockIdx}"]`);
       if (el) scrollToCenter(el, "instant", viewMode === "text");
     }
     setScrollReady(true);
-  }, [scrollTargetBlockIdx, chapterNum, scrollToBottom, viewMode]);
+  }, [initialScrollBlockIdx, chapterNum, scrollToBottom, viewMode]);
 
   // ── Audio session ──────────────────────────────────────────────────────
   const segmentBoundaries = useMemo((): SegmentBoundary[] => {
@@ -307,7 +283,7 @@ export default function ChapterView({
         <button aria-label={bookmarkActive ? "Pause scroll tracking" : "Resume scroll tracking"}
           onClick={() => { if (!bookmarkActive) updatePositionFromScroll(); setBookmarkActive((b) => !b); }}
           className="reading-bookmark"
-          style={{ position: "fixed", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "none", cursor: "pointer", color: "var(--color-cursor)", opacity: bookmarkActive ? 0.7 : 0.3, transition: "opacity 0.2s, color 0.2s", padding: 0 }}>
+          style={{ position: "fixed", top: getReadingCenterY(true), transform: "translateY(-50%)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "none", cursor: "pointer", color: "var(--color-cursor)", opacity: bookmarkActive ? 0.7 : 0.3, transition: "opacity 0.2s, color 0.2s", padding: 0 }}>
           <BookmarkIcon size={18} filled={bookmarkActive} />
         </button>
       )}
