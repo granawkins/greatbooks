@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback, typ
 import { useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import { type SegmentBoundary, useAudioPlayer } from "@/lib/AudioPlayerContext";
-import { scrollToCenter, getReadingCenterY } from "@/lib/readingCenter";
+import { scrollToCenter } from "@/lib/readingCenter";
 import { useTopBar } from "@/lib/TopBarContext";
 import { useBookShell } from "@/app/[bookId]/BookShell";
 import { groupIntoBlocks, type ChapterData } from "@/components/reader";
@@ -93,8 +93,9 @@ export default function ChapterView({
   const scrollToBottom = searchParams.get("scroll") === "bottom";
   const autoplay = searchParams.get("autoplay") === "1";
 
-  const { session, loadSession, wordTimingsRef, audioRef, viewMode, playbackSpeedRef, audioGateCheckRef, onAudioBlockedRef, getSessionListenedMs } = useAudioPlayer();
+  const { session, loadSession, wordTimingsRef, audioRef, viewMode, setViewMode, playbackSpeedRef, audioGateCheckRef, onAudioBlockedRef, getSessionListenedMs } = useAudioPlayer();
   const { user, loading: authLoading } = useAuth();
+  const hasAudio = !!chapterData.audio_file;
   const { setScrolled } = useTopBar();
   const [upgradeModal, setUpgradeModal] = useState<UpgradeModalVariant | null>(null);
 
@@ -107,6 +108,11 @@ export default function ChapterView({
   const segments = chapterData.segments;
   const layout = bookMeta.layout || "prose";
   const blocks = useMemo(() => groupIntoBlocks(segments, layout), [segments, layout]);
+
+  // ── Force text mode for chapters without audio ─────────────────────────
+  useEffect(() => {
+    if (!hasAudio && viewMode !== "text") setViewMode("text");
+  }, [hasAudio, viewMode, setViewMode]);
 
   // ── Audio gate ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -251,7 +257,7 @@ export default function ChapterView({
         <button aria-label={bookmarkActive ? "Pause scroll tracking" : "Resume scroll tracking"}
           onClick={() => { if (!bookmarkActive) updatePositionFromScroll(); setBookmarkActive((b) => !b); }}
           className="reading-bookmark"
-          style={{ position: "fixed", top: getReadingCenterY(), transform: "translateY(-50%)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "none", cursor: "pointer", color: "var(--color-cursor)", opacity: bookmarkActive ? 0.7 : 0.3, transition: "opacity 0.2s, color 0.2s", padding: 0 }}>
+          style={{ position: "fixed", top: "50%", transform: "translateY(-50%)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "none", cursor: "pointer", color: "var(--color-cursor)", opacity: bookmarkActive ? 0.7 : 0.3, transition: "opacity 0.2s, color 0.2s", padding: 0 }}>
           <BookmarkIcon size={18} filled={bookmarkActive} />
         </button>
       )}
