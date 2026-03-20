@@ -66,6 +66,10 @@ WHERE c.book_id = ? AND s.text LIKE ?
 ORDER BY c.number, s.sequence;
 ```
 
+## Syncing from Production
+
+Run `./db_sync.sh` in the project root to pull the production database locally (with progress bar and integrity check). See deployment skill for details.
+
 ## Conventions
 
 - Always use parameterized queries (never string interpolation)
