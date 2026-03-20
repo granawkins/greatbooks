@@ -497,6 +497,7 @@ function FeaturedBookCard({
       >
         {/* Cover */}
         <div
+          className="book-card-cover"
           style={{
             width: 120,
             flexShrink: 0,
@@ -559,8 +560,25 @@ function FeaturedBookCard({
             </p>
           )}
 
-          {/* Stats/Progress + Open button */}
+          {/* CTA + Stats/Progress */}
           <div className="book-card-actions">
+            <span
+              style={{
+                fontFamily: "var(--font-ui)",
+                fontSize: "0.8125rem",
+                fontWeight: 500,
+                color: "#fff",
+                backgroundColor: "var(--color-accent)",
+                padding: "0.375rem 0.875rem",
+                borderRadius: "var(--radius)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.25rem",
+              }}
+            >
+              {inProgress ? "Continue" : "Open"}
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3l5 5-5 5" /></svg>
+            </span>
             {inProgress ? (
               <div>
                 <div
@@ -617,23 +635,6 @@ function FeaturedBookCard({
                 )}
               </p>
             )}
-            <span
-              style={{
-                fontFamily: "var(--font-ui)",
-                fontSize: "0.8125rem",
-                fontWeight: 500,
-                color: "#fff",
-                backgroundColor: "var(--color-accent)",
-                padding: "0.375rem 0.875rem",
-                borderRadius: "var(--radius)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.25rem",
-              }}
-            >
-              {inProgress ? "Continue" : "Open"}
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3l5 5-5 5" /></svg>
-            </span>
           </div>
         </div>
       </div>
