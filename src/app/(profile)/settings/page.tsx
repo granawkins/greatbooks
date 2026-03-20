@@ -46,15 +46,16 @@ export default function SettingsPage() {
   };
 
   return (
-    <>
-      <h1 style={sectionHeadingStyle}>Settings</h1>
+    <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)" }}>
+      <div style={{ maxWidth: "var(--content-max-width)", margin: "0 auto", padding: "2.5rem 1.5rem" }}>
+        <h1 style={sectionHeadingStyle}>Settings</h1>
 
-      {loading ? (
-        <p style={{ color: "var(--color-text-secondary)", fontSize: "0.875rem" }}>
-          Loading...
-        </p>
-      ) : (
-        <>
+        {loading ? (
+          <p style={{ color: "var(--color-text-secondary)", fontSize: "0.875rem" }}>
+            Loading...
+          </p>
+        ) : (
+          <>
           {/* Email */}
           <div style={rowStyle}>
             <span style={labelStyle}>Email</span>
@@ -114,8 +115,9 @@ export default function SettingsPage() {
               ))}
             </div>
           </div>
-        </>
-      )}
-    </>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

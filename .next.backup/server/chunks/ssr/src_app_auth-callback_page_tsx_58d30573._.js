@@ -1,3 +1,0 @@
-module.exports=[14803,a=>{"use strict";var b=a.i(87924),c=a.i(72131),d=a.i(50944);function e(){let a=(0,d.useRouter)();return(0,c.useEffect)(()=>{let b=new URLSearchParams(window.location.search),c="true"===b.get("successful"),d=b.get("returnTo")||"/";c||console.error("Login failed:",b.get("error")),a.replace(d)},[a]),(0,b.jsx)("div",{className:"min-h-screen flex items-center justify-center",style:{backgroundColor:"var(--color-bg)",color:"var(--color-text)"},children:(0,b.jsx)("p",{children:"Signing in..."})})}a.s(["default",()=>e])}];
-
-//# sourceMappingURL=src_app_auth-callback_page_tsx_58d30573._.js.map
