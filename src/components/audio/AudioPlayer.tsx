@@ -188,7 +188,12 @@ export default function AudioPlayer() {
             const prevEl = sd.elements[activeParaRef.current];
             if (prevEl) {
               const rect = prevEl.getBoundingClientRect();
-              const visible = rect.top < window.innerHeight && rect.bottom > 0;
+              const vh = window.visualViewport?.height ?? window.innerHeight;
+              // Account for topbar and player bar occlusion
+              const topBar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height") || "52");
+              const playerBar = document.querySelector<HTMLElement>("[data-player-bar]");
+              const bottomInset = playerBar ? playerBar.getBoundingClientRect().height : 0;
+              const visible = rect.bottom > topBar && rect.top < (vh - bottomInset);
               if (!visible) {
                 autoScrollRef.current = false;
                 activeParaRef.current = i;

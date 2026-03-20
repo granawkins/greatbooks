@@ -5,7 +5,7 @@ import type { Annotation } from "./types";
 import { WordPopup } from "./WordPopup";
 import { CommentModal, CommentInputModal } from "./CommentModals";
 import { setCommentHover } from "./commentHover";
-import { useAudioSession } from "@/lib/AudioPlayerContext";
+import { useAudioSession, useAudioView } from "@/lib/AudioPlayerContext";
 import { useAnnotations } from "./AnnotationContext";
 import {
   applyAnnotations, clearAnnotations, applyClass, removeClass,
@@ -47,6 +47,7 @@ export default function InteractiveParagraph({
 }: Props) {
   const containerRef = useRef<HTMLSpanElement | null>(null);
   const { audioRef, session, onChapterSelectRef, wordTimingsRef } = useAudioSession();
+  const { setViewMode } = useAudioView();
   const { annotations, addAnnotation, removeAnnotation } = useAnnotations();
 
   const [showCommentInput, setShowCommentInput] = useState(false);
@@ -133,8 +134,9 @@ export default function InteractiveParagraph({
     } else {
       onChapterSelectRef.current?.(chapterNum, startMs, true);
     }
+    setViewMode("audio");
     clearSelection();
-  }, [session, chapterNum, audioRef, onChapterSelectRef, wordTimingsRef]);
+  }, [session, chapterNum, audioRef, onChapterSelectRef, wordTimingsRef, setViewMode]);
 
   const handleHighlight = useCallback(() => {
     const range = getSelectionRange();

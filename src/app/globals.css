@@ -117,10 +117,8 @@ body::before {
 
 /* ── Reading mode bookmark positioning ───────────────────────── */
 
-/* Vertical center of the visible reading area (between topbar and bottom) */
+/* top + transform set via inline style using getReadingCenterY() */
 .reading-bookmark {
-  top: calc(var(--topbar-height) + (100vh - var(--topbar-height)) / 2);
-  transform: translateY(-50%);
   /* Desktop: sits just left of text column */
   left: calc(50% - var(--content-max-width) / 2 - 28px);
 }

@@ -41,7 +41,7 @@ function PlusIcon() {
   );
 }
 
-export function ViewModeToggle() {
+export function ViewModeToggle({ showLabels }: { showLabels?: boolean } = {}) {
   const { session, audioRef } = useAudioSession();
   const { viewMode, setViewMode } = useAudioView();
   if (!session) return null;
@@ -50,6 +50,8 @@ export function ViewModeToggle() {
     if (mode === "text") audioRef.current?.pause();
     setViewMode(mode);
   };
+
+  const labels: Record<string, string> = { text: "Read", audio: "Listen" };
 
   return (
     <div
@@ -72,17 +74,22 @@ export function ViewModeToggle() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 42,
+            gap: showLabels ? 6 : 0,
             height: 38,
+            padding: showLabels ? "0 14px" : "0",
+            width: showLabels ? "auto" : 42,
             border: "none",
             cursor: "pointer",
-            padding: 0,
             backgroundColor: viewMode === mode ? "var(--color-bg-secondary)" : "transparent",
             color: viewMode === mode ? "var(--color-text)" : "var(--color-text-secondary)",
             transition: "background-color 0.15s, color 0.15s",
+            fontFamily: "var(--font-ui)",
+            fontSize: "0.8125rem",
+            fontWeight: 500,
           }}
         >
           {mode === "audio" ? <HeadphonesIcon /> : <BookIcon />}
+          {showLabels && labels[mode]}
         </button>
       ))}
     </div>
@@ -96,7 +103,7 @@ const DEFAULT_FONT_SIZE = 18;
  * onResize: called BEFORE the font size change. Should return an element
  * to keep anchored at the reading center, or null.
  */
-export function FontSizeControls({ onResize }: { onResize?: () => HTMLElement | null }) {
+export function FontSizeControls({ onResize, label }: { onResize?: () => HTMLElement | null; label?: string }) {
   const { session } = useAudioSession();
   if (!session) return null;
 
@@ -164,23 +171,35 @@ export function FontSizeControls({ onResize }: { onResize?: () => HTMLElement | 
   };
 
   return (
-    <div
-      style={{
-        display: "inline-flex",
-        borderRadius: 20,
-        border: "1px solid var(--color-border)",
-        overflow: "hidden",
-        backgroundColor: "var(--color-surface)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-      }}
-    >
-      <button aria-label="Decrease font size" onClick={() => adjust(-1)} style={btnStyle}>
-        <MinusIcon />
-      </button>
-      <button aria-label="Increase font size" onClick={() => adjust(1)} style={btnStyle}>
-        <PlusIcon />
-      </button>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      {label && (
+        <span style={{
+          fontFamily: "var(--font-ui)",
+          fontSize: "0.8125rem",
+          fontWeight: 500,
+          color: "var(--color-text-secondary)",
+        }}>
+          {label}
+        </span>
+      )}
+      <div
+        style={{
+          display: "inline-flex",
+          borderRadius: 20,
+          border: "1px solid var(--color-border)",
+          overflow: "hidden",
+          backgroundColor: "var(--color-surface)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+        }}
+      >
+        <button aria-label="Decrease font size" onClick={() => adjust(-1)} style={btnStyle}>
+          <MinusIcon />
+        </button>
+        <button aria-label="Increase font size" onClick={() => adjust(1)} style={btnStyle}>
+          <PlusIcon />
+        </button>
+      </div>
     </div>
   );
 }
@@ -197,6 +216,7 @@ export default function PersistentPlayerBar() {
 
   return (
     <div
+      data-player-bar
       className="fixed left-0 right-0 z-50"
       style={{
         bottom: 0,
