@@ -484,6 +484,7 @@ function FeaturedBookCard({
   return (
     <Link
       href={href}
+      className="book-card-link"
       style={{ textDecoration: "none", display: "block" }}
     >
       <div
