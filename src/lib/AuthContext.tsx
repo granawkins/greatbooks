@@ -13,6 +13,7 @@ type AuthUser = {
   creditsUsed: number;
   creditsLimit: number;
   tierExpiresAt: string | null;
+  isAdmin: boolean;
 };
 
 type AuthContextType = {
@@ -28,6 +29,7 @@ const ANONYMOUS_USER: AuthUser = {
   id: null, email: null, playback_speed: 1,
   tier: "anonymous", audioUsedMs: 0, audioLimitMs: 0,
   creditsUsed: 0, creditsLimit: 0, tierExpiresAt: null,
+  isAdmin: false,
 };
 
 const AuthContext = createContext<AuthContextType>({
