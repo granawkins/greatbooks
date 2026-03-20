@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import ChapterView from "./ChapterView";
 import ChapterContent from "@/components/reader/ChapterContent";
 import type { Segment } from "@/components/reader";
+import { groupIntoBlocks } from "@/components/reader";
 import type { WordBoundary } from "@/components/reader/types";
 
 export default async function ChapterPage({
@@ -58,6 +59,19 @@ export default async function ChapterPage({
   const audioPositionMs =
     progress?.chapter_number === chapterNum ? (progress.audio_position_ms ?? 0) : 0;
 
+  // Compute scroll target block index server-side so useLayoutEffect can query DOM directly
+  let initialScrollBlockIdx = -1;
+  if (audioPositionMs > 0) {
+    const layout = book.layout === "verse" ? "verse" as const : "prose" as const;
+    const blocks = groupIntoBlocks(segments, layout);
+    for (let bi = blocks.length - 1; bi >= 0; bi--) {
+      const block = blocks[bi];
+      if (block.type !== "paragraph") continue;
+      const firstMs = block.segments[0]?.audio_start_ms;
+      if (firstMs != null && firstMs <= audioPositionMs) { initialScrollBlockIdx = bi; break; }
+    }
+  }
+
   // For course reference chapters with no course progress on this chapter,
   // check if the source book has independent progress that's newer than the course progress.
   // Only prompt if the user made independent progress AFTER their last course activity.
@@ -99,6 +113,7 @@ export default async function ChapterPage({
       }}
       chapterType={chapter.chapter_type ?? "text"}
       initialAudioPositionMs={audioPositionMs}
+      initialScrollBlockIdx={initialScrollBlockIdx}
       sourceProgress={sourceProgress}
       initialAnnotations={initialAnnotations}
     >

@@ -11,13 +11,11 @@ function getViewportHeight(): number {
   return window.visualViewport?.height ?? window.innerHeight;
 }
 
-/** Measure the actual player bar height from the DOM, falling back to CSS variable. */
+/** Measure the actual player bar height from the DOM. Returns 0 if not mounted. */
 function getPlayerBarHeight(): number {
   const bar = document.querySelector<HTMLElement>("[data-player-bar]");
-  if (bar) return bar.getBoundingClientRect().height;
-  return parseFloat(
-    getComputedStyle(document.documentElement).getPropertyValue("--player-height") || "172"
-  );
+  if (!bar) return 0;
+  return bar.getBoundingClientRect().height;
 }
 
 /** Returns the Y coordinate (in viewport pixels) of the visible reading center. */
