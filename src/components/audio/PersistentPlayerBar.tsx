@@ -197,6 +197,7 @@ export default function PersistentPlayerBar() {
 
   return (
     <div
+      data-player-bar
       className="fixed left-0 right-0 z-50"
       style={{
         bottom: 0,
