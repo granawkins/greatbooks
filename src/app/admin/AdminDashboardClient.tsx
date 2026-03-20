@@ -23,15 +23,10 @@ type Charts = {
   messagesPerDay: { date: string; count: number }[];
 };
 
-const ACCENT = "#C4A97D";
+// Chart colours that work in both light and dark mode
+const ACCENT = "var(--color-accent)";
 const ACCENT2 = "#7D9EC4";
-const BG = "#141311";
-const BG2 = "#1E1C19";
-const BG3 = "#2A2722";
-const BORDER = "#302C25";
-const TEXT = "#E5E0D8";
-const TEXT2 = "#9A9184";
-const PIE_COLORS = [ACCENT, ACCENT2, "#C47D9E", "#7DC4A9"];
+const PIE_COLORS = ["var(--color-accent)", "#7D9EC4", "#C47D9E", "#7DC4A9"];
 
 function shortDate(d: string) {
   const [, m, day] = d.split("-");
@@ -41,17 +36,17 @@ function shortDate(d: string) {
 function StatCard({ label, value, sub }: { label: string; value: number; sub?: string }) {
   return (
     <div style={{
-      background: BG2,
-      border: `1px solid ${BORDER}`,
+      background: "var(--color-bg-secondary)",
+      border: "1px solid var(--color-border)",
       borderRadius: 8,
       padding: "20px 24px",
       display: "flex",
       flexDirection: "column",
       gap: 4,
     }}>
-      <div style={{ color: TEXT2, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</div>
-      <div style={{ color: TEXT, fontSize: 32, fontWeight: 600 }}>{value.toLocaleString()}</div>
-      {sub && <div style={{ color: ACCENT, fontSize: 12 }}>{sub}</div>}
+      <div style={{ color: "var(--color-text-secondary)", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</div>
+      <div style={{ color: "var(--color-text)", fontSize: 32, fontWeight: 600 }}>{value.toLocaleString()}</div>
+      {sub && <div style={{ color: "var(--color-accent)", fontSize: 12 }}>{sub}</div>}
     </div>
   );
 }
@@ -59,12 +54,12 @@ function StatCard({ label, value, sub }: { label: string; value: number; sub?: s
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{
-      background: BG2,
-      border: `1px solid ${BORDER}`,
+      background: "var(--color-bg-secondary)",
+      border: "1px solid var(--color-border)",
       borderRadius: 8,
       padding: "20px 24px",
     }}>
-      <div style={{ color: TEXT, fontSize: 14, fontWeight: 600, marginBottom: 16, letterSpacing: "0.04em" }}>
+      <div style={{ color: "var(--color-text)", fontSize: 14, fontWeight: 600, marginBottom: 16, letterSpacing: "0.04em" }}>
         {title}
       </div>
       {children}
@@ -72,16 +67,35 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
-const tooltipStyle = {
-  contentStyle: { background: BG3, border: `1px solid ${BORDER}`, borderRadius: 6, color: TEXT, fontSize: 12 },
-  cursor: { fill: "rgba(196,169,125,0.08)" },
-};
+// Recharts tooltip needs explicit hex colours (can't use CSS vars inside SVG context)
+// We read them at render time from the document root.
+function useComputedColors() {
+  const [colors, setColors] = useState({
+    bg3: "#2A2722",
+    border: "#302C25",
+    text: "#E5E0D8",
+    textSecondary: "#9A9184",
+  });
+
+  useEffect(() => {
+    const style = getComputedStyle(document.documentElement);
+    setColors({
+      bg3: style.getPropertyValue("--color-bg-tertiary").trim() || "#2A2722",
+      border: style.getPropertyValue("--color-border").trim() || "#302C25",
+      text: style.getPropertyValue("--color-text").trim() || "#E5E0D8",
+      textSecondary: style.getPropertyValue("--color-text-secondary").trim() || "#9A9184",
+    });
+  }, []);
+
+  return colors;
+}
 
 export default function AdminDashboardClient() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [charts, setCharts] = useState<Charts | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState("");
+  const c = useComputedColors();
 
   useEffect(() => {
     setNow(new Date().toUTCString());
@@ -97,9 +111,14 @@ export default function AdminDashboardClient() {
       .catch((e) => setError(e.message));
   }, []);
 
+  const tooltipStyle = {
+    contentStyle: { background: c.bg3, border: `1px solid ${c.border}`, borderRadius: 6, color: c.text, fontSize: 12 },
+    cursor: { fill: "rgba(128,128,128,0.08)" },
+  };
+
   if (error) {
     return (
-      <div style={{ background: BG, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: TEXT }}>
+      <div style={{ background: "var(--color-bg)", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text)" }}>
         Error: {error}
       </div>
     );
@@ -107,13 +126,12 @@ export default function AdminDashboardClient() {
 
   if (!stats || !charts) {
     return (
-      <div style={{ background: BG, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: TEXT2 }}>
+      <div style={{ background: "var(--color-bg)", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-secondary)" }}>
         Loading…
       </div>
     );
   }
 
-  // Fill in zero-count dates for line/bar charts
   function fillDates(data: { date: string; count: number }[]) {
     const map = Object.fromEntries(data.map((d) => [d.date, d.count]));
     const result: { date: string; count: number }[] = [];
@@ -131,15 +149,15 @@ export default function AdminDashboardClient() {
   const messages = fillDates(charts.messagesPerDay);
 
   return (
-    <div style={{ background: BG, minHeight: "100vh", padding: "32px 24px", fontFamily: "inherit" }}>
+    <div style={{ background: "var(--color-bg)", minHeight: "100vh", padding: "32px 24px", fontFamily: "inherit" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
 
         {/* Header */}
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ color: ACCENT, fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: "0.04em" }}>
+          <h1 style={{ color: "var(--color-accent)", fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: "0.04em" }}>
             Admin Dashboard
           </h1>
-          <div style={{ color: TEXT2, fontSize: 12, marginTop: 6 }}>{now}</div>
+          <div style={{ color: "var(--color-text-secondary)", fontSize: 12, marginTop: 6 }}>{now}</div>
         </div>
 
         {/* Stat cards */}
@@ -160,43 +178,39 @@ export default function AdminDashboardClient() {
         {/* Charts grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
 
-          {/* Daily signups */}
           <ChartCard title="Daily Signups — last 30 days">
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={signups} barSize={6}>
-                <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fill: TEXT2, fontSize: 10 }} tickLine={false} axisLine={false} interval={6} />
-                <YAxis tick={{ fill: TEXT2, fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} width={24} />
+                <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fill: c.textSecondary, fontSize: 10 }} tickLine={false} axisLine={false} interval={6} />
+                <YAxis tick={{ fill: c.textSecondary, fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} width={24} />
                 <Tooltip {...tooltipStyle} formatter={(v) => [v, "signups"]} labelFormatter={(l) => l} />
                 <Bar dataKey="count" fill={ACCENT} radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* Daily sessions */}
           <ChartCard title="Daily Sessions — last 30 days">
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={sessions} barSize={6}>
-                <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fill: TEXT2, fontSize: 10 }} tickLine={false} axisLine={false} interval={6} />
-                <YAxis tick={{ fill: TEXT2, fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} width={24} />
+                <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fill: c.textSecondary, fontSize: 10 }} tickLine={false} axisLine={false} interval={6} />
+                <YAxis tick={{ fill: c.textSecondary, fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} width={24} />
                 <Tooltip {...tooltipStyle} formatter={(v) => [v, "sessions"]} labelFormatter={(l) => l} />
                 <Bar dataKey="count" fill={ACCENT2} radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* Chat messages per day */}
           <ChartCard title="Chat Messages — last 30 days">
             <ResponsiveContainer width="100%" height={180}>
               <LineChart data={messages}>
-                <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fill: TEXT2, fontSize: 10 }} tickLine={false} axisLine={false} interval={6} />
-                <YAxis tick={{ fill: TEXT2, fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} width={24} />
+                <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fill: c.textSecondary, fontSize: 10 }} tickLine={false} axisLine={false} interval={6} />
+                <YAxis tick={{ fill: c.textSecondary, fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} width={24} />
                 <Tooltip {...tooltipStyle} formatter={(v) => [v, "messages"]} labelFormatter={(l) => l} />
                 <Line type="monotone" dataKey="count" stroke={ACCENT} strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* Sessions by mode */}
           <ChartCard title="Sessions by Mode">
             <ResponsiveContainer width="100%" height={180}>
               <PieChart>
@@ -207,17 +221,13 @@ export default function AdminDashboardClient() {
                   cx="50%"
                   cy="50%"
                   outerRadius={65}
-                  label={(props) => {
-                    const pct = typeof props.percent === "number" ? (props.percent * 100).toFixed(0) : "0";
-                    return `${props.name ?? ""} ${pct}%`;
-                  }}
                   labelLine={false}
                 >
                   {charts.sessionsByMode.map((_, i) => (
                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                   ))}
                 </Pie>
-                <Legend formatter={(v) => <span style={{ color: TEXT2, fontSize: 12 }}>{v}</span>} />
+                <Legend formatter={(v) => <span style={{ color: c.textSecondary, fontSize: 12 }}>{v}</span>} />
                 <Tooltip {...tooltipStyle} />
               </PieChart>
             </ResponsiveContainer>
@@ -230,11 +240,11 @@ export default function AdminDashboardClient() {
           <ChartCard title="Sessions by Book">
             <ResponsiveContainer width="100%" height={Math.max(200, charts.sessionsByBook.length * 32)}>
               <BarChart data={charts.sessionsByBook} layout="vertical" barSize={14}>
-                <XAxis type="number" tick={{ fill: TEXT2, fontSize: 10 }} tickLine={false} axisLine={false} />
+                <XAxis type="number" tick={{ fill: c.textSecondary, fontSize: 10 }} tickLine={false} axisLine={false} />
                 <YAxis
                   type="category"
                   dataKey="title"
-                  tick={{ fill: TEXT2, fontSize: 11 }}
+                  tick={{ fill: c.textSecondary, fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
                   width={180}
