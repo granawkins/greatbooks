@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import ChapterView from "./ChapterView";
 import ChapterContent from "@/components/reader/ChapterContent";
 import type { Segment } from "@/components/reader";
-import { groupIntoBlocks } from "@/components/reader";
 import type { WordBoundary } from "@/components/reader/types";
 
 export default async function ChapterPage({
@@ -59,18 +58,40 @@ export default async function ChapterPage({
   const audioPositionMs =
     progress?.chapter_number === chapterNum ? (progress.audio_position_ms ?? 0) : 0;
 
-  // Compute scroll target block index server-side so useLayoutEffect can query DOM directly
-  let initialScrollBlockIdx = -1;
+  // Compute the exact word span ID for initial scroll position
+  let initialWordSpanId: string | null = null;
   if (audioPositionMs > 0) {
-    const layout = book.layout === "verse" ? "verse" as const : "prose" as const;
-    const blocks = groupIntoBlocks(segments, layout);
-    for (let bi = blocks.length - 1; bi >= 0; bi--) {
-      const block = blocks[bi];
-      if (block.type !== "paragraph") continue;
-      const firstMs = block.segments[0]?.audio_start_ms;
-      if (firstMs != null && firstMs <= audioPositionMs) { initialScrollBlockIdx = bi; break; }
+    for (const seg of rawSegments) {
+      if (seg.audio_start_ms != null && seg.audio_end_ms != null &&
+          audioPositionMs >= seg.audio_start_ms && audioPositionMs < seg.audio_end_ms &&
+          seg.word_timestamps) {
+        const words = JSON.parse(seg.word_timestamps) as { start_ms: number; end_ms: number; char_start: number; char_end: number }[];
+        // Find the word containing the audio position, or fall back to the first word
+        const word = words.find(w => audioPositionMs >= w.start_ms && audioPositionMs < w.end_ms) ?? words[0];
+        if (word) {
+          initialWordSpanId = `w-${chapterNum}-${seg.sequence}-${word.char_start}`;
+        }
+        break;
+      }
+    }
+    // Fallback: if we couldn't find an exact word, find the segment that starts closest
+    if (!initialWordSpanId) {
+      for (let i = rawSegments.length - 1; i >= 0; i--) {
+        const seg = rawSegments[i];
+        if (seg.audio_start_ms != null && seg.audio_start_ms <= audioPositionMs && seg.word_timestamps) {
+          const words = JSON.parse(seg.word_timestamps) as { char_start: number }[];
+          if (words.length > 0) {
+            initialWordSpanId = `w-${chapterNum}-${seg.sequence}-${words[0].char_start}`;
+          }
+          break;
+        }
+      }
     }
   }
+
+  // Playback speed from user record (avoids race with auth fetch on client)
+  const userRow = userId ? db.getUser(userId) : null;
+  const playbackSpeed = userRow?.playback_speed ?? 1;
 
   // For course reference chapters with no course progress on this chapter,
   // check if the source book has independent progress that's newer than the course progress.
@@ -113,9 +134,10 @@ export default async function ChapterPage({
       }}
       chapterType={chapter.chapter_type ?? "text"}
       initialAudioPositionMs={audioPositionMs}
-      initialScrollBlockIdx={initialScrollBlockIdx}
+      initialWordSpanId={initialWordSpanId}
       sourceProgress={sourceProgress}
       initialAnnotations={initialAnnotations}
+      playbackSpeed={playbackSpeed}
     >
       <ChapterContent
         segments={segments}

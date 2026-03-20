@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAudioSession, type WordTiming } from "@/lib/AudioPlayerContext";
-import { scrollToCenter } from "@/lib/readingCenter";
+import { scrollToCenter, isInReadingZone } from "@/lib/readingCenter";
 import { applyClassById, removeClassById } from "@/components/reader/wordAnnotator";
 import { Scrubber, formatTime, formatTimeRemaining } from "./Scrubber";
 import { CtrlBtn } from "./CtrlBtn";
@@ -30,7 +30,6 @@ export default function AudioPlayer() {
     session,
     audioRef,
     wordTimingsRef,
-    scrollDataRef,
     viewingChapterRef,
     onChatClickRef,
     playbackSpeedRef,
@@ -144,8 +143,10 @@ export default function AudioPlayer() {
   const remainingRef = useRef<HTMLSpanElement>(null);
 
   const activeWordRef = useRef<string | null>(null);
-  const activeParaRef = useRef<number | null>(null);
-  const autoScrollRef = useRef(true);
+  // following = true means auto-scroll tracks the active word
+  const followingRef = useRef(false);
+  // Timestamp of last programmatic scroll — ignore user-scroll events within 600ms
+  const lastAutoScrollRef = useRef(0);
 
   const [speedHovered, setSpeedHovered] = useState(false);
   const [playHovered, setPlayHovered] = useState(false);
@@ -173,41 +174,16 @@ export default function AudioPlayer() {
       if (activeWordRef.current) removeClassById(activeWordRef.current, "word-active");
       if (newId) applyClassById(newId, "word-active");
       activeWordRef.current = newId;
-    }
-  }, [wordTimingsRef]);
-
-  const updateScroll = useCallback((ms: number) => {
-    if (!autoScrollRef.current) return;
-    const sd = scrollDataRef.current;
-    if (!sd) return;
-    for (let i = 0; i < sd.ranges.length; i++) {
-      const r = sd.ranges[i];
-      if (r && ms >= r.start_ms && ms < r.end_ms) {
-        if (i !== activeParaRef.current) {
-          if (activeParaRef.current !== null) {
-            const prevEl = sd.elements[activeParaRef.current];
-            if (prevEl) {
-              const rect = prevEl.getBoundingClientRect();
-              const vh = window.visualViewport?.height ?? window.innerHeight;
-              // Account for topbar and player bar occlusion
-              const topBar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height") || "52");
-              const playerBar = document.querySelector<HTMLElement>("[data-player-bar]");
-              const bottomInset = playerBar ? playerBar.getBoundingClientRect().height : 0;
-              const visible = rect.bottom > topBar && rect.top < (vh - bottomInset);
-              if (!visible) {
-                autoScrollRef.current = false;
-                activeParaRef.current = i;
-                return;
-              }
-            }
-          }
-          activeParaRef.current = i;
-          if (sd.elements[i]) scrollToCenter(sd.elements[i]!);
+      // Word-level auto-scroll: if following, keep active word in middle 50%
+      if (followingRef.current && newId) {
+        const el = document.getElementById(newId);
+        if (el && !isInReadingZone(el)) {
+          lastAutoScrollRef.current = Date.now();
+          scrollToCenter(el, "smooth");
         }
-        return;
       }
     }
-  }, [scrollDataRef]);
+  }, [wordTimingsRef]);
 
   const clearHighlight = useCallback(() => {
     if (activeWordRef.current) {
@@ -216,18 +192,59 @@ export default function AudioPlayer() {
     }
   }, []);
 
-  // ── Reset highlight on resize (reflow may clear inline styles) ──────────
+  // ── Reset highlight on resize ───────────────────────────────────────────
   useEffect(() => {
     const handleResize = () => {
       if (activeWordRef.current) {
         clearHighlight();
         activeWordRef.current = null;
       }
-      activeParaRef.current = null;
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [clearHighlight]);
+
+  // ── Following state machine ────────────────────────────────────────────
+  // Play → following=true + jump to cursor
+  // User scroll while playing → following=false
+  // Pause+play → following=true + jump again
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onPlay = () => {
+      followingRef.current = true;
+      // Jump to the active word immediately
+      if (activeWordRef.current) {
+        const el = document.getElementById(activeWordRef.current);
+        if (el && !isInReadingZone(el)) {
+          lastAutoScrollRef.current = Date.now();
+          scrollToCenter(el, "smooth");
+        }
+      }
+    };
+    const onPause = () => {
+      followingRef.current = false;
+    };
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    return () => {
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+    };
+  }, [audioRef]);
+
+  // User scroll while playing → stop following (ignore scroll events within 600ms of auto-scroll)
+  useEffect(() => {
+    const handleScroll = () => {
+      if (Date.now() - lastAutoScrollRef.current < 600) return;
+      const audio = audioRef.current;
+      if (audio && !audio.paused) {
+        followingRef.current = false;
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [audioRef]);
 
   // ── rAF loop ────────────────────────────────────────────────────────────
 
@@ -241,26 +258,8 @@ export default function AudioPlayer() {
       if (!paused) {
         const ms = Math.floor(audio.currentTime * 1000);
         const dur = session?.durationMs ?? 0;
-
-        if (wasPaused) {
-          autoScrollRef.current = true;
-          activeParaRef.current = null;
-          const sd = scrollDataRef.current;
-          if (sd) {
-            for (let i = 0; i < sd.ranges.length; i++) {
-              const r = sd.ranges[i];
-              if (r && ms >= r.start_ms && ms < r.end_ms) {
-                activeParaRef.current = i;
-                if (sd.elements[i]) scrollToCenter(sd.elements[i]!);
-                break;
-              }
-            }
-          }
-        }
-
         updateScrubber(ms, dur);
         updateHighlight(ms);
-        updateScroll(ms);
         wasPaused = false;
       } else if (!wasPaused) {
         clearHighlight();
@@ -272,7 +271,7 @@ export default function AudioPlayer() {
     };
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [audioRef, session, scrollDataRef, updateScrubber, updateHighlight, updateScroll, clearHighlight]);
+  }, [audioRef, session, updateScrubber, updateHighlight, clearHighlight]);
 
   useEffect(() => {
     const ms = session?.initialPositionMs ?? 0;

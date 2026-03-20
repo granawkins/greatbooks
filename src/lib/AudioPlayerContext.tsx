@@ -27,12 +27,6 @@ export type AudioSession = {
 // Word-timing span the player uses for imperative highlighting
 export type WordTiming = { id: string; start_ms: number; end_ms: number };
 
-// Paragraph-timing data the player uses for imperative auto-scroll
-export type ScrollData = {
-  ranges: ({ start_ms: number; end_ms: number } | null)[];
-  elements: (HTMLElement | null)[];
-};
-
 export type ViewMode = "audio" | "text";
 
 // ── AudioSessionContext ──────────────────────────────────────────────────────
@@ -46,7 +40,6 @@ type AudioSessionContextValue = {
 
   // Data refs — the book page populates these, the player reads them imperatively
   wordTimingsRef: React.RefObject<WordTiming[] | null>;
-  scrollDataRef: React.RefObject<ScrollData | null>;
 
   // What book/chapter the user is currently viewing (set synchronously, no async deps)
   viewingChapterRef: React.RefObject<{ bookId: string; chapterId: number } | null>;
@@ -109,15 +102,14 @@ export function useAudioPlayer() {
 export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [session, setSession] = useState<AudioSession | null>(null);
-  const [viewMode, setViewModeState] = useState<ViewMode>("audio");
-
-  // Restore viewMode from localStorage on mount
-  useEffect(() => {
+  const [viewMode, setViewModeState] = useState<ViewMode>(() => {
+    if (typeof window === "undefined") return "audio";
     try {
       const stored = localStorage.getItem("greatbooks-view-mode");
-      if (stored === "audio" || stored === "text") setViewModeState(stored);
+      if (stored === "audio" || stored === "text") return stored;
     } catch {}
-  }, []);
+    return "audio";
+  });
 
   const setViewMode = useCallback((mode: ViewMode) => {
     setViewModeState(mode);
@@ -129,7 +121,6 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const autoPlayRef = useRef(false);
 
   const wordTimingsRef = useRef<WordTiming[] | null>(null);
-  const scrollDataRef = useRef<ScrollData | null>(null);
   const viewingChapterRef = useRef<{ bookId: string; chapterId: number } | null>(null);
   const navigateToChapterRef = useRef<((chapterId: number) => void) | null>(null);
   const onPauseRef = useRef<((ms: number) => void) | null>(null);
@@ -291,7 +282,6 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     loadSession,
     dismiss,
     wordTimingsRef,
-    scrollDataRef,
     viewingChapterRef,
     navigateToChapterRef,
     onPauseRef,

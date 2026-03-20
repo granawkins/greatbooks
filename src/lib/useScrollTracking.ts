@@ -53,7 +53,7 @@ export function useScrollTracking({
               const el = refs[i];
               if (el) {
                 programmaticScrollRef.current = true;
-                scrollToCenter(el, "instant", true);
+                scrollToCenter(el, "instant");
                 requestAnimationFrame(() => { programmaticScrollRef.current = false; });
               }
               break;
@@ -116,7 +116,7 @@ export function useScrollTracking({
       return;
     }
 
-    const centerY = getReadingCenterY(true);
+    const centerY = getReadingCenterY();
     const refs = blockRefsRef.current;
     let bestBlock = -1;
     let bestDist = Infinity;

@@ -11,37 +11,28 @@ function getViewportHeight(): number {
   return window.visualViewport?.height ?? window.innerHeight;
 }
 
-/** Measure the actual player bar height from the DOM. Returns 0 if not mounted. */
-function getPlayerBarHeight(): number {
-  const bar = document.querySelector<HTMLElement>("[data-player-bar]");
-  if (!bar) return 0;
-  return bar.getBoundingClientRect().height;
-}
-
-/** Returns the Y coordinate (in viewport pixels) of the visible reading center. */
-export function getReadingCenterY(isTextMode: boolean): number {
-  const topInset = parseFloat(
-    getComputedStyle(document.documentElement).getPropertyValue("--topbar-height") || "52"
-  );
-  const bottomInset = isTextMode ? 0 : getPlayerBarHeight();
-  return topInset + (getViewportHeight() - topInset - bottomInset) / 2;
+/** Reading center: 40% from top of viewport. */
+export function getReadingCenterY(): number {
+  return getViewportHeight() * 0.4;
 }
 
 /**
- * Scroll an element so its top portion is at the reading center.
- * For short elements, this centers them; for tall elements,
- * it ensures the start of the element (where the user reads) stays visible.
+ * Scroll an element to the reading center (40% from top).
  */
 export function scrollToCenter(
   el: HTMLElement,
   behavior: ScrollBehavior = "smooth",
-  isTextMode = false,
 ): void {
   const rect = el.getBoundingClientRect();
-  // Target the top of the element (with a small offset into it) rather than
-  // the vertical center — this keeps the start of new paragraphs visible
-  // even for tall elements.
   const elTarget = rect.top + Math.min(rect.height / 2, 40);
-  const targetY = getReadingCenterY(isTextMode);
-  window.scrollBy({ top: elTarget - targetY, behavior });
+  window.scrollBy({ top: elTarget - getReadingCenterY(), behavior });
+}
+
+/** Is the element within the reading zone (20%–60% from top of viewport)?
+ *  When it leaves this zone, we scroll to re-center it at 40%. */
+export function isInReadingZone(el: HTMLElement): boolean {
+  const vh = getViewportHeight();
+  const rect = el.getBoundingClientRect();
+  const mid = rect.top + rect.height / 2;
+  return mid >= vh * 0.2 && mid <= vh * 0.6;
 }
