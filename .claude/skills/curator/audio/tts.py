@@ -55,7 +55,7 @@ def _get_google_client():
     if _google_client is None:
         with _client_lock:
             if _google_client is None:
-                from google.cloud import texttospeech_v1beta1 as texttospeech
+                from google.cloud import texttospeech
                 creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
                 if creds_path:
                     _google_client = texttospeech.TextToSpeechClient.from_service_account_json(
@@ -244,7 +244,7 @@ def _split_long_sentences(text: str, max_sentence_chars: int = 300) -> str:
 
 def _generate_google(text: str, output_path: str, voice: str = "Algieba") -> dict:
     """Generate TTS via Google Chirp3 HD."""
-    from google.cloud import texttospeech_v1beta1 as texttospeech
+    from google.cloud import texttospeech
 
     if len(text) > MAX_INPUT_CHARS:
         raise ValueError(
@@ -255,7 +255,18 @@ def _generate_google(text: str, output_path: str, voice: str = "Algieba") -> dic
     text = _split_long_sentences(text)
 
     client = _get_google_client()
-    voice_name = voice[0].upper() + voice[1:].lower()
+
+    # Support full voice names like "en-GB-Chirp3-HD-Despina" or short names like "Algieba"
+    if voice.startswith("en-"):
+        # Full voice name provided — extract language code and use as-is
+        parts = voice.split("-")
+        lang_code = "-".join(parts[:2])  # e.g. "en-GB"
+        full_voice_name = voice
+    else:
+        # Short name — default to en-US Chirp3-HD
+        lang_code = "en-US"
+        voice_name = voice[0].upper() + voice[1:].lower()
+        full_voice_name = f"en-US-Chirp3-HD-{voice_name}"
 
     max_retries = 3
     for attempt in range(max_retries):
@@ -263,8 +274,8 @@ def _generate_google(text: str, output_path: str, voice: str = "Algieba") -> dic
             response = client.synthesize_speech(
                 input=texttospeech.SynthesisInput(text=text),
                 voice=texttospeech.VoiceSelectionParams(
-                    language_code="en-US",
-                    name=f"en-US-Chirp3-HD-{voice_name}",
+                    language_code=lang_code,
+                    name=full_voice_name,
                 ),
                 audio_config=texttospeech.AudioConfig(
                     audio_encoding=texttospeech.AudioEncoding.MP3,

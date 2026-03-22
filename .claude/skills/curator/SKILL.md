@@ -60,7 +60,12 @@ Fetch public-domain text, parse into segments, insert into DB, generate cover ar
 - Batch script: `text/add_ica_books.py`
 
 **Project Gutenberg** (gutenberg.org) — English literature, modern philosophy, novels.
-- Parser: `text/parse_html.py --source gutenberg` *(Gutenberg parser not yet implemented)*
+- Parser: `text/parse_html.py --source gutenberg` *(generic Gutenberg parser not yet implemented)*
+- For new Gutenberg books: write a custom `data/<book-id>/parse.py` following the pattern in `data/bronte-wuthering-heights/parse.py`
+  - Strip boilerplate between `*** START OF` / `*** END OF` markers
+  - Split on `<div class="chapter">` or `<h2>CHAPTER` headings
+  - **Convert em dashes correctly:** `s.replace('\u2014', '—')` not `'--'`
+  - Write `data/<book-id>/chapters.json`, then run `data/<book-id>/seed.py` to insert
 - Batch script: `text/add_gutenberg_books.py`
 
 Safe translators: Butler (Homer), Jowett (Plato), old PG editions. **Fagles and Lattimore are NOT public domain.**
@@ -99,7 +104,21 @@ python .claude/skills/curator/text/img.py \
   --subject "<specific object or scene description>"
 ```
 
-Saves `data/<book-id>/cover.png` and updates `books.cover_image`. Each call ~$0.04. Add a Cover section to `data/<book-id>/SKILL.md` when done.
+The script saves `public/covers/<book-id>.png`. Each call ~$0.04.
+
+**After generating, you must:**
+1. Create JPEG variants for GCS serving:
+```python
+from PIL import Image
+img = Image.open('public/covers/<book-id>.png').convert('RGB')
+img.save('public/covers/<book-id>.jpg', 'JPEG', quality=90)
+img.resize((256, 384)).save('public/covers/<book-id>-sm.jpg', 'JPEG', quality=75)
+```
+2. Upload to GCS: `.venv/bin/python scripts/upload_to_gcs.py --covers --force`
+3. Update the DB: `UPDATE books SET cover_image='/covers/<book-id>.jpg' WHERE id='<book-id>';`
+   - img.py may not set this correctly — always verify with `SELECT cover_image FROM books WHERE id='<book-id>';`
+
+Add a Cover section to `data/<book-id>/SKILL.md` when done.
 
 #### Course covers (different from book covers)
 
@@ -154,6 +173,9 @@ This fetches segments from DB, runs TTS + STT per chapter in parallel batches, m
 
 **Google Chirp3 HD** (default): Algieba, Orus, Kore, Puck, Zephyr, Aoede
 - Max 2000 chars/call · ~$0.016/1K chars · 24kHz MP3
+- **en-GB voices available** — pass full voice name e.g. `--voice en-GB-Chirp3-HD-Gacrux`
+- Full en-GB voice list: Achernar, Achird, Algenib, Algieba, Alnilam, Aoede, Autonoe, Callirrhoe, Charon, Despina, Enceladus, Erinome, Fenrir, Gacrux, Iapetus, Kore, Laomedeia, Leda, Orus, Puck, Pulcherrima, Rasalgethi, Sadachbia, Sadaltager, Schedar, Sulafat, Umbriel
+- **Use stable `google.cloud.texttospeech` (v1), not `texttospeech_v1beta1`** — en-GB voices require v1; tts.py has been updated accordingly
 
 **ElevenLabs**: Frederick Surrey (`j9jfwdrw7BRfcR43Qohk`)
 - Max 5000 chars/call · ~$0.30/1K chars (v3) · better quality for literary prose

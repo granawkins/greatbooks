@@ -38,6 +38,13 @@ from pathlib import Path
 # Allow importing sibling modules
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+# Load .env from project root so GOOGLE_APPLICATION_CREDENTIALS etc. are available
+_project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+_env_file = _project_root / ".env"
+if _env_file.exists():
+    from dotenv import load_dotenv
+    load_dotenv(_env_file)
+
 from tts import generate, MAX_INPUT_CHARS
 from stt import transcribe_and_align
 

@@ -293,3 +293,145 @@ Minerva stops the final battle and imposes peace. Critics have found this ending
 ### Essay
 
 The *Odyssey* ends not with the reunion of Ulysses and Penelope but with a peace imposed by a goddess on people who are still angry. Is this a satisfying ending? What is Homer saying about the limits of human justice — and about what it takes to actually end a cycle of violence?
+
+---
+
+
+## Suggested Discussion Questions
+
+*Annotation prompts placed at natural story beats — designed to appear as tappable buttons in the app. Each entry notes the location and the button text. Prompts don't need to be answered in order; readers can skip or return to any.*
+
+### Categories
+
+- **Word/craft** — a linguistic or structural detail a professor would point out
+- **Character** — who someone is, what drives them, what they reveal
+- **Story beat** — a natural pause after a key scene ("let's talk about the Cyclops")
+- **Big idea** — a theme, value, or question the scene raises
+- **Compare** — connection to another work, another character, or the reader's own life
+
+---
+
+### Before you read
+| Category | Button text |
+|----------|-------------|
+| Word/craft | What's the first word in Greek — and why is it different from the Iliad's? |
+| Big idea | What is the Odyssey actually about? |
+
+### Book I
+| Category | Button text |
+|----------|-------------|
+| Word/craft | What does *nostos* mean? |
+| Story beat | Why does the poem start with the son, not the father? |
+| Character | Who is Telemachus at the start? |
+
+### Book II
+| Category | Button text |
+|----------|-------------|
+| Character | What changes when Telemachus finally speaks up? |
+
+### Book III
+| Category | Button text |
+|----------|-------------|
+| Compare | What happened to Agamemnon when he got home — and what does that mean for Ulysses? |
+
+### Book IV
+| Category | Button text |
+|----------|-------------|
+| Character | Who are Menelaus and Helen now — after everything? |
+
+### Book V
+| Category | Button text |
+|----------|-------------|
+| Big idea | Why would anyone choose mortality over immortality? |
+| Character | Who is Calypso — captor, or something more complicated? |
+
+### Book VI
+| Category | Button text |
+|----------|-------------|
+| Character | How does Ulysses talk his way out of a completely hopeless situation? |
+
+### Book VIII
+| Category | Button text |
+|----------|-------------|
+| Story beat | Let's talk about Demodocus — the blind bard who sings about Troy. |
+| Big idea | Why can't Ulysses stop crying at songs about himself? |
+| Big idea | What does it mean to tell your own story? |
+
+### Book IX
+| Category | Button text |
+|----------|-------------|
+| Story beat | Let's talk about the Cyclops. |
+| Character | Why does Ulysses shout his real name as the ships pull away? |
+| Big idea | Was blinding the Cyclops the right call? |
+
+### Book X
+| Category | Button text |
+|----------|-------------|
+| Character | Who keeps making the same mistakes — and why can't they stop? |
+| Story beat | Let's talk about Circe. |
+
+### Book XI
+| Category | Button text |
+|----------|-------------|
+| Story beat | Let's talk about the underworld. |
+| Character | Ulysses tries to embrace his dead mother and can't. What does that moment mean? |
+| Compare | Achilles says he'd rather be a living slave than king of the dead. Does the Odyssey disagree with the Iliad? |
+
+### Book XII
+| Category | Button text |
+|----------|-------------|
+| Big idea | The crew was warned. Why did they eat the cattle anyway? |
+| Word/craft | What are the Sirens actually offering — and why is it dangerous? |
+
+### Book XIII
+| Category | Button text |
+|----------|-------------|
+| Big idea | Why does Ulysses need to come home as a beggar? |
+
+### Book XIV
+| Category | Button text |
+|----------|-------------|
+| Big idea | What does loyalty look like — in Eumaeus, and in the poem generally? |
+
+### Book XVI
+| Category | Button text |
+|----------|-------------|
+| Story beat | Father and son meet for the first time as men. |
+| Character | What kind of reunion is this — and why isn't it more triumphant? |
+
+### Book XVII
+| Category | Button text |
+|----------|-------------|
+| Story beat | Let's talk about Argos. |
+
+### Book XIX
+| Category | Button text |
+|----------|-------------|
+| Character | Does Penelope know who the beggar is? |
+| Big idea | What is the scar — and why does Homer pause the whole poem to tell that story? |
+
+### Book XXI
+| Category | Button text |
+|----------|-------------|
+| Character | Whose plan is the bow contest really — Penelope's or Ulysses'? |
+
+### Book XXII
+| Category | Button text |
+|----------|-------------|
+| Big idea | Was the slaughter of the suitors justified? |
+
+### Book XXIII
+| Category | Button text |
+|----------|-------------|
+| Word/craft | What does *homophrosýnē* mean — the word Homer uses for their reunion? |
+| Story beat | Let's talk about the bed. |
+
+### Book XXIV
+| Category | Button text |
+|----------|-------------|
+| Big idea | A goddess has to stop the final battle. Is that a satisfying ending? |
+| Compare | How is the Odyssey's ending different from the Iliad's? |
+
+---
+
+*Total: 34 prompts. Concentrated in the wanderings and the homecoming — where the poem is richest.*

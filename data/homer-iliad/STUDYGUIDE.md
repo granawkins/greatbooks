@@ -289,3 +289,138 @@ Simone Weil: force is the true subject. The poem is about what force does to peo
 ### Essay
 
 The *Iliad* ends not with victory, not with Achilles' death, not with the fall of Troy — but with an enemy's funeral. The poem that opened with the word rage closes with the line: "So they performed the burial rites of Hector, breaker of horses." Is the *Iliad* an antiwar poem? What is Homer saying about the heroic world he has spent twenty-four books celebrating — and what does he ask you to carry away?
+
+---
+
+
+## Suggested Discussion Questions
+
+*Annotation prompts placed at natural story beats — designed to appear as tappable buttons in the app. Each entry notes the location and the button text. Prompts don't need to be answered in order; readers can skip or return to any.*
+
+### Categories
+
+- **Word/craft** — a linguistic or structural detail a professor would point out ("the poem's first word is...")
+- **Character** — who someone is, what drives them, what they reveal
+- **Story beat** — a natural pause after a key scene ("let's talk about the Cyclops")
+- **Big idea** — a theme, value, or question the scene raises
+- **Compare** — connection to another work, another character, or the reader's own life
+
+---
+
+### Before you read
+| Category | Button text |
+|----------|-------------|
+| Word/craft | What's the first word in Greek? |
+| Big idea | What is the Iliad actually about? |
+
+### Book I
+| Category | Button text |
+|----------|-------------|
+| Word/craft | What does *timē* mean — and why does it drive the whole plot? |
+| Character | Why does Achilles walk away? |
+| Character | Who is Thetis — and why does it matter? |
+| Big idea | Is this a story about pride, or about something deeper? |
+
+### Book II
+| Category | Button text |
+|----------|-------------|
+| Story beat | Why does the army almost sail home? |
+| Character | Who is Thersites, and why does Homer include him? |
+
+### Book III
+| Category | Button text |
+|----------|-------------|
+| Story beat | What kind of war is this? |
+| Character | Is Paris a coward — or just a different kind of man? |
+
+### Book V
+| Category | Button text |
+|----------|-------------|
+| Story beat | Can a mortal really wound a god? |
+| Big idea | What does Diomed's aristeia say about the limits of heroism? |
+
+### Book VI
+| Category | Button text |
+|----------|-------------|
+| Story beat | Let's talk about Hector and Andromache. |
+| Character | Is Hector the real hero? |
+| Big idea | What is Hector fighting for, if he knows Troy will fall? |
+
+### Book VII
+| Category | Button text |
+|----------|-------------|
+| Big idea | Can enemies respect each other? |
+
+### Book IX
+| Category | Button text |
+|----------|-------------|
+| Story beat | Let's talk about the embassy to Achilles. |
+| Character | Was Achilles right to refuse? |
+| Word/craft | What does *kleos* mean — and why does Achilles suddenly question it? |
+
+### Book X
+| Category | Button text |
+|----------|-------------|
+| Big idea | Is the night raid heroic — or just ruthless? |
+
+### Book XII
+| Category | Button text |
+|----------|-------------|
+| Character | Who is Sarpedon, and what's his argument for being a hero? |
+| Big idea | Why be a hero if you're going to die anyway? |
+
+### Book XIV
+| Category | Button text |
+|----------|-------------|
+| Story beat | Juno tricks Jove to change the battle — let's talk about that. |
+| Big idea | Do the gods actually care about humans? |
+
+### Book XVI
+| Category | Button text |
+|----------|-------------|
+| Character | What is Patroclus trying to prove? |
+| Big idea | Who is responsible for Patroclus's death? |
+
+### Book XVII
+| Category | Button text |
+|----------|-------------|
+| Craft | Why does Homer show us the horses weeping? |
+
+### Book XVIII
+| Category | Button text |
+|----------|-------------|
+| Character | How has Achilles changed? |
+| Word/craft | What is the Shield of Achilles, and why does it matter? |
+
+### Book XIX
+| Category | Button text |
+|----------|-------------|
+| Character | Achilles reconciles — but is this the same man? |
+
+### Book XXI
+| Category | Button text |
+|----------|-------------|
+| Big idea | Has Achilles become something inhuman? |
+| Compare | Simone Weil said the Iliad is about force. What does that mean? |
+
+### Book XXII
+| Category | Button text |
+|----------|-------------|
+| Story beat | Let's talk about Hector's death. |
+| Character | Why does Hector run — and is that the brave thing or the cowardly thing? |
+
+### Book XXIII
+| Category | Button text |
+|----------|-------------|
+| Character | Achilles laughs at the funeral games. Is he returning to himself? |
+
+### Book XXIV
+| Category | Button text |
+|----------|-------------|
+| Story beat | Let's talk about Priam coming to Achilles. |
+| Big idea | What finally breaks through to Achilles? |
+| Big idea | Is the Iliad an antiwar poem? |
+
+---
+
+*Total: 32 prompts. Not uniformly distributed — concentrated where the poem offers the richest natural pauses.*
