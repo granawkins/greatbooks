@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Greatbooks.fm Catalog</title>
+<style>
+:root {
+  --bg: #faf9f7; --surface: #fff; --border: #e0ddd8;
+  --text: #1a1a1a; --dim: #777; --accent: #2563eb; --accent-bg: #eff6ff;
+  --green: #16a34a; --green-bg: #f0fdf4; --tag-bg: #f3f4f6;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+.sticky-header { position: sticky; top: 0; z-index: 10; background: var(--surface); }
+.toolbar { border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.toolbar h1 { font-size: 16px; font-weight: 600; margin-right: 8px; }
+.search { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; width: 220px; outline: none; }
+.search:focus { border-color: var(--accent); }
+.stats { font-size: 12px; color: var(--dim); }
+.filter-row { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.pill { font-size: 11px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; background: var(--surface); user-select: none; }
+.pill:hover { background: var(--tag-bg); }
+.pill.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+table { width: 100%; border-collapse: collapse; }
+th { position: sticky; top: var(--hh, 0px); z-index: 5; background: var(--tag-bg); border-bottom: 2px solid var(--border); padding: 8px 10px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; cursor: pointer; white-space: nowrap; user-select: none; }
+th:hover { background: #e8e6e1; }
+th .arr { margin-left: 4px; font-size: 10px; color: var(--dim); }
+th.on .arr { color: var(--accent); }
+td { padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+tr:hover td { background: #fdfcfa; }
+.done td { background: var(--green-bg); }
+.done:hover td { background: #e5fbe9; }
+.y { color: var(--green); font-weight: 600; }
+.n { color: #ccc; }
+</style>
+</head>
+<body>
+<div class="sticky-header">
+  <div class="toolbar">
+    <h1>Greatbooks.fm Catalog</h1>
+    <input class="search" type="text" placeholder="Search..." id="q">
+    <span class="stats" id="stats"></span>
+  </div>
+  <div class="filter-row" id="filters"></div>
+</div>
+<table><thead><tr id="th"></tr></thead><tbody id="tb"></tbody></table>
+<script>
+const BOOKS = [
+  {t:"The Iliad",a:"Homer",y:-750,yl:"~750 BC",s:"http://classics.mit.edu/Homer/iliad.html",gr:3.93,grn:515436,T:1,A:1,R:1,G:1},
+  {t:"The Odyssey",a:"Homer",y:-700,yl:"~700 BC",s:"http://classics.mit.edu/Homer/odyssey.html",gr:3.84,grn:1207479,T:1,A:1,R:1,G:1},
+  {t:"Oedipus Rex",a:"Sophocles",y:-429,yl:"~429 BC",s:"http://classics.mit.edu/Sophocles/oedipus.html",gr:3.73,grn:239371,T:0,A:0,R:0,G:0},
+  {t:"The Republic",a:"Plato",y:-380,yl:"~380 BC",s:"http://classics.mit.edu/Plato/republic.html",gr:3.97,grn:228029,T:1,A:1,R:1,G:0},
+  {t:"The Aeneid",a:"Virgil",y:-19,yl:"~19 BC",s:"http://classics.mit.edu/Virgil/aeneid.html",gr:3.88,grn:144861,T:0,A:0,R:0,G:0},
+  {t:"Meditations",a:"Marcus Aurelius",y:170,yl:"~170",s:"http://classics.mit.edu/Antoninus/meditations.html",gr:4.28,grn:358125,T:1,A:0,R:0,G:0},
+  {t:"Confessions",a:"Augustine",y:397,yl:"397",s:"https://www.gutenberg.org/ebooks/3296",gr:4.0,grn:75267,T:1,A:0,R:0,G:0},
+  {t:"The Divine Comedy",a:"Dante Alighieri",y:1320,yl:"1320",s:"https://www.gutenberg.org/ebooks/8800",gr:4.09,grn:174382,T:1,A:0,R:0,G:0},
+  {t:"The Canterbury Tales",a:"Geoffrey Chaucer",y:1400,yl:"~1400",s:"https://www.gutenberg.org/ebooks/2383",gr:3.53,grn:239045,T:1,A:0,R:0,G:0},
+  {t:"The Prince",a:"Niccolò Machiavelli",y:1513,yl:"1513",s:"https://www.gutenberg.org/ebooks/1232",gr:3.84,grn:386903,T:1,A:0,R:0,G:0},
+  {t:"Essays",a:"Michel de Montaigne",y:1580,yl:"1580",s:"https://www.gutenberg.org/ebooks/3600",gr:4.23,grn:22286,T:1,A:0,R:0,G:0},
+  {t:"Romeo and Juliet",a:"William Shakespeare",y:1597,yl:"~1597",s:"https://www.gutenberg.org/ebooks/1513",gr:3.74,grn:2841837,T:0,A:0,R:0,G:0},
+  {t:"Hamlet",a:"William Shakespeare",y:1603,yl:"1603",s:"https://www.gutenberg.org/ebooks/1524",gr:4.03,grn:1063426,T:1,A:0,R:0,G:0},
+  {t:"Don Quixote",a:"Miguel de Cervantes",y:1605,yl:"1605",s:"https://www.gutenberg.org/ebooks/996",gr:3.91,grn:308145,T:1,A:0,R:0,G:0},
+  {t:"King Lear",a:"William Shakespeare",y:1608,yl:"1608",s:"https://www.gutenberg.org/ebooks/1128",gr:3.91,grn:239259,T:1,A:0,R:0,G:0},
+  {t:"Leviathan",a:"Thomas Hobbes",y:1651,yl:"1651",s:"https://www.gutenberg.org/ebooks/3207",gr:3.7,grn:53561,T:1,A:0,R:0,G:0},
+  {t:"Paradise Lost",a:"John Milton",y:1667,yl:"1667",s:"https://www.gutenberg.org/ebooks/26",gr:3.86,grn:184096,T:1,A:0,R:0,G:0},
+  {t:"Second Treatise of Government",a:"John Locke",y:1689,yl:"1689",s:"https://www.gutenberg.org/ebooks/7370",gr:3.87,grn:19684,T:1,A:0,R:0,G:0},
+  {t:"Discourse on the Method",a:"René Descartes",y:1637,yl:"1637",s:"https://www.gutenberg.org/ebooks/59",gr:3.72,grn:25611,T:1,A:0,R:0,G:0},
+  {t:"Meditations on First Philosophy",a:"René Descartes",y:1641,yl:"1641",s:"https://www.gutenberg.org/ebooks/70091",gr:3.73,grn:29888,T:0,A:0,R:0,G:0},
+  {t:"Robinson Crusoe",a:"Daniel Defoe",y:1719,yl:"1719",s:"https://www.gutenberg.org/ebooks/521",gr:3.68,grn:333373,T:0,A:0,R:0,G:0},
+  {t:"Gulliver's Travels",a:"Jonathan Swift",y:1726,yl:"1726",s:"https://www.gutenberg.org/ebooks/829",gr:3.59,grn:300711,T:1,A:0,R:0,G:0},
+  {t:"Tom Jones",a:"Henry Fielding",y:1749,yl:"1749",s:"https://www.gutenberg.org/ebooks/6593",gr:3.75,grn:34420,T:0,A:0,R:0,G:0},
+  {t:"Tristram Shandy",a:"Laurence Sterne",y:1759,yl:"1759",s:"https://www.gutenberg.org/ebooks/1079",gr:3.72,grn:23039,T:0,A:0,R:0,G:0},
+  {t:"The Wealth of Nations",a:"Adam Smith",y:1776,yl:"1776",s:"https://www.gutenberg.org/ebooks/3300",gr:3.89,grn:35158,T:1,A:0,R:0,G:0},
+  {t:"Les Liaisons Dangereuses",a:"Pierre Choderlos de Laclos",y:1782,yl:"1782",s:"https://www.gutenberg.org/ebooks/45128",gr:4.05,grn:59524,T:0,A:0,R:0,G:0},
+  {t:"The Federalist Papers",a:"Hamilton, Madison & Jay",y:1788,yl:"1788",s:"https://www.gutenberg.org/ebooks/18",gr:4.1,grn:42258,T:1,A:0,R:0,G:0},
+  {t:"The Sorrows of Young Werther",a:"Johann Wolfgang von Goethe",y:1774,yl:"1774",s:"https://www.gutenberg.org/ebooks/2527",gr:3.7,grn:157599,T:0,A:0,R:0,G:0},
+  {t:"Autobiography of Benjamin Franklin",a:"Benjamin Franklin",y:1791,yl:"1791",s:"https://www.gutenberg.org/ebooks/20203",gr:3.85,grn:92413,T:0,A:0,R:0,G:0},
+  {t:"Faust",a:"Johann Wolfgang von Goethe",y:1808,yl:"1808",s:"https://www.gutenberg.org/ebooks/14591",gr:3.83,grn:86737,T:1,A:0,R:0,G:0},
+  {t:"Sense and Sensibility",a:"Jane Austen",y:1811,yl:"1811",s:"https://www.gutenberg.org/ebooks/161",gr:4.09,grn:1307585,T:0,A:0,R:0,G:0},
+  {t:"Pride and Prejudice",a:"Jane Austen",y:1813,yl:"1813",s:"https://www.gutenberg.org/ebooks/1342",gr:4.3,grn:4864701,T:1,A:0,R:0,G:0},
+  {t:"Emma",a:"Jane Austen",y:1815,yl:"1815",s:"https://www.gutenberg.org/ebooks/158",gr:4.05,grn:994468,T:1,A:0,R:0,G:0},
+  {t:"Frankenstein",a:"Mary Shelley",y:1818,yl:"1818",s:"https://www.gutenberg.org/ebooks/84",gr:3.91,grn:1926544,T:0,A:0,R:0,G:0},
+  {t:"The Legend of Sleepy Hollow",a:"Washington Irving",y:1820,yl:"1820",s:"https://www.gutenberg.org/ebooks/41",gr:3.77,grn:155985,T:0,A:0,R:0,G:0},
+  {t:"The Red and the Black",a:"Stendhal",y:1830,yl:"1830",s:"https://www.gutenberg.org/ebooks/44747",gr:3.86,grn:84551,T:0,A:0,R:0,G:0},
+  {t:"Oliver Twist",a:"Charles Dickens",y:1838,yl:"1838",s:"https://www.gutenberg.org/ebooks/730",gr:3.88,grn:430807,T:0,A:0,R:0,G:0},
+  {t:"The Charterhouse of Parma",a:"Stendhal",y:1839,yl:"1839",s:"https://www.gutenberg.org/ebooks/66374",gr:3.78,grn:20214,T:0,A:0,R:0,G:0},
+  {t:"The Count of Monte Cristo",a:"Alexandre Dumas",y:1844,yl:"1844",s:"https://www.gutenberg.org/ebooks/1184",gr:4.33,grn:1037736,T:0,A:0,R:0,G:0},
+  {t:"Narrative of the Life of Frederick Douglass",a:"Frederick Douglass",y:1845,yl:"1845",s:"https://www.gutenberg.org/ebooks/23",gr:4.13,grn:136356,T:0,A:0,R:0,G:0},
+  {t:"Jane Eyre",a:"Charlotte Brontë",y:1847,yl:"1847",s:"https://www.gutenberg.org/ebooks/1260",gr:4.16,grn:2348705,T:0,A:0,R:0,G:0},
+  {t:"Wuthering Heights",a:"Emily Brontë",y:1847,yl:"1847",s:"https://www.gutenberg.org/ebooks/768",gr:3.9,grn:2182877,T:0,A:0,R:0,G:0},
+  {t:"Vanity Fair",a:"William Makepeace Thackeray",y:1848,yl:"1848",s:"https://www.gutenberg.org/ebooks/599",gr:3.81,grn:133622,T:0,A:0,R:0,G:0},
+  {t:"David Copperfield",a:"Charles Dickens",y:1850,yl:"1850",s:"https://www.gutenberg.org/ebooks/766",gr:4.05,grn:261049,T:0,A:0,R:0,G:0},
+  {t:"The Scarlet Letter",a:"Nathaniel Hawthorne",y:1850,yl:"1850",s:"https://www.gutenberg.org/ebooks/25344",gr:3.44,grn:926222,T:0,A:0,R:0,G:0},
+  {t:"Moby Dick",a:"Herman Melville",y:1851,yl:"1851",s:"https://www.gutenberg.org/ebooks/2701",gr:3.57,grn:620784,T:1,A:0,R:0,G:0},
+  {t:"Bleak House",a:"Charles Dickens",y:1853,yl:"1853",s:"https://www.gutenberg.org/ebooks/1023",gr:4.02,grn:114976,T:0,A:0,R:0,G:0},
+  {t:"Walden",a:"Henry David Thoreau",y:1854,yl:"1854",s:"https://www.gutenberg.org/ebooks/205",gr:3.77,grn:205438,T:0,A:0,R:0,G:0},
+  {t:"Madame Bovary",a:"Gustave Flaubert",y:1857,yl:"1857",s:"https://www.gutenberg.org/ebooks/2413",gr:3.71,grn:378968,T:0,A:0,R:0,G:0},
+  {t:"A Tale of Two Cities",a:"Charles Dickens",y:1859,yl:"1859",s:"https://www.gutenberg.org/ebooks/98",gr:3.88,grn:1018745,T:0,A:0,R:0,G:0},
+  {t:"Great Expectations",a:"Charles Dickens",y:1861,yl:"1861",s:"https://www.gutenberg.org/ebooks/1400",gr:3.8,grn:880124,T:0,A:0,R:0,G:0},
+  {t:"Fathers and Sons",a:"Ivan Turgenev",y:1862,yl:"1862",s:"https://www.gutenberg.org/ebooks/30723",gr:4.0,grn:102603,T:0,A:0,R:0,G:0},
+  {t:"Les Misérables",a:"Victor Hugo",y:1862,yl:"1862",s:"https://www.gutenberg.org/ebooks/135",gr:4.21,grn:848813,T:0,A:0,R:0,G:0},
+  {t:"Notes from Underground",a:"Fyodor Dostoevsky",y:1864,yl:"1864",s:"https://www.gutenberg.org/ebooks/600",gr:4.17,grn:237449,T:0,A:0,R:0,G:0},
+  {t:"Alice's Adventures in Wonderland",a:"Lewis Carroll",y:1865,yl:"1865",s:"https://www.gutenberg.org/ebooks/11",gr:3.99,grn:441440,T:0,A:0,R:0,G:0},
+  {t:"Crime and Punishment",a:"Fyodor Dostoevsky",y:1866,yl:"1866",s:"https://www.gutenberg.org/ebooks/2554",gr:4.29,grn:1101466,T:0,A:0,R:0,G:0},
+  {t:"Little Women",a:"Louisa May Alcott",y:1868,yl:"1868",s:"https://www.gutenberg.org/ebooks/514",gr:4.17,grn:2484867,T:0,A:0,R:0,G:0},
+  {t:"The Idiot",a:"Fyodor Dostoevsky",y:1869,yl:"1869",s:"https://www.gutenberg.org/ebooks/2638",gr:4.21,grn:221322,T:0,A:0,R:0,G:0},
+  {t:"War and Peace",a:"Leo Tolstoy",y:1869,yl:"1869",s:"https://www.gutenberg.org/ebooks/2600",gr:4.17,grn:369065,T:1,A:0,R:0,G:0},
+  {t:"Middlemarch",a:"George Eliot",y:1874,yl:"1874",s:"https://www.gutenberg.org/ebooks/145",gr:4.04,grn:180966,T:1,A:0,R:0,G:0},
+  {t:"The Adventures of Tom Sawyer",a:"Mark Twain",y:1876,yl:"1876",s:"https://www.gutenberg.org/ebooks/74",gr:3.92,grn:1026459,T:0,A:0,R:0,G:0},
+  {t:"Anna Karenina",a:"Leo Tolstoy",y:1878,yl:"1878",s:"https://www.gutenberg.org/ebooks/1399",gr:4.1,grn:941662,T:0,A:0,R:0,G:0},
+  {t:"A Doll's House",a:"Henrik Ibsen",y:1879,yl:"1879",s:"https://www.gutenberg.org/ebooks/2542",gr:3.77,grn:166031,T:0,A:0,R:0,G:0},
+  {t:"The Brothers Karamazov",a:"Fyodor Dostoevsky",y:1880,yl:"1880",s:"https://www.gutenberg.org/ebooks/28054",gr:4.39,grn:394080,T:1,A:0,R:0,G:0},
+  {t:"The Portrait of a Lady",a:"Henry James",y:1881,yl:"1881",s:"https://www.gutenberg.org/ebooks/2833",gr:3.8,grn:85623,T:0,A:0,R:0,G:0},
+  {t:"Treasure Island",a:"Robert Louis Stevenson",y:1883,yl:"1883",s:"https://www.gutenberg.org/ebooks/120",gr:3.85,grn:545022,T:0,A:0,R:0,G:0},
+  {t:"The Adventures of Huckleberry Finn",a:"Mark Twain",y:1884,yl:"1884",s:"https://www.gutenberg.org/ebooks/76",gr:3.83,grn:1342771,T:1,A:0,R:0,G:0},
+  {t:"Thus Spake Zarathustra",a:"Friedrich Nietzsche",y:1885,yl:"1885",s:"https://www.gutenberg.org/ebooks/1998",gr:4.07,grn:178729,T:0,A:0,R:0,G:0},
+  {t:"Beyond Good and Evil",a:"Friedrich Nietzsche",y:1886,yl:"1886",s:"https://www.gutenberg.org/ebooks/4363",gr:4.03,grn:115822,T:1,A:0,R:0,G:0},
+  {t:"Dr. Jekyll and Mr. Hyde",a:"Robert Louis Stevenson",y:1886,yl:"1886",s:"https://www.gutenberg.org/ebooks/43",gr:3.83,grn:673889,T:0,A:0,R:0,G:0},
+  {t:"The Death of Ivan Ilyich",a:"Leo Tolstoy",y:1886,yl:"1886",s:"https://standardebooks.org/ebooks/leo-tolstoy/short-fiction/louise-maude_aylmer-maude",gr:4.14,grn:231511,T:0,A:0,R:0,G:0},
+  {t:"A Study in Scarlet",a:"Arthur Conan Doyle",y:1887,yl:"1887",s:"https://www.gutenberg.org/ebooks/244",gr:4.13,grn:499259,T:0,A:0,R:0,G:0},
+  {t:"The Picture of Dorian Gray",a:"Oscar Wilde",y:1890,yl:"1890",s:"https://www.gutenberg.org/ebooks/174",gr:4.14,grn:1913037,T:0,A:0,R:0,G:0},
+  {t:"The Adventures of Sherlock Holmes",a:"Arthur Conan Doyle",y:1892,yl:"1892",s:"https://www.gutenberg.org/ebooks/1661",gr:4.3,grn:328537,T:0,A:0,R:0,G:0},
+  {t:"The Importance of Being Earnest",a:"Oscar Wilde",y:1895,yl:"1895",s:"https://www.gutenberg.org/ebooks/844",gr:4.17,grn:408821,T:0,A:0,R:0,G:0},
+  {t:"Dracula",a:"Bram Stoker",y:1897,yl:"1897",s:"https://www.gutenberg.org/ebooks/345",gr:4.02,grn:1495215,T:0,A:0,R:0,G:0},
+  {t:"The Turn of the Screw",a:"Henry James",y:1898,yl:"1898",s:"https://www.gutenberg.org/ebooks/209",gr:3.38,grn:182345,T:0,A:0,R:0,G:0},
+  {t:"Heart of Darkness",a:"Joseph Conrad",y:1899,yl:"1899",s:"https://www.gutenberg.org/ebooks/219",gr:3.43,grn:563232,T:1,A:0,R:0,G:0},
+  {t:"Lord Jim",a:"Joseph Conrad",y:1900,yl:"1900",s:"https://www.gutenberg.org/ebooks/21435",gr:3.61,grn:33212,T:0,A:0,R:0,G:0},
+  {t:"Sister Carrie",a:"Theodore Dreiser",y:1900,yl:"1900",s:"https://www.gutenberg.org/ebooks/233",gr:3.78,grn:41920,T:0,A:0,R:0,G:0},
+  {t:"The Wonderful Wizard of Oz",a:"L. Frank Baum",y:1900,yl:"1900",s:"https://www.gutenberg.org/ebooks/55",gr:4.0,grn:516193,T:0,A:0,R:0,G:0},
+  {t:"Kim",a:"Rudyard Kipling",y:1901,yl:"1901",s:"https://www.gutenberg.org/ebooks/2226",gr:3.7,grn:40270,T:0,A:0,R:0,G:0},
+  {t:"The Wings of the Dove",a:"Henry James",y:1902,yl:"1902",s:"https://www.gutenberg.org/ebooks/1388",gr:3.78,grn:17607,T:0,A:0,R:0,G:0},
+  {t:"The Ambassadors",a:"Henry James",y:1903,yl:"1903",s:"https://www.gutenberg.org/ebooks/432",gr:3.63,grn:13050,T:0,A:0,R:0,G:0},
+  {t:"The Call of the Wild",a:"Jack London",y:1903,yl:"1903",s:"https://www.gutenberg.org/ebooks/215",gr:3.92,grn:477128,T:0,A:0,R:0,G:0},
+  {t:"The Souls of Black Folk",a:"W.E.B. Du Bois",y:1903,yl:"1903",s:"https://www.gutenberg.org/ebooks/408",gr:4.31,grn:45292,T:0,A:0,R:0,G:0},
+  {t:"The Way of All Flesh",a:"Samuel Butler",y:1903,yl:"1903",s:"https://www.gutenberg.org/ebooks/2084",gr:3.61,grn:9752,T:0,A:0,R:0,G:0},
+  {t:"Nostromo",a:"Joseph Conrad",y:1904,yl:"1904",s:"https://www.gutenberg.org/ebooks/2021",gr:3.81,grn:18050,T:0,A:0,R:0,G:0},
+  {t:"Peter Pan",a:"J.M. Barrie",y:1904,yl:"1904",s:"https://www.gutenberg.org/ebooks/16",gr:4.03,grn:375423,T:0,A:0,R:0,G:0},
+  {t:"The Golden Bowl",a:"Henry James",y:1904,yl:"1904",s:"https://www.gutenberg.org/ebooks/1078",gr:3.77,grn:11858,T:0,A:0,R:0,G:0},
+  {t:"The House of Mirth",a:"Edith Wharton",y:1905,yl:"1905",s:"https://www.gutenberg.org/ebooks/284",gr:3.98,grn:106781,T:0,A:0,R:0,G:0},
+  {t:"The Secret Agent",a:"Joseph Conrad",y:1907,yl:"1907",s:"https://www.gutenberg.org/ebooks/974",gr:3.58,grn:25109,T:0,A:0,R:0,G:0},
+  {t:"A Room with a View",a:"E.M. Forster",y:1908,yl:"1908",s:"https://www.gutenberg.org/ebooks/2641",gr:3.89,grn:203328,T:0,A:0,R:0,G:0},
+  {t:"Anne of Green Gables",a:"L.M. Montgomery",y:1908,yl:"1908",s:"https://www.gutenberg.org/ebooks/45",gr:4.33,grn:1124481,T:0,A:0,R:0,G:0},
+  {t:"The Old Wives' Tale",a:"Arnold Bennett",y:1908,yl:"1908",s:"https://www.gutenberg.org/ebooks/5247",gr:3.85,grn:4812,T:0,A:0,R:0,G:0},
+  {t:"Howards End",a:"E.M. Forster",y:1910,yl:"1910",s:"https://www.gutenberg.org/ebooks/2946",gr:3.96,grn:95379,T:0,A:0,R:0,G:0},
+  {t:"Zuleika Dobson",a:"Max Beerbohm",y:1911,yl:"1911",s:"https://www.gutenberg.org/ebooks/1845",gr:3.52,grn:4942,T:0,A:0,R:0,G:0},
+  {t:"Sons and Lovers",a:"D.H. Lawrence",y:1913,yl:"1913",s:"https://www.gutenberg.org/ebooks/217",gr:3.64,grn:56058,T:0,A:0,R:0,G:0},
+  {t:"Of Human Bondage",a:"W. Somerset Maugham",y:1915,yl:"1915",s:"https://www.gutenberg.org/ebooks/351",gr:4.16,grn:62014,T:0,A:0,R:0,G:0},
+  {t:"The Good Soldier",a:"Ford Madox Ford",y:1915,yl:"1915",s:"https://www.gutenberg.org/ebooks/2775",gr:3.67,grn:29011,T:0,A:0,R:0,G:0},
+  {t:"The Metamorphosis",a:"Franz Kafka",y:1915,yl:"1915",s:"https://www.gutenberg.org/ebooks/5200",gr:3.91,grn:1460222,T:0,A:0,R:0,G:0},
+  {t:"The Rainbow",a:"D.H. Lawrence",y:1915,yl:"1915",s:"https://www.gutenberg.org/ebooks/28948",gr:3.7,grn:21792,T:0,A:0,R:0,G:0},
+  {t:"A Portrait of the Artist as a Young Man",a:"James Joyce",y:1916,yl:"1916",s:"https://www.gutenberg.org/ebooks/4217",gr:3.64,grn:165364,T:0,A:0,R:0,G:0},
+  {t:"The Magnificent Ambersons",a:"Booth Tarkington",y:1918,yl:"1918",s:"https://www.gutenberg.org/ebooks/8867",gr:3.79,grn:12240,T:0,A:0,R:0,G:0},
+  {t:"Winesburg, Ohio",a:"Sherwood Anderson",y:1919,yl:"1919",s:"https://www.gutenberg.org/ebooks/416",gr:3.84,grn:37211,T:0,A:0,R:0,G:0},
+  {t:"Main Street",a:"Sinclair Lewis",y:1920,yl:"1920",s:"https://www.gutenberg.org/ebooks/543",gr:3.78,grn:26999,T:0,A:0,R:0,G:0},
+  {t:"The Age of Innocence",a:"Edith Wharton",y:1920,yl:"1920",s:"https://www.gutenberg.org/ebooks/541",gr:3.97,grn:198212,T:0,A:0,R:0,G:0},
+  {t:"Women in Love",a:"D.H. Lawrence",y:1920,yl:"1920",s:"https://www.gutenberg.org/ebooks/4240",gr:3.66,grn:33587,T:0,A:0,R:0,G:0},
+  {t:"Ulysses",a:"James Joyce",y:1922,yl:"1922",s:"https://www.gutenberg.org/ebooks/4300",gr:3.76,grn:138951,T:0,A:0,R:0,G:0},
+  {t:"A Passage to India",a:"E.M. Forster",y:1924,yl:"1924",s:"https://www.gutenberg.org/ebooks/61221",gr:3.67,grn:86420,T:0,A:0,R:0,G:0},
+  {t:"An American Tragedy",a:"Theodore Dreiser",y:1925,yl:"1925",s:"https://www.gutenberg.org/ebooks/75181",gr:3.97,grn:38953,T:0,A:0,R:0,G:0},
+  {t:"The Great Gatsby",a:"F. Scott Fitzgerald",y:1925,yl:"1925",s:"https://www.gutenberg.org/ebooks/64317",gr:3.93,grn:5979876,T:0,A:0,R:0,G:0},
+  {t:"The Trial",a:"Franz Kafka",y:1925,yl:"1925",s:"https://www.gutenberg.org/ebooks/7849",gr:3.94,grn:402557,T:0,A:0,R:0,G:0},
+  {t:"The Sun Also Rises",a:"Ernest Hemingway",y:1926,yl:"1926",s:"https://www.gutenberg.org/ebooks/67138",gr:3.79,grn:498497,T:0,A:0,R:0,G:0},
+  {t:"Death Comes for the Archbishop",a:"Willa Cather",y:1927,yl:"1927",s:"https://www.gutenberg.org/ebooks/69730",gr:3.97,grn:43789,T:0,A:0,R:0,G:0},
+  {t:"The Bridge of San Luis Rey",a:"Thornton Wilder",y:1927,yl:"1927",s:"https://www.gutenberg.org/ebooks/69768",gr:3.79,grn:38854,T:0,A:0,R:0,G:0},
+  {t:"To the Lighthouse",a:"Virginia Woolf",y:1927,yl:"1927",s:"https://standardebooks.org/ebooks/virginia-woolf/to-the-lighthouse",gr:3.81,grn:217667,T:0,A:0,R:0,G:0},
+  {t:"Parade's End",a:"Ford Madox Ford",y:1928,yl:"1928",s:"https://www.gutenberg.org/ebooks/64248",gr:3.87,grn:6878,T:0,A:0,R:0,G:0},
+  {t:"Point Counter Point",a:"Aldous Huxley",y:1928,yl:"1928",s:"https://archive.org/details/pointcounterpoint0000huxl",gr:3.86,grn:12297,T:0,A:0,R:0,G:0},
+  {t:"A Farewell to Arms",a:"Ernest Hemingway",y:1929,yl:"1929",s:"https://www.gutenberg.org/ebooks/75201",gr:3.82,grn:357085,T:0,A:0,R:0,G:0},
+  {t:"A High Wind in Jamaica",a:"Richard Hughes",y:1929,yl:"1929",s:"https://www.gutenberg.org/ebooks/75530",gr:3.76,grn:10616,T:0,A:0,R:0,G:0},
+  {t:"The Sound and the Fury",a:"William Faulkner",y:1929,yl:"1929",s:"https://www.gutenberg.org/ebooks/75170",gr:3.86,grn:197474,T:0,A:0,R:0,G:0},
+  {t:"As I Lay Dying",a:"William Faulkner",y:1930,yl:"1930",s:"https://archive.org/details/asilaydying0000faul",gr:3.72,grn:188899,T:0,A:0,R:0,G:0},
+  {t:"The Maltese Falcon",a:"Dashiell Hammett",y:1930,yl:"1930",s:"https://www.gutenberg.org/ebooks/77600",gr:3.86,grn:116537,T:0,A:0,R:0,G:0},
+];
+
+const COLS = [
+  {k:'t',  l:'Title',    vis:1, sort:1},
+  {k:'a',  l:'Author',   vis:1, sort:1},
+  {k:'yl', l:'Year',     vis:1, sort:1, sk:'y'},
+  {k:'gr', l:'Rating',   vis:1, sort:1, fmt:'rating'},
+  {k:'grn',l:'# Rated',  vis:1, sort:1, fmt:'num'},
+  {k:'s',  l:'Source',   vis:1, sort:1},
+  {k:'T',  l:'Text',     vis:1, sort:1, bool:1},
+  {k:'A',  l:'Audio',    vis:1, sort:1, bool:1},
+  {k:'R',  l:'Research', vis:1, sort:1, bool:1},
+  {k:'G',  l:'Guide',    vis:1, sort:1, bool:1},
+];
+
+const FILTERS = [
+  {k:'T', l:'Has Text'}, {k:'A', l:'Has Audio'}, {k:'R', l:'Has Research'},
+  {k:'G', l:'Has Guide'}, {k:'todo', l:'Todo (no text)'},
+];
+
+let sc = 'y', sd = 1, sq = '', sf = null;
+
+const $ = id => document.getElementById(id);
+
+function render() {
+  let f = BOOKS.filter(b => {
+    if (sq && !(b.t+' '+b.a).toLowerCase().includes(sq)) return false;
+    if (sf === 'todo') return !b.T;
+    if (sf) return !!b[sf];
+    return true;
+  });
+  f.sort((a,b) => {
+    const k = COLS.find(c=>c.k===sc)?.sk || sc;
+    let va=a[k]??'', vb=b[k]??'';
+    if (typeof va==='number'&&typeof vb==='number') return (va-vb)*sd;
+    return String(va).localeCompare(String(vb))*sd;
+  });
+
+  const done = f.filter(b=>b.T).length;
+  $('stats').textContent = `${f.length} books, ${done} with text`;
+
+  $('th').innerHTML = COLS.map(c => {
+    const on = sc===c.k||sc===c.sk;
+    return `<th class="${on?'on':''}" data-k="${c.k}">${c.l}<span class="arr">${on?(sd>0?'▲':'▼'):'▸'}</span></th>`;
+  }).join('');
+
+  $('tb').innerHTML = f.map(b =>
+    `<tr class="${b.T?'done':''}">` + COLS.map(c =>
+      `<td>${c.bool ? (b[c.k]?'<span class="y">✓</span>':'<span class="n">·</span>') : c.k==='s'&&b.s ? '<a href="'+b.s+'" target="_blank" style="color:var(--accent)">'+(b.s.includes('gutenberg')?'PG':b.s.includes('mit.edu')?'MIT':b.s.includes('standardebooks')?'SE':b.s.includes('archive.org')?'IA':'link')+'</a>' : c.fmt==='num'&&b[c.k] ? Number(b[c.k]).toLocaleString() : (b[c.k]??'')}</td>`
+    ).join('') + '</tr>'
+  ).join('');
+
+  const h = document.querySelector('.sticky-header').offsetHeight;
+  document.documentElement.style.setProperty('--hh', h+'px');
+}
+
+function renderFilters() {
+  $('filters').innerHTML = FILTERS.map(f =>
+    `<span class="pill${sf===f.k?' active':''}" data-f="${f.k}">${f.l}</span>`
+  ).join('');
+}
+
+$('q').addEventListener('input', e => { sq = e.target.value.toLowerCase(); render(); });
+$('th').addEventListener('click', e => {
+  const th = e.target.closest('th'); if (!th) return;
+  const c = COLS.find(c=>c.k===th.dataset.k); if (!c||!c.sort) return;
+  const nk = c.sk||c.k;
+  if (sc===nk) sd*=-1; else { sc=nk; sd=1; }
+  render();
+});
+$('filters').addEventListener('click', e => {
+  const p = e.target.closest('.pill'); if (!p) return;
+  sf = sf===p.dataset.f ? null : p.dataset.f;
+  renderFilters(); render();
+});
+window.addEventListener('resize', render);
+
+renderFilters(); render();
+</script>
+</body>
+</html>

@@ -32,20 +32,12 @@ Update this table when any stage completes for a book.
 
 ## Corpus: Which Books
 
-Three launch courses, each requiring all four pipeline stages to be complete:
-
-| Course | Books | Audio status |
-|--------|-------|-------------|
-| Ancient Epics | Iliad → Odyssey | ✓ complete |
-| The Examined Life | Apology → Phaedo → Republic | Republic only |
-| How to Live | Meditations → Discourses → Apology | none |
+**124 titles** on the shortlist — see `sources/index.html` for the full interactive catalog with pipeline status, Goodreads ratings, and source links. See `sources/SKILL.md` for how we built the list and all sources consulted.
 
 **Book ID convention:** `{author-lastname}-{short-title}` — all lowercase, hyphens only, English.
 Examples: `homer-iliad`, `plato-republic`, `marcus-aurelius-meditations`
 
-Full book selection: `sources/GBWW_LIST.md` (Britannica), `sources/SJC_LIST.md` (St. John's), `sources/SOURCES.md` (verified URLs).
-
-**Tier 1 status:** 54 books in DB, 1,858 chapters, ~364,000 segments. Remaining corpus gaps: drama/verse parser (Oresteia, Oedipus, Aeneid), Hegel and Marx (not on Gutenberg in English).
+**Current DB:** 54 books ingested (Phase 1 academic canon). ~31 of these overlap with the new 124-title shortlist.
 
 ---
 
