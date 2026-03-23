@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { getCoverLgUrl } from "@/lib/assets";
@@ -75,7 +75,7 @@ function SkeletonContent() {
       {/* Header with cover placeholder + meta placeholders */}
       <div style={{ display: "flex", gap: "1.25rem", padding: "1.5rem 1.5rem 0" }}>
         {/* Cover placeholder */}
-        <SkeletonBlock width={120} height={160} style={{ flexShrink: 0 }} />
+        <SkeletonBlock width={240} height={320} style={{ flexShrink: 0 }} />
 
         {/* Title + meta placeholders */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -161,6 +161,10 @@ export default function BookDetailsModal({
         @keyframes skeletonPulse {
           0%, 100% { opacity: 0.3; }
           50% { opacity: 0.6; }
+        }
+        .modal-cover { width: 120px; height: 160px; }
+        @media (min-width: 480px) {
+          .modal-cover { width: 240px; height: 320px; }
         }
       `}</style>
       <div
@@ -275,9 +279,8 @@ function LoadedContent({
       >
         {/* Cover */}
         <div
+          className="modal-cover"
           style={{
-            width: 120,
-            height: 160,
             flexShrink: 0,
             borderRadius: "4px",
             overflow: "hidden",
@@ -290,7 +293,7 @@ function LoadedContent({
             src={getCoverLgUrl(book.id)}
             alt={`${book.title} cover`}
             fill
-            sizes="120px"
+            sizes="(max-width: 479px) 120px, 240px"
             className="object-cover"
           />
         </div>
@@ -363,32 +366,35 @@ function LoadedContent({
                 Verse
               </div>
             )}
+            {book.stats && (
+              <>
+                <div>
+                  <span style={{ color: "var(--color-text-secondary)", opacity: 0.7 }}>Chapters:</span>{" "}
+                  {book.chapters.length}
+                </div>
+                {totalPages > 0 && (
+                  <div>
+                    <span style={{ color: "var(--color-text-secondary)", opacity: 0.7 }}>Pages:</span>{" "}
+                    {totalPages}
+                  </div>
+                )}
+                {totalPages > 0 && (
+                  <div>
+                    <span style={{ color: "var(--color-text-secondary)", opacity: 0.7 }}>Reading time:</span>{" "}
+                    {formatReadingTime(book.stats.total_chars)}
+                  </div>
+                )}
+                {hasDuration && (
+                  <div>
+                    <span style={{ color: "var(--color-text-secondary)", opacity: 0.7 }}>Audio:</span>{" "}
+                    {formatDuration(book.stats.total_duration_ms!)}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
-
-      {/* Stats row */}
-      {book.stats && (
-        <div
-          style={{
-            display: "flex",
-            gap: "1.5rem",
-            padding: "1rem 1.5rem",
-            fontFamily: "var(--font-ui)",
-            fontSize: "0.75rem",
-            color: "var(--color-text-secondary)",
-          }}
-        >
-          <span>{book.chapters.length} chapters</span>
-          {totalPages > 0 && <span>{totalPages} pages</span>}
-          {totalPages > 0 && (
-            <span>{formatReadingTime(book.stats.total_chars)} read</span>
-          )}
-          {hasDuration && (
-            <span>{formatDuration(book.stats.total_duration_ms!)} audio</span>
-          )}
-        </div>
-      )}
 
       {/* Description */}
       {book.description && (
@@ -431,26 +437,73 @@ function LoadedContent({
         </Link>
       </div>
 
-      {/* Table of contents */}
-      <div
+      {/* Table of contents — collapsible */}
+      <CollapsibleTOC
+        book={book}
+        continueChapter={continueChapter}
+        onClose={onClose}
+      />
+    </>
+  );
+}
+
+function CollapsibleTOC({
+  book,
+  continueChapter,
+  onClose,
+}: {
+  book: BookDetails;
+  continueChapter: number | null;
+  onClose: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div
+      style={{
+        borderTop: "1px solid var(--color-border)",
+        padding: "1rem 1.5rem 1.5rem",
+      }}
+    >
+      <button
+        onClick={() => setOpen((v) => !v)}
         style={{
-          borderTop: "1px solid var(--color-border)",
-          padding: "1rem 1.5rem 1.5rem",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.5rem",
+          width: "100%",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+          fontFamily: "var(--font-ui)",
+          fontSize: "0.6875rem",
+          fontWeight: 500,
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+          color: "var(--color-text-secondary)",
+          margin: "0 0 0.75rem",
         }}
       >
-        <h3
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           style={{
-            fontFamily: "var(--font-ui)",
-            fontSize: "0.6875rem",
-            fontWeight: 500,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            color: "var(--color-text-secondary)",
-            margin: "0 0 0.75rem",
+            transform: open ? "rotate(90deg)" : "rotate(0deg)",
+            transition: "transform 0.15s ease",
           }}
         >
-          Table of Contents
-        </h3>
+          <path d="M3 1l4 4-4 4" />
+        </svg>
+        Table of Contents ({book.chapters.length})
+      </button>
+      {open && (
         <div>
           {book.chapters.map((ch) => {
             const isCurrent = ch.number === continueChapter;
@@ -571,7 +624,7 @@ function LoadedContent({
             );
           })}
         </div>
-      </div>
-    </>
+      )}
+    </div>
   );
 }

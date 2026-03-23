@@ -224,6 +224,15 @@ body::before {
     inset -1px 0 2px rgba(0,0,0,0.04) !important;
 }
 
+/* Continue CTA: lift on card hover */
+.continue-cta {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.book-card-link:hover .continue-cta {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
 /* Book card description: clamp on desktop, full text on mobile */
 @media (min-width: 640px) {
   .book-card-desc {

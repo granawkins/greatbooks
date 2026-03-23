@@ -10,6 +10,7 @@ export function ChapterSelector({ isOnBookPage }: { isOnBookPage: boolean }) {
   const [chapterListOpen, setChapterListOpen] = useState(false);
   const [chapterList, setChapterList] = useState<{ number: number; title: string }[]>([]);
   const chapterListRef = useRef<HTMLDivElement>(null);
+  const activeItemRef = useRef<HTMLButtonElement>(null);
 
   // Fetch chapter list when dropdown opens
   useEffect(() => {
@@ -21,6 +22,13 @@ export function ChapterSelector({ isOnBookPage }: { isOnBookPage: boolean }) {
       })
       .catch(() => {});
   }, [chapterListOpen, session?.bookId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Scroll active chapter into view when list opens
+  useEffect(() => {
+    if (chapterListOpen && chapterList.length > 0 && activeItemRef.current) {
+      activeItemRef.current.scrollIntoView({ block: "center" });
+    }
+  }, [chapterListOpen, chapterList]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -150,6 +158,7 @@ export function ChapterSelector({ isOnBookPage }: { isOnBookPage: boolean }) {
             return (
               <button
                 key={ch.number}
+                ref={isActive ? activeItemRef : undefined}
                 onClick={() => {
                   setChapterListOpen(false);
                   onChapterSelectRef.current?.(ch.number);
