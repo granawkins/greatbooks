@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import type { BookRow } from "@/lib/db";
-import BookCover from "@/components/BookCover";
+import BookCard from "@/components/BookCard";
 import { useAudioSession } from "@/lib/AudioPlayerContext";
 import { useBookDetailsModal } from "@/lib/BookDetailsModalContext";
 
-type ProgressMap = Record<string, { chapter_number: number }>;
+type ProgressMap = Record<string, { chapter_number: number; audio_position_ms: number }>;
 type StatsMap = Record<string, { chapter_count: number; total_duration_ms: number | null; total_chars: number }>;
 
 export default function LibraryClient({
@@ -19,7 +19,7 @@ export default function LibraryClient({
   progressMap: ProgressMap;
 }) {
   const { session } = useAudioSession();
-  const { openBookDetails, setMaps } = useBookDetailsModal();
+  const { setMaps } = useBookDetailsModal();
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -57,7 +57,7 @@ export default function LibraryClient({
           style={{
             width: "100%",
             padding: "0.5rem 0.75rem",
-            marginBottom: "1.25rem",
+            marginBottom: "0.5rem",
             fontFamily: "var(--font-ui)",
             fontSize: "0.875rem",
             color: "var(--color-text)",
@@ -67,26 +67,16 @@ export default function LibraryClient({
             outline: "none",
           }}
         />
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-5 gap-y-6">
-          {filtered.map((book) => {
-            const stats = statsMap[book.id];
-            const progress = progressMap[book.id];
-            return (
-              <button
-                key={book.id}
-                onClick={() => openBookDetails(book.id)}
-                className="block"
-                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}
-              >
-                <BookCover
-                  bookId={book.id}
-                  title={book.title}
-                  stats={stats ?? null}
-                  progress={progress ?? null}
-                />
-              </button>
-            );
-          })}
+        <div>
+          {filtered.map((book, i) => (
+            <BookCard
+              key={book.id}
+              book={book}
+              stats={statsMap[book.id] ?? null}
+              progress={progressMap[book.id] ?? null}
+              isLast={i === filtered.length - 1}
+            />
+          ))}
         </div>
       </main>
     </div>

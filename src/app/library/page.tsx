@@ -9,9 +9,9 @@ export default async function LibraryPage() {
   const progressRows = userId ? db.getProgress(userId) : [];
   const bookStats = db.getBookStats();
 
-  const progressMap: Record<string, { chapter_number: number }> = {};
+  const progressMap: Record<string, { chapter_number: number; audio_position_ms: number }> = {};
   for (const r of progressRows) {
-    progressMap[r.book_id] = { chapter_number: r.chapter_number };
+    progressMap[r.book_id] = { chapter_number: r.chapter_number, audio_position_ms: r.audio_position_ms };
   }
 
   const statsMap: Record<string, { chapter_count: number; total_duration_ms: number | null; total_chars: number }> = {};
