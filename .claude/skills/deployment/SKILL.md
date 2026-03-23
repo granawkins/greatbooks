@@ -73,10 +73,13 @@ ssh greatbooks "pm2 start greatbooks"
 ```
 
 ### Pull database from remote
+
+The **remote database is the source of truth**. Local `greatbooks.db` is a read-only copy. To sync:
+
 ```bash
 ./db_sync.sh
 ```
-Checkpoints WAL on remote, removes local WAL/SHM, downloads via rsync (with progress bar, bandwidth cap), and verifies integrity. See `db_sync.sh` in project root.
+Checkpoints WAL on remote, removes local WAL/SHM, downloads via rsync (with progress bar, bandwidth cap), and verifies integrity.
 
 ### Data files (audio, covers)
 

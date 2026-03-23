@@ -68,7 +68,13 @@ ORDER BY c.number, s.sequence;
 
 ## Syncing from Production
 
-Run `./db_sync.sh` in the project root to pull the production database locally (with progress bar and integrity check). See deployment skill for details.
+The **remote database is the source of truth**. The local `greatbooks.db` is a read-only copy — never push local changes upstream. To get the latest data, run:
+
+```bash
+./db_sync.sh
+```
+
+This checkpoints WAL on the remote, downloads via rsync (with progress bar and bandwidth cap), and verifies integrity. Run this whenever you need data that was added in production (e.g. new books, user data).
 
 ## Conventions
 

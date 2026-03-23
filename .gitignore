@@ -67,3 +67,4 @@ next-env.d.ts
 # audit reports
 AUDIT_*
 .next.backup/
+/public/covers/
