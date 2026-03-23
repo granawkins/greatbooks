@@ -13,9 +13,50 @@ they expect from a well-edited print edition.
 
 ---
 
-## Step 0 — Before You Start
+## Step 0 — Idempotency Check (run this first, every time)
 
-Pull latest main and run from `/home/granawkins/greatbooks/`:
+Before doing anything, check what's already done:
+
+```python
+import sqlite3, subprocess
+book_id = "{book-id}"
+conn = sqlite3.connect('greatbooks.db')
+
+book = conn.execute("SELECT id, description, cover_image, layout FROM books WHERE id = ?", (book_id,)).fetchone()
+chapters = conn.execute("SELECT COUNT(*) FROM chapters WHERE book_id = ?", (book_id,)).fetchone()[0]
+segments = conn.execute("SELECT COUNT(*) FROM segments s JOIN chapters c ON s.chapter_id = c.id WHERE c.book_id = ?", (book_id,)).fetchone()[0]
+conn.close()
+
+import os
+lg = os.path.exists(f"public/covers/{book_id}-lg.png")
+sm = os.path.exists(f"public/covers/{book_id}-sm.jpg")
+
+print(f"Book in DB:      {'YES' if book else 'NO'}")
+print(f"Chapters:        {chapters}")
+print(f"Segments:        {segments}")
+print(f"Description:     {book[1] if book else 'N/A'}")
+print(f"Cover (DB):      {book[2] if book else 'N/A'}")
+print(f"Cover lg (local):{lg}")
+print(f"Cover sm (local):{sm}")
+```
+
+Then check GCS:
+```bash
+curl -s -o /dev/null -w "%{http_code}" "https://storage.googleapis.com/greatbooks-assets/covers/{book-id}-sm.jpg"
+```
+
+**Decision matrix:**
+| State | Action |
+|-------|--------|
+| Book not in DB | Run full pipeline from Step 1 |
+| Book in DB, chapters look wrong | Skip to Step 2 (fix chapters) |
+| Book in DB, no description | Skip to Step 6 (description) |
+| Book in DB, no cover in DB | Skip to Step 6 (cover) |
+| Cover in DB but not GCS (non-200) | Skip to Step 6 (resize + upload only) |
+| Cover local files exist but not uploaded | Run upload only |
+| Everything present and correct | Return — nothing to do |
+
+Pull latest main before starting:
 ```bash
 git pull origin main
 cd /home/granawkins/greatbooks
