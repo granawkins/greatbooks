@@ -140,11 +140,27 @@ def process_chapter(book_id: str, chapter: dict, voice: str, stt_provider: str |
     manifest = generate_chapter(
         segments, audio_dir, ch_num,
         voice=voice, stt_provider=stt_provider,
+        book_id=book_id,
     )
     elapsed = time.time() - t0
 
     # Update DB
     update_db(book_id, ch_num, manifest)
+
+    # Move to data/ and upload to GCS immediately
+    import shutil, subprocess
+    src = PROJECT_ROOT / ".claude" / "data" / book_id / "audio" / f"{ch_num:02d}.mp3"
+    dst_dir = PROJECT_ROOT / "data" / book_id / "audio"
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    dst = dst_dir / f"{ch_num:02d}.mp3"
+    if src.exists():
+        shutil.move(str(src), str(dst))
+        subprocess.run(
+            ["python", "scripts/upload_to_gcs.py", "--audio", "--force"],
+            cwd=str(PROJECT_ROOT),
+            capture_output=True,
+        )
+        print(f"  ↑ Uploaded ch{ch_num} to GCS")
 
     duration_s = manifest["merged_duration_ms"] / 1000
     print(f"  ✓ Chapter {ch_num} done: {duration_s:.1f}s audio, "
