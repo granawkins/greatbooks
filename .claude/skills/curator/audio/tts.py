@@ -56,16 +56,11 @@ def _get_google_client():
         with _client_lock:
             if _google_client is None:
                 from google.cloud import texttospeech
-                creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
-                if creds_path:
-                    _google_client = texttospeech.TextToSpeechClient.from_service_account_json(
-                        creds_path
-                    )
-                else:
-                    api_key = os.environ.get("GOOGLE_API_KEY", "")
-                    _google_client = texttospeech.TextToSpeechClient(
-                        client_options={"api_key": api_key}
-                    )
+                # Use default client — respects GOOGLE_APPLICATION_CREDENTIALS env var
+                # via ADC (Application Default Credentials), which correctly handles
+                # service account scopes. from_service_account_json() creates
+                # scoped credentials that can fail for en-GB voices.
+                _google_client = texttospeech.TextToSpeechClient()
     return _google_client
 
 

@@ -255,6 +255,7 @@ def generate_chapter(
     voice: str = "Algieba",
     max_workers: int = DEFAULT_WORKERS,
     stt_provider: str | None = None,
+    book_id: str | None = None,
 ) -> dict:
     """
     Generate audio for a full chapter.
@@ -273,6 +274,10 @@ def generate_chapter(
     Returns:
         Manifest dict with chunk info and word timestamps
     """
+    # Set entity ID for cost tracking so all thread workers inherit it
+    if book_id:
+        os.environ["GREATBOOKS_ENTITY_ID"] = book_id
+
     os.makedirs(output_dir, exist_ok=True)
     chapter_str = f"{chapter_number:02d}"
 
