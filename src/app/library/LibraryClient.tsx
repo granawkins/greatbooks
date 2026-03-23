@@ -37,45 +37,18 @@ export default function LibraryClient({
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--color-bg)" }}>
-      {/* ── Hero ── */}
-      <section
-        style={{
-          padding: "4rem 1.5rem 3rem",
-          maxWidth: "var(--content-max-width)",
-          margin: "0 auto",
-          width: "100%",
-          textAlign: "center",
-        }}
-      >
+      <main style={{ maxWidth: "var(--content-max-width)", margin: "0 auto", padding: "2rem 1.5rem", paddingBottom: session ? 220 : 64 }}>
         <h1
           style={{
             fontFamily: "var(--font-display)",
-            fontSize: "clamp(2rem, 6vw, 3.25rem)",
+            fontSize: "1.5rem",
             fontWeight: 400,
             color: "var(--color-text)",
-            lineHeight: 1.15,
-            margin: "0 0 1rem",
-            letterSpacing: "-0.01em",
+            marginBottom: "1.25rem",
           }}
         >
-          Long Walks<br />with Old Books
+          Library
         </h1>
-        <p
-          style={{
-            fontFamily: "var(--font-body)",
-            fontSize: "1.0625rem",
-            color: "var(--color-text-secondary)",
-            lineHeight: 1.6,
-            maxWidth: "36ch",
-            margin: "0 auto",
-            fontStyle: "italic",
-          }}
-        >
-          Listen to Homer, Plato, and Milton — beautifully narrated, with an AI tutor at your side.
-        </p>
-      </section>
-
-      <main style={{ maxWidth: "var(--content-max-width)", margin: "0 auto", padding: "0 1.5rem", paddingBottom: session ? 220 : 64 }}>
         <input
           type="text"
           placeholder="Search by title or author..."
