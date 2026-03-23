@@ -79,7 +79,7 @@ GUTENBERG_BOOKS = [
     {"id": "sterne-tristram-shandy",        "title": "Tristram Shandy",                      "author": "Laurence Sterne",              "pg_id": 1079},
     {"id": "hume-enquiry",                  "title": "An Enquiry Concerning Human Understanding", "author": "David Hume",             "pg_id": 9662},
     {"id": "rousseau-social-contract",      "title": "The Social Contract",                  "author": "Jean-Jacques Rousseau",        "pg_id": 46333},
-    {"id": "laclos-liaisons-dangereuses",   "title": "Les Liaisons Dangereuses",             "author": "Pierre Choderlos de Laclos",   "pg_id": 45128},
+    {"id": "laclos-liaisons-dangereuses",   "title": "Les Liaisons Dangereuses",             "author": "Pierre Choderlos de Laclos",   "pg_id": 45512},
     {"id": "smith-wealth-of-nations",       "title": "The Wealth of Nations",                "author": "Adam Smith",                   "pg_id": 3300},
     {"id": "goethe-sorrows-of-werther",     "title": "The Sorrows of Young Werther",         "author": "Johann Wolfgang von Goethe",   "pg_id": 2527},
     {"id": "hamilton-federalist",           "title": "The Federalist Papers",                "author": "Alexander Hamilton, James Madison, John Jay", "pg_id": 18},
@@ -144,17 +144,17 @@ GUTENBERG_BOOKS = [
     {"id": "butler-way-of-all-flesh",       "title": "The Way of All Flesh",                 "author": "Samuel Butler",                "pg_id": 2084},
 
     # ── 1900–1910 ────────────────────────────────────────────────────────────
-    {"id": "conrad-lord-jim",              "title": "Lord Jim",                             "author": "Joseph Conrad",                "pg_id": 21435},
+    {"id": "conrad-lord-jim",              "title": "Lord Jim",                             "author": "Joseph Conrad",                "pg_id": 5658},
     {"id": "dreiser-sister-carrie",         "title": "Sister Carrie",                        "author": "Theodore Dreiser",             "pg_id": 233},
     {"id": "baum-wizard-of-oz",             "title": "The Wonderful Wizard of Oz",           "author": "L. Frank Baum",                "pg_id": 55},
     {"id": "kipling-kim",                  "title": "Kim",                                  "author": "Rudyard Kipling",              "pg_id": 2226},
-    {"id": "james-wings-dove",              "title": "The Wings of the Dove",                "author": "Henry James",                  "pg_id": 1388},
+    {"id": "james-wings-dove",              "title": "The Wings of the Dove",                "author": "Henry James",                  "pg_id": 29452, "pg_id_vol2": 30059},
     {"id": "james-ambassadors",             "title": "The Ambassadors",                      "author": "Henry James",                  "pg_id": 432},
     {"id": "london-call-of-wild",           "title": "The Call of the Wild",                 "author": "Jack London",                  "pg_id": 215},
     {"id": "dubois-souls-black-folk",       "title": "The Souls of Black Folk",              "author": "W.E.B. Du Bois",               "pg_id": 408},
     {"id": "conrad-nostromo",              "title": "Nostromo",                             "author": "Joseph Conrad",                "pg_id": 2021},
     {"id": "barrie-peter-pan",              "title": "Peter Pan",                            "author": "J.M. Barrie",                  "pg_id": 16},
-    {"id": "james-golden-bowl",             "title": "The Golden Bowl",                      "author": "Henry James",                  "pg_id": 1078},
+    {"id": "james-golden-bowl",             "title": "The Golden Bowl",                      "author": "Henry James",                  "pg_id": 4264},
     {"id": "wharton-house-of-mirth",        "title": "The House of Mirth",                   "author": "Edith Wharton",                "pg_id": 284},
     {"id": "conrad-heart-of-darkness",     "title": "Heart of Darkness",                   "author": "Joseph Conrad",                "pg_id": 219},
     {"id": "conrad-secret-agent",           "title": "The Secret Agent",                     "author": "Joseph Conrad",                "pg_id": 974},
@@ -186,7 +186,7 @@ GUTENBERG_BOOKS = [
     {"id": "hemingway-sun-also-rises",      "title": "The Sun Also Rises",                   "author": "Ernest Hemingway",             "pg_id": 67138},
     {"id": "cather-death-archbishop",       "title": "Death Comes for the Archbishop",       "author": "Willa Cather",                 "pg_id": 69730},
     {"id": "wilder-bridge-san-luis-rey",    "title": "The Bridge of San Luis Rey",           "author": "Thornton Wilder",              "pg_id": 69768},
-    {"id": "ford-parades-end",              "title": "Parade's End",                         "author": "Ford Madox Ford",              "pg_id": 64248},
+    {"id": "ford-parades-end",              "title": "Parade's End",                         "author": "Ford Madox Ford",              "pg_id": 64248, "pg_id_vol2": 67622},
 
     # ── 1930s ────────────────────────────────────────────────────────────────
     {"id": "hemingway-farewell-arms",       "title": "A Farewell to Arms",                   "author": "Ernest Hemingway",             "pg_id": 75201},

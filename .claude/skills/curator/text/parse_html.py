@@ -204,21 +204,35 @@ def parse_gutenberg(html: str) -> dict:
     for tag in soup.find_all("sup"):
         tag.decompose()
 
-    # Try splitting on h2, then h3 — use whichever captures more content
-    chapters = _gutenberg_split_by_heading(soup, "h2")
-    h2_segs = sum(len(g["segments"]) for c in chapters for g in c["groups"])
+    # Try splitting on h1, h2, h3, h4 — pick the best result
+    # Prefer multi-chapter results; among those, pick whichever captures the most content
+    candidates = []
+    for tag in ["h1", "h2", "h3", "h4"]:
+        chs = _gutenberg_split_by_heading(soup, tag)
+        segs = sum(len(g["segments"]) for c in chs for g in c["groups"])
+        if chs:
+            candidates.append((tag, chs, segs, len(chs)))
 
-    h3_chapters = _gutenberg_split_by_heading(soup, "h3")
-    h3_segs = sum(len(g["segments"]) for c in h3_chapters for g in c["groups"])
+    if candidates:
+        # Prefer multi-chapter results (>1 chapter) over single-chapter results
+        multi = [(t, chs, segs, n) for t, chs, segs, n in candidates if n > 1]
+        if multi:
+            # Among multi-chapter results, pick the one with the most segments
+            best = max(multi, key=lambda x: x[2])
+        else:
+            # All are single-chapter; pick the one with the most segments
+            best = max(candidates, key=lambda x: x[2])
+        return {"chapters": best[1]}
 
-    if h3_segs > h2_segs * 1.5:
-        chapters = h3_chapters
+    groups = _gutenberg_extract_groups(soup)
+    return {"chapters": [{"title": "Full Text", "groups": groups}]}
 
-    if not chapters:
-        groups = _gutenberg_extract_groups(soup)
-        return {"chapters": [{"title": "Full Text", "groups": groups}]}
 
-    return {"chapters": chapters}
+_PART_RE = re.compile(
+    r'^(PART|BOOK|VOLUME|TOME)\s+[\dIVXLCDMivxlcdm]+\.?$'
+    r'|^(PART|BOOK|VOLUME|TOME)\s+(?:ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN)$',
+    re.IGNORECASE,
+)
 
 
 def _gutenberg_split_by_heading(soup, heading_tag: str) -> list[dict]:
@@ -228,7 +242,8 @@ def _gutenberg_split_by_heading(soup, heading_tag: str) -> list[dict]:
         return []
 
     # Determine the sub-heading tag for this level
-    sub_heading = "h3" if heading_tag == "h2" else "h4"
+    sub_heading_map = {"h1": "h2", "h2": "h3", "h3": "h4", "h4": "h5"}
+    sub_heading = sub_heading_map.get(heading_tag, "h4")
 
     chapters = []
     for i, heading in enumerate(headings):
@@ -245,12 +260,31 @@ def _gutenberg_split_by_heading(soup, heading_tag: str) -> list[dict]:
         # Check if heading is inside a div.chapter
         parent_div = heading.find_parent("div", class_="chapter")
         if parent_div:
+            # First try: collect elements inside the same div.chapter
+            # (skip descendants of the heading itself)
             for el in heading.find_all_next():
+                if heading in el.parents or el in heading.descendants:
+                    continue
                 if el.find_parent("div", class_="chapter") != parent_div:
                     break
                 if el.name == heading_tag and el != heading:
                     break
                 chapter_elements.append(el)
+            # Check if we got any real content (p tags)
+            has_content = any(hasattr(el, 'name') and el.name == 'p' for el in chapter_elements)
+            # If div.chapter only contains the heading (content is outside),
+            # fall through to sibling-based collection starting after the div
+            if not has_content:
+                chapter_elements = []
+                el = parent_div.next_sibling
+                while el:
+                    if hasattr(el, "name") and el.name == heading_tag:
+                        break
+                    if hasattr(el, "name") and el.name == "div" and el.get("class") and "chapter" in el.get("class", []):
+                        break
+                    if hasattr(el, "name") and el.name:
+                        chapter_elements.append(el)
+                    el = el.next_sibling
         else:
             el = heading.next_sibling
             while el:
@@ -286,7 +320,7 @@ def _gutenberg_split_by_heading(soup, heading_tag: str) -> list[dict]:
 
 def _gutenberg_extract_groups(soup) -> list[dict]:
     """Extract text groups from a BeautifulSoup object."""
-    elements = soup.find_all(["p", "h3", "h4", "h5"])
+    elements = soup.find_all(["p", "h2", "h3", "h4", "h5"])
     return _gutenberg_elements_to_groups(elements)
 
 
@@ -297,7 +331,7 @@ def _gutenberg_elements_to_groups(elements: list) -> list[dict]:
         if not hasattr(el, "name") or el.name is None:
             continue
 
-        if el.name in ("h3", "h4", "h5"):
+        if el.name in ("h2", "h3", "h4", "h5"):
             text = el.get_text(strip=True)
             if text:
                 groups.append({"type": "heading", "segments": [text]})

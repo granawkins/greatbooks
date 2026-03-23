@@ -43,6 +43,32 @@ log = logging.getLogger(__name__)
 
 ICA_BOOKS = [
     {
+        "id": "virgil-aeneid",
+        "title": "The Aeneid",
+        "author": "Virgil",
+        "description": "Aeneas flees Troy and founds the Roman race — Virgil's epic of duty, fate, and empire.",
+        "original_date": "~19 BCE",
+        "translator": "John Dryden",
+        "translation_date": "1697",
+        "source_url": "http://classics.mit.edu/Virgil/aeneid.html",
+        "license": "Public Domain",
+        "url_pattern": "http://classics.mit.edu/Virgil/aeneid.{n}.{numeral}.html",
+        "pages": 12,
+    },
+    {
+        "id": "sophocles-oedipus-rex",
+        "title": "Oedipus Rex",
+        "author": "Sophocles",
+        "description": "A king discovers he has unwittingly fulfilled a terrible prophecy — the foundational tragedy of Western literature.",
+        "original_date": "~429 BCE",
+        "translator": "R. C. Jebb",
+        "translation_date": "1887",
+        "source_url": "http://classics.mit.edu/Sophocles/oedipus.html",
+        "license": "Public Domain",
+        "url_pattern": None,
+        "pages": 1,
+    },
+    {
         "id": "homer-odyssey",
         "title": "Odyssey",
         "author": "Homer",
